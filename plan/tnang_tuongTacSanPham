@@ -1,0 +1,123 @@
+# Kế hoạch triển khai: Tính năng Tương tác sản phẩm
+
+Kế hoạch này phác thảo việc triển khai bộ tính năng "Tương tác sản phẩm" dựa trên kịch bản yêu cầu. Bộ tính năng bao gồm:
+1. **Kịch bản chính**: Tìm kiếm từ khóa -> hiển thị danh sách sách -> nhấn xem chi tiết -> xem hình ảnh, giá, mô tả và **đánh giá độc giả** (Reviews & Ratings).
+2. **Kịch bản phụ 1 (Bộ lọc)**: Lọc sách theo danh mục và **kéo thanh trượt giá (Price Range Slider)** cập nhật danh sách ngay lập tức.
+3. **Kịch bản phụ 2 (Không có kết quả)**: Hiển thị thông báo "Không tìm thấy" tinh tế kèm danh sách gợi ý "Có thể bạn sẽ thích" (Recommended Books) dựa trên các cuốn sách mới nhất.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> Chúng tôi đề xuất tạo một bảng cơ sở dữ liệu `reviews` thực thụ trong PostgreSQL để lưu trữ đánh giá của người dùng thay vì chỉ tạo dữ liệu giả lập (mock data) ở Frontend. Điều này giúp hệ thống hoạt động chuyên nghiệp và hoàn chỉnh.
+
+> [!WARNING]
+> Mặc định trong kịch bản kiểm thử thực tế, chỉ người dùng đã từng mua sách thành công mới được đánh giá. Tuy nhiên, để tiện cho việc phát triển và kiểm thử của bạn, chúng tôi đề xuất **cho phép bất kỳ người dùng đã đăng nhập nào cũng có thể gửi đánh giá**, giúp bạn dễ dàng test tính năng mà không cần hoàn thành toàn bộ luồng mua hàng.
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Câu hỏi 1**: Bạn có đồng ý với việc lưu trữ Đánh giá (Reviews/Ratings) thực tế vào Database thông qua bảng `reviews` và xây dựng API đi kèm không?
+> 
+> **Câu hỏi 2**: Về thanh trượt giá (Price Slider), chúng tôi định giá trị tối đa mặc định là `500.000 đ` (bước nhảy `10.000 đ`). Khoảng giá này có phù hợp với dữ liệu sách hiện tại của bạn không, hay bạn muốn một khoảng giá rộng hơn (ví dụ: `1.000.000 đ`)?
+
+---
+
+## Proposed Changes
+
+### 1. Database Schema
+
+Chúng ta sẽ tạo thêm bảng `reviews` để quản lý các nhận xét, đánh giá của khách hàng đối với từng cuốn sách.
+
+#### [NEW] [migration_reviews.js](file:///E:/sdl-project/src/utils/migration_reviews.js)
+Tạo file migration để tự động tạo bảng `reviews` trong cơ sở dữ liệu PostgreSQL:
+```sql
+CREATE TABLE IF NOT EXISTS reviews (
+    id SERIAL PRIMARY KEY,
+    book_id INT REFERENCES books(id) ON DELETE CASCADE,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    rating INT CHECK (rating >= 1 AND rating <= 5) NOT NULL,
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(book_id, user_id) -- Mỗi user chỉ được đánh giá 1 cuốn sách 1 lần
+);
+```
+
+---
+
+### 2. Backend API (`E:\sdl-project`)
+
+Chỉnh sửa API lấy danh sách sách để hỗ trợ lọc giá tối đa (`maxPrice`), đồng thời xây dựng API quản lý đánh giá sách.
+
+#### [MODIFY] [Book.js](file:///E:/sdl-project/src/models/Book.js)
+- Cập nhật hàm `Book.getAll` nhận thêm tham số `maxPrice` trong bộ filters.
+- Thêm điều kiện SQL: `b.price <= $maxPrice` vào danh sách `whereConditions` nếu có `maxPrice`.
+
+#### [MODIFY] [bookController.js](file:///E:/sdl-project/src/controllers/bookController.js)
+- Lấy `maxPrice` từ `req.query.maxPrice` (chuyển đổi sang kiểu số thực).
+- Truyền `maxPrice` vào service `BookService.getBooks`.
+
+#### [NEW] [Review.js](file:///E:/sdl-project/src/models/Review.js)
+Tạo model quản lý bảng `reviews`:
+- `Review.create({ bookId, userId, rating, comment })`: Thêm đánh giá mới.
+- `Review.getByBookId(bookId)`: Lấy toàn bộ đánh giá của cuốn sách kèm theo thông tin tên người đánh giá (JOIN với `user_profiles` và `users`).
+- `Review.getAverageRating(bookId)`: Tính điểm trung bình cộng số sao và tổng số đánh giá của sách.
+
+#### [NEW] [reviewController.js](file:///E:/sdl-project/src/controllers/reviewController.js)
+Tạo controller xử lý các API đánh giá:
+- `getReviews(req, res)`: Trả về danh sách đánh giá của 1 sách và thống kê (avg rating, count).
+- `createReview(req, res)`: Kiểm tra đăng nhập, nhận `rating`, `comment` và lưu vào Database.
+
+#### [MODIFY] [books.js](file:///E:/sdl-project/src/routes/books.js)
+Đăng ký các route phụ cho reviews:
+- `GET /:id/reviews` -> public, lấy danh sách đánh giá.
+- `POST /:id/reviews` -> verifyToken (yêu cầu đăng nhập), gửi đánh giá mới.
+
+---
+
+### 3. Frontend UI (`e:\it-project\smart_digital_library\code_frontend\sdl-frontend`)
+
+Cập nhật giao diện trang chủ và trang chi tiết sách để đáp ứng trải nghiệm mượt mà, phản hồi ngay lập tức và mang tính thẩm mỹ cao (Editorial Layout).
+
+#### [MODIFY] [HomePage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/HomePage.jsx)
+- **Thanh trượt giá (Price Slider)**: 
+  - Thêm state `maxPrice` (mặc định là `500000`).
+  - Thêm một thanh trượt (`<input type="range">`) được thiết kế tinh tế (sử dụng accent terracotta `#c56017`) nằm trên thanh lọc (Filter Bar) bên cạnh ô Tìm kiếm.
+  - Khi người dùng kéo thanh trượt, `maxPrice` sẽ cập nhật lập tức -> Kích hoạt React Query tự động tải lại danh sách sách từ backend.
+- **Kịch bản phụ 2 (Không có kết quả)**:
+  - Khi danh sách sách trả về rỗng (`books?.length === 0`), thay vì chỉ hiển thị một dòng thông báo đơn điệu, chúng ta sẽ thiết kế một khu vực thông báo "Không tìm thấy" sang trọng.
+  - Phía dưới thông báo đó, tự động hiển thị phần **"Có thể bạn sẽ thích"** tải danh sách 4 cuốn sách mới nhất (gọi API không bộ lọc) được trình bày đẹp mắt dưới dạng lưới sản phẩm.
+
+#### [MODIFY] [BookDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/BookDetailPage.jsx)
+- **Thông tin đánh giá (Phần đầu)**:
+  - Hiển thị điểm số sao trung bình (ví dụ: `⭐ 4.8 (12 đánh giá)`) ngay bên cạnh hoặc dưới giá tiền sản phẩm.
+- **Khối đánh giá độc giả (Reviews Section) ở cuối trang**:
+  - Thiết kế một khu vực đánh giá rộng rãi, sang trọng sử dụng font chữ Serif cổ điển.
+  - Liệt kê các đánh giá của độc giả: hiển thị số sao, tên người nhận xét (ẩn bớt kí tự nếu cần bảo mật), nội dung nhận xét, và ngày đánh giá.
+  - **Form viết đánh giá**:
+    - Chỉ hiển thị đối với người dùng đã đăng nhập.
+    - Cho phép chọn số sao (từ 1 đến 5 sao bằng cách click vào biểu tượng ngôi sao) và nhập nội dung bình luận.
+    - Nút gửi đánh giá tinh tế (`rounded-none`, màu nền terracotta) vô hiệu hóa khi đang gửi (`.isPending`) để tránh gửi lặp lại.
+
+---
+
+## Verification Plan
+
+### Automated / DB Migrations
+- Chạy script `node src/utils/migration_reviews.js` để đảm bảo bảng `reviews` được khởi tạo thành công và không lỗi cú pháp.
+- Gửi yêu cầu HTTP thử nghiệm thông qua Postman hoặc test scripts để kiểm tra endpoint `/api/books/:id/reviews`.
+
+### Manual UI Verification
+1. **Tìm kiếm & Lọc**:
+   - Gõ từ khóa hợp lệ -> kiểm tra kết quả.
+   - Bấm danh mục khác nhau -> danh sách tự động cập nhật lập tức.
+   - Kéo thanh trượt giá xuống dưới `150.000 đ` -> kiểm tra xem các sách có giá cao hơn có bị lọc đi lập tức không.
+2. **Trường hợp Không tìm thấy**:
+   - Gõ từ khóa ngẫu nhiên không tồn tại (ví dụ: `xyz123`) -> Xác nhận xuất hiện bảng báo không tìm thấy kết quả và phần gợi ý "Có thể bạn sẽ thích" hiển thị đầy đủ sách gợi ý.
+3. **Đánh giá chi tiết sách**:
+   - Click vào một cuốn sách bất kỳ.
+   - Kiểm tra xem phần đánh giá hiển thị ở cuối trang.
+   - Đăng nhập, gửi một đánh giá 5 sao kèm bình luận -> Xác nhận đánh giá xuất hiện ngay lập tức và điểm số sao trung bình cập nhật thành công.

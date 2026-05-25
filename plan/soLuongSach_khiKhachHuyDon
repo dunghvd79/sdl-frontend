@@ -1,0 +1,65 @@
+# Kế hoạch triển khai: Khách hàng tự hủy đơn hàng & Hoàn trả tồn kho tự động
+
+Kế hoạch này bổ sung tính năng cho phép **Khách hàng** tự hủy đơn hàng của họ trực tiếp từ Lịch sử đơn hàng hoặc Trang chi tiết đơn hàng, với điều kiện đơn hàng chưa chuyển sang trạng thái "Đang giao" (DELIVERING). Khi khách hàng hủy đơn, hệ thống sẽ tự động hoàn trả số lượng sách tương ứng về kho vật lý hoặc nhả lượng giữ chỗ.
+
+---
+
+## Nghiệp vụ chi tiết
+
+1. **Điều kiện hủy đơn của Khách hàng**:
+   * Chỉ được phép hủy khi trạng thái đơn hàng hiện tại là: `PENDING` (Chờ xác nhận), `CONFIRMED` (Đã xác nhận), hoặc `PACKAGING` (Đóng gói).
+   * **Không** được phép tự hủy khi đơn hàng đã chuyển sang: `DELIVERING` (Đang giao), `DELIVERED` (Đã giao), hoặc đã bị hủy trước đó `CANCELLED` (Đã hủy).
+2. **Logic cập nhật Kho hàng**:
+   * Nếu trạng thái cũ là `PENDING`: Chỉ giải phóng lượng giữ chỗ (gọi `Inventory.cancelReservation`).
+   * Nếu trạng thái cũ là `CONFIRMED` hoặc `PACKAGING`: Do hàng đã bị trừ kho sẵn có, hệ thống sẽ tiến hành cộng lại hàng vào kho sẵn có và giảm số lượng đã bán (gọi `Inventory.returnStock`).
+
+---
+
+## Proposed Changes
+
+### Component: Backend (Routes, Controllers & Services)
+
+#### [MODIFY] [orders.js](file:///E:/sdl-project/src/routes/orders.js)
+* Bổ sung route PUT cho khách hàng tự hủy đơn:
+  `router.put('/:id/cancel', orderController.cancelOrder);`
+
+#### [MODIFY] [orderController.js](file:///E:/sdl-project/src/controllers/orderController.js)
+* Triển khai hàm `static async cancelOrder(req, res)`:
+  * Lấy `id` đơn hàng từ params và `userId` từ `req.user.id`.
+  * Gọi `OrderService.cancelOrder(orderId, userId)`.
+  * Trả về thông báo thành công hoặc lỗi phù hợp.
+
+#### [MODIFY] [orderService.js](file:///E:/sdl-project/src/services/orderService.js)
+* Triển khai hàm `static async cancelOrder(orderId, userId)` sử dụng transaction:
+  * Tìm đơn hàng theo ID. Nếu không tìm thấy hoặc `order.user_id !== userId`, báo lỗi quyền truy cập.
+  * Kiểm tra trạng thái đơn hàng: Nếu không thuộc `['PENDING', 'CONFIRMED', 'PACKAGING']`, bắn lỗi `"Đơn hàng đang được giao hoặc đã hoàn thành, không thể tự hủy. Vui lòng liên hệ CSKH!"`.
+  * Lặp qua danh sách `order.items`:
+    * Nếu status ban đầu là `PENDING`: Gọi `Inventory.cancelReservation(...)`.
+    * Nếu status ban đầu là `CONFIRMED` hoặc `PACKAGING`: Gọi `Inventory.returnStock(...)`.
+  * Cập nhật trạng thái đơn hàng trong bảng `orders` thành `'CANCELLED'`.
+  * Commit transaction.
+
+---
+
+### Component: Frontend UI (Customer Pages)
+
+#### [MODIFY] [OrderHistoryPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderHistoryPage.jsx)
+* Thêm nút "Hủy đơn" tại phần footer của mỗi thẻ đơn hàng (bên cạnh nút "Chi tiết") nếu đơn hàng ở trạng thái `PENDING`, `CONFIRMED`, hoặc `PACKAGING`.
+* Sử dụng mutation để gọi API `PUT /api/orders/:id/cancel`. Khi thành công, thông báo qua toast, invalidate query `['myOrders']` để làm mới danh sách đơn hàng và thống kê.
+* Yêu cầu xác nhận qua hộp thoại confirm trước khi hủy đơn.
+
+#### [MODIFY] [OrderDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderDetailPage.jsx)
+* Hiển thị nút "Hủy đơn hàng" nổi bật ở góc trên phần thông tin chi tiết (cạnh trạng thái badge) khi đơn hàng thuộc diện có thể hủy.
+* Tích hợp mutation gọi API hủy đơn tương tự, invalidate query `['orderDetail', id]` và `['myOrders']` để cập nhật lại timeline và trạng thái chi tiết.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+* Bổ sung kịch bản kiểm thử vào `test_order_inventory_flow.js` để chạy kiểm tra khách hàng tự hủy đơn ở cả hai trạng thái `PENDING` và `CONFIRMED` xem kho hàng có hoàn trả chính xác như quy định hay không.
+
+### Manual Verification
+1. Đăng nhập tài khoản khách hàng, tạo một đơn hàng mới (trạng thái `PENDING`). Thử bấm "Hủy đơn" trên Lịch sử đơn hàng, xác nhận và kiểm tra xem đơn hàng đã chuyển sang "Đã hủy", kiểm tra kho xem lượng giữ chỗ đã về 0.
+2. Tạo một đơn hàng khác, vào bảng Admin duyệt đơn sang "Đã xác nhận" (`CONFIRMED`). Quay lại tài khoản khách hàng, vào Chi tiết đơn hàng và bấm "Hủy đơn". Kiểm tra xem sách có được hoàn trả lại kho sẵn có (`available_qty` tăng lại, `sold_qty` giảm lại).
+3. Thử đổi đơn hàng sang trạng thái "Đang giao" (`DELIVERING`) từ phía Admin. Kiểm tra xem nút "Hủy đơn" phía khách hàng đã biến mất và API trả về lỗi nếu cố tình gọi trực tiếp.

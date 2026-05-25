@@ -1,0 +1,99 @@
+# Kế hoạch triển khai: Cấu hình thứ tự ưu tiên hiển thị sách (Phương án B)
+
+Kế hoạch này triển khai trường `display_order` trong cơ sở dữ liệu, cho phép Admin nhập điểm ưu tiên cho từng cuốn sách. Sách có điểm ưu tiên cao hơn sẽ tự động xuất hiện ở các vị trí đầu tiên của Trang 1 trong giao diện khách hàng.
+
+---
+
+## Ý tưởng cốt lõi
+1. **Cơ sở dữ liệu:** Thêm cột `display_order` kiểu số nguyên (`INT`) vào bảng `books`, giá trị mặc định là `0`.
+2. **Backend:**
+   * Sửa API cập nhật và thêm sách để ghi nhận và lưu trữ `display_order` gửi lên từ Admin.
+   * Cập nhật logic sắp xếp mặc định (`newest`) ở API lấy sách để ưu tiên `display_order DESC` trước, sau đó mới đến ngày tạo `created_at DESC`.
+3. **Frontend:**
+   * Thêm ô nhập liệu số **"Thứ tự ưu tiên"** vào modal Thêm/Sửa sách trong Admin Dashboard.
+   * Gửi trường `display_order` trong payload API khi thêm hoặc cập nhật sách.
+
+---
+
+## Các thay đổi chi tiết đề xuất
+
+### 1. Cơ sở dữ liệu (Database)
+
+#### [MODIFY] [01_init_schema.sql](file:///e:/it-project/smart_digital_library/sdl-project/database/01_init_schema.sql)
+* Bổ sung cột `display_order INT DEFAULT 0` vào câu lệnh tạo bảng `books`.
+
+#### [NEW] [migrate_display_order.js](file:///e:/it-project/smart_digital_library/sdl-project/src/utils/migrate_display_order.js)
+* Tạo script Node.js chạy một lần câu lệnh SQL:
+  ```sql
+  ALTER TABLE books ADD COLUMN IF NOT EXISTS display_order INT DEFAULT 0;
+  ```
+
+---
+
+### 2. Backend (API)
+
+#### [MODIFY] [Book.js](file:///e:/it-project/smart_digital_library/sdl-project/src/models/Book.js)
+* **Hàm `create`**: Thêm cột `display_order` vào câu lệnh INSERT SQL.
+* **Hàm `getAll`**: Cập nhật logic sắp xếp mặc định (`newest`):
+  ```sql
+  ORDER BY b.display_order DESC, b.created_at DESC
+  ```
+
+#### [MODIFY] [bookController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/bookController.js)
+* **Hàm `createBook`** & **`updateBook`**:
+  * Nhận trường `display_order` từ `req.body`.
+  * Chuẩn hóa và làm sạch dữ liệu thành số nguyên (`parseInt(display_order) || 0`).
+  * Cập nhật trong câu lệnh INSERT / UPDATE SQL tương ứng.
+
+---
+
+### 3. Frontend (Giao diện Admin)
+
+#### [MODIFY] [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+* **State `form`**: Khởi tạo `display_order: 0`.
+* **Hàm `openAddModal`**: Reset `display_order: 0`.
+* **Hàm `openEditModal`**: Điền `display_order: book.display_order || 0`.
+* **Giao diện Modal**:
+  * Tại cột bên trái, ngay dưới checkbox "Nổi bật", thêm một trường nhập số (Number Input) có nhãn: **"Thứ tự ưu tiên (Trang chủ)"**.
+  * Chú thích: *"Sách có điểm ưu tiên cao hơn sẽ xuất hiện trước trên trang 1."*
+
+---
+
+## Hướng dẫn Kiểm thử & Xác minh (Chi tiết)
+
+Sau khi hoàn thành code, chúng ta sẽ thực hiện 6 bước kiểm thử thủ công sau đây để đảm bảo chức năng hoạt động chính xác:
+
+### Bước 1: Chạy script migration để cập nhật database
+* **Hành động:** Chạy lệnh `node src/utils/migrate_display_order.js` từ cửa sổ console ở thư mục backend.
+* **Kết quả mong muốn:** Console thông báo chạy migration thành công, không báo lỗi liên quan đến cú pháp SQL hay kết nối.
+
+### Bước 2: Kiểm tra mặc định
+* **Hành động:** Mở Trang chủ hệ thống.
+* **Kết quả mong muốn:** Giao diện sách hiển thị đúng 8 cuốn sách với thứ tự sắp xếp theo thời gian tạo như cũ (vì điểm `display_order` của mọi sách đang mặc định là `0`).
+
+### Bước 3: Thay đổi thứ tự ưu tiên của một cuốn sách ở cuối
+* **Hành động:** 
+  1. Đăng nhập với tài khoản Admin, đi tới **Admin Dashboard** -> **Quản lý Sách**.
+  2. Chọn cuốn sách thứ 8 (cuốn cuối cùng ở trang 1 hiện tại, ví dụ: **Đắc Nhân Tâm**).
+  3. Bấm **Sửa**, thay đổi **Thứ tự ưu tiên** từ `0` thành `10`.
+  4. Nhấn **Lưu thay đổi**.
+* **Kết quả mong muốn:** Cập nhật thành công không có lỗi.
+
+### Bước 4: Kiểm tra kết quả hiển thị trên Trang chủ
+* **Hành động:** Quay lại Trang chủ, làm mới (F5) trang.
+* **Kết quả mong muốn:** Cuốn **Đắc Nhân Tâm** phải nhảy lên vị trí đầu tiên của trang 1 (do có điểm `10` cao hơn điểm `0` của các cuốn còn lại).
+
+### Bước 5: Cấu hình ưu tiên tương đối giữa nhiều sách
+* **Hành động:** 
+  1. Vẫn ở trang Admin, chọn một cuốn sách khác ở vị trí thấp (ví dụ: **Số Đỏ**).
+  2. Đổi **Thứ tự ưu tiên** thành `20` (lớn hơn điểm `10` của Đắc Nhân Tâm).
+  3. Bấm **Lưu thay đổi**.
+* **Kết quả mong muốn:**
+  * Quay lại Trang chủ và làm mới trang.
+  * Cuốn **Số Đỏ** (điểm `20`) phải vượt lên đứng thứ nhất, cuốn **Đắc Nhân Tâm** (điểm `10`) đứng thứ hai, các cuốn khác (điểm `0`) đứng tiếp sau đó.
+
+### Bước 6: Kiểm tra với các bộ lọc sắp xếp khác
+* **Hành động:** Trên trang chủ, thay đổi hộp chọn sắp xếp (Sort Selector) sang **Giá: Thấp - Cao** hoặc **Giá: Cao - Thấp**.
+* **Kết quả mong muốn:**
+  * Danh sách sách phải được sắp xếp hoàn toàn theo giá của cuốn sách đó.
+  * Điểm `display_order` chỉ được áp dụng ở chế độ mặc định ("Mới nhất") chứ không ghi đè lên các bộ lọc sắp xếp tường minh của người dùng.

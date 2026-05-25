@@ -1,0 +1,92 @@
+# Báo cáo Triển khai: Editorial UI Redesign
+
+Xin chúc mừng! Toàn bộ Cửa hàng Sách trực tuyến của bạn đã được "lột xác" thành công theo đúng template Tạp chí Nghệ thuật (Cup of Couple) mà bạn cung cấp. 
+
+Dưới đây là tổng kết những thay đổi vừa được áp dụng:
+
+## 1. Thiết kế Nền & Chữ (Typography & Background)
+- Đổi màu nền (Background) từ trắng tinh sang **màu be nhạt (Beige `#faf8f5` / `#fcfbf9`)** mang lại cảm giác cổ điển như trang giấy.
+- Tích hợp 2 bộ font chữ chuẩn mực nhất từ Google Fonts:
+  - **Playfair Display (Serif):** Áp dụng cho các phần trang trọng như Logo và Tiêu đề Sách.
+  - **Inter (Sans-serif):** Áp dụng cho các dòng text siêu nhỏ (meta data) để tăng độ rõ nét.
+
+## 2. Navbar Siêu Tối Giản & Slogan Sticky
+- Loại bỏ thanh ngang màu xanh cũ kĩ.
+- **Logo:** Giờ đây logo "Pigeon" được định hình font serif cách điệu cùng 2 cánh bồ câu đối xứng tuyệt đẹp ở hàng đầu tiên.
+- **Thanh Menu:** Nằm ngay bên dưới logo. Các đường link được viết in hoa, cách xa nhau và phân tách bằng các đường kẻ dọc (`|`) cực kỳ sắc sảo (1px).
+- **Thanh quản lý curator:** Thay thế liên kết dạng text thô kệch bằng icon bánh răng (Gear icon) tinh xảo có hiệu ứng xoay 90 độ mượt mà khi di chuột qua.
+- **Avatar Profile:** Chuyển từ dạng hình tròn sang dạng thẻ vuông tối giản phẳng hoàn toàn.
+
+## 3. HomePage & Bộ Lọc
+- **Hero Intro:** Tích hợp một banner Chào mừng hoành tráng nhưng tối giản ngay đầu trang chủ với slogan, văn bản chào mừng và nút bấm khám phá dạng phẳng.
+- **Lưới hiển thị (Grid):** Đổi từ lưới 4 cột chật chội sang lưới 2 cột rộng rãi. Điều này giúp hình ảnh sách được tôn lên tối đa, hệt như các bức tranh trong phòng triển lãm.
+- **Thanh tìm kiếm (Search):** Được thiết kế chìm, in nghiêng *(Search...)*, không viền, mang lại trải nghiệm tinh giản nhất.
+- **Danh mục:** Thay thế dạng nút bấm (Pills) thành các thẻ chữ in hoa, có đường kẻ phân cách tương tự như Navbar.
+
+## 4. Thẻ Sách Đặc Trưng (Book Card)
+- **Hình ảnh:** Trải dài hết chiều ngang thẻ, **không bo góc**, tạo cảm giác mạnh mẽ, góc cạnh. Kèm theo huy hiệu "BESTSELLER" nhỏ xíu ở góc trái.
+- **Phân cách:** Một đường gạch ngang mỏng manh 1px được thêm vào dưới cụm hình ảnh + tiêu đề để phân định nội dung.
+- **Thông tin Meta:** Thể loại và Tác giả ở bên trái, Giá tiền và **Tồn kho thực tế** ở bên phải. 
+- **Nút "Add To Cart":** Đổi thành dạng Text mỏng, viền đen. Chỉ khi người dùng rê chuột vào mới hiển thị màu đen, vô cùng tinh tế.
+
+## 5. Thiết kế lại BookDetailPage (Chi tiết sách)
+- **Tỷ lệ hình ảnh:** Khóa cứng tỷ lệ vàng 3:4 cho ảnh bìa sách để hiển thị chuẩn xác, không bị biến dạng hay méo ảnh.
+- **Bảng Metadata:** Thay thế các hàng thông tin tẻ nhạt bằng bảng phân tách nét đứt (dashed divider) vô cùng lịch lãm.
+- **Nút hành động:** Bố trí nút "Đọc thử" và "Thêm vào giỏ hàng" dạng phẳng lớn, phối hợp màu Ink đậm chất editorial.
+
+## 6. Trải nghiệm Chat AI RAG (ChatPage)
+- **Tin nhắn:** Chuyển đổi tin nhắn của User sang bong bóng phẳng màu cam đất (`#c56017`), tin nhắn AI sang nền trắng viền mỏng không bo góc.
+- **Nguồn trích dẫn (RAG Citation):** Trưng bày các trang trích dẫn dưới dạng nhãn xám mực phẳng chuyên nghiệp, dễ bấm chọn.
+- **Hiệu ứng nghĩ (Thinking):** Thiết kế lại 3 hạt loading nhấp nháy sang tông màu cam đất độc đáo.
+
+## 7. Giỏ hàng & Hộp thoại xác nhận (CartPage & ConfirmDialog)
+- **Giỏ hàng:** Lược bỏ toàn bộ các khối bo góc, thay bằng cấu trúc viền mỏng phẳng, hiển thị danh sách sách thu nhỏ tỉ lệ 3:4.
+- **Xác nhận xóa:** Đồng bộ hóa `ConfirmDialog` với cấu trúc phẳng vuông góc, loại bỏ shadow 2xl và dùng icon cảnh báo cam đất tối giản.
+- **Thông báo:** Đưa toàn bộ các hộp thoại `alert()` hay `confirm()` trình duyệt cũ kĩ về hệ thống `react-hot-toast` và `ConfirmDialog` mượt mà.
+
+> **Cách kiểm tra thành quả:**
+> Toàn bộ dự án đã được build thành công (`npm run build`) không có lỗi. Bạn có thể mở trình duyệt và trải nghiệm dòng chảy mượt mà của giao diện mới ngay lập tức!
+
+## 8. Đồng bộ hóa 5 trang lớn còn lại (Phase 5)
+- **Trang Hồ sơ Cá nhân (`ProfilePage.jsx`):** Layout 2 cột tạp chí nghệ thuật. Thay thế avatar flaticon cũ bằng avatar ký tự viết tắt (Initials Avatar) lồng trong vòng tròn màu be đất, role badge màu dịu nhẹ tinh tế, inputs & buttons phẳng hoàn toàn (`rounded-none`).
+- **Trang Thanh toán & Xác nhận đơn (`CheckoutPage.jsx`):** Gỡ bỏ hoàn toàn `alert` mặc định, thay bằng `useToast`. Khung cổng thanh toán (PayGate) chuyển sang viền nét đứt (dashed border) tối giản. Các nút hành động phẳng vuông vức.
+- **Trang Kết quả Thanh toán (`PaymentResultPage.jsx`):** Các icon Trạng thái được vẽ nét mảnh đơn giản (không dùng hình ảnh sặc sỡ). Nút điều hướng phẳng tối giản.
+- **Trang Lịch sử Đơn hàng (`OrderHistoryPage.jsx`):** Trạng thái đơn (PAID, PENDING, CANCELLED) được bọc trong các viền hộp phẳng mỏng. Tích hợp `useToast` khi thanh toán lại gặp lỗi.
+- **Trang Quản trị Admin (`AdminDashboardPage.jsx`):**
+  - **Tab Quản lý sách:** Header & nút "Thêm sách mới" phẳng cam đất. Bảng dữ liệu phẳng hóa, header in hoa font Sans, viền mỏng. Modal thêm/sửa sách phẳng hoàn toàn, inputs vuông vức, checkboxes thể loại phẳng.
+  - **Tab Quản lý kho:** Bảng quản lý kho, ô nhập số lượng & nút "Lưu" phẳng. Badge tồn kho phẳng viền mảnh có màu sắc dịu nhẹ.
+  - **Tab Vector hóa RAG:** Khung thống kê vector hóa thành các ô chữ nhật phẳng tối giản. Ô chọn file (file inputs) phẳng và nút vector hóa cam đất.
+  - **Tab Quản lý đơn hàng:** Dropdown lọc trạng thái và dropdown chỉnh sửa trạng thái đơn hàng phẳng, tinh tế.
+  - **Tab Quản lý người dùng:** Tìm kiếm phẳng. Thay thế avatar Flaticon sặc sỡ bằng avatar ký tự viết tắt (Initials Avatar) chuyên nghiệp. Dropdown phân quyền phẳng.
+
+## 9. Thêm Phần Chi Tiết Đơn Hàng trong Quản trị
+- **Nút "Chi tiết":** Bổ sung thêm cột **Thao tác** và nút **Chi tiết** phẳng cho từng hàng trong bảng danh sách đơn hàng.
+- **Modal chi tiết (Order Details Modal):** Khi nhấp vào nút "Chi tiết", một Modal phẳng góc cạnh (`rounded-none`, border 1px mỏng) sẽ hiện ra chứa:
+  - Thông tin khách hàng đầy đủ (Họ tên, Email) được bọc trong khung màu be đất tối giản.
+  - Thông tin giao dịch (Ngày đặt hàng) cùng bộ chọn cập nhật trạng thái đơn hàng trực tiếp ngay trong Modal. Thay đổi trạng thái tại đây sẽ tự động đồng bộ hóa ra bảng danh sách phía ngoài nhờ cơ chế Reactive Query.
+  - Bảng liệt kê các sách đã mua với đầy đủ cột: Tên sách (tự động phát hiện `title` hoặc `bookTitle`), Đơn giá, Số lượng và Thành tiền.
+  - Tổng số tiền thanh toán hiển thị lớn, in đậm bằng font Serif màu cam đất đặc trưng (`#c56017`).
+  - Nút Đóng phẳng hoàn toàn để quay lại bảng quản trị nhanh chóng.
+
+## 10. Mở Rộng 6 Trạng Thái Đơn Hàng & Khóa AI Chat khi chưa Giao Thành Công
+- **Quy trình 6 trạng thái:** Đơn hàng được nâng cấp từ 3 trạng thái lên 6 trạng thái: `PENDING` (Chờ xác nhận), `CONFIRMED` (Đã xác nhận), `PACKAGING` (Đóng gói), `DELIVERING` (Đang giao), `DELIVERED` (Đã giao), và `CANCELLED` (Đã hủy).
+- **Khóa AI Chat:** Quyền truy cập vào tính năng **Hỏi đáp AI** được bảo mật toàn diện:
+  - **Backend:** Thêm Middleware kiểm tra quyền sở hữu sách trong API `/api/ai/ask`. Đối với tài khoản khách hàng (`CUSTOMER`), họ bắt buộc phải có đơn hàng chứa cuốn sách đó ở trạng thái `DELIVERED` thì mới có quyền hỏi đáp AI. Quyền truy cập cho `ADMIN` và `CURATOR` được mở để phục vụ mục đích kiểm thử/quản trị.
+  - **Frontend:**
+    - Nút **Hỏi đáp AI** trên trang Lịch sử đơn hàng chỉ hiển thị khi đơn hàng ở trạng thái `DELIVERED`.
+    - Nút **Chat hỏi đáp với Sách (AI RAG)** trên trang Chi tiết sách sẽ tự động chuyển sang trạng thái bị khóa `🔒 AI Chat (Chưa mua / Chưa giao)` kèm theo dòng lưu ý nhỏ màu đỏ ở dưới nếu người dùng chưa mua sách hoặc đơn hàng chưa được giao thành công.
+    - Trang **ChatPage.jsx** sẽ hiển thị giao diện khóa (Lock Screen) tuyệt đẹp với thông điệp rõ ràng và nút hướng dẫn xem chi tiết sách nếu người dùng cố tình truy cập trực tiếp bằng URL mà chưa hoàn thành giao hàng.
+
+## 11. Trang Chi Tiết Đơn Hàng & Timeline Trạng Thái (Khách Hàng)
+- **Backend API chi tiết đơn hàng (`/api/orders/:id`)**:
+  - Hỗ trợ lấy thông tin chi tiết của một đơn hàng cụ thể.
+  - Tích hợp kiểm tra bảo mật: Khách hàng chỉ được phép xem các đơn hàng của chính mình (nếu cố tình nhập ID đơn hàng của người khác sẽ trả về lỗi `403 Forbidden`). Các tài khoản quản trị (`ADMIN`, `CURATOR`) được phép xem mọi đơn hàng.
+  - Truy vấn kết hợp lấy đầy đủ chi tiết tên sách (`bookTitle`) và tác giả (`bookAuthor`) cho các mặt hàng trong đơn hàng.
+- **Frontend Trang Chi tiết đơn hàng (`OrderDetailPage.jsx` - `/orders/:id`)**:
+  - **Timeline tiến trình (Stepper)**: Thiết kế chỉ báo tiến trình 5 bước phẳng, tinh tế và responsive (`PENDING` -> `CONFIRMED` -> `PACKAGING` -> `DELIVERING` -> `DELIVERED`). Các bước đã hoàn thành hoặc đang thực hiện được làm sáng rõ bằng màu cam đất `#c56017` kèm dấu tick, bước kế tiếp hiển thị dạng khóa mờ. Nếu đơn hàng bị hủy (`CANCELLED`), giao diện hiển thị hộp thông báo khẩn cấp màu đỏ cảnh báo.
+  - **Bảng chi tiết sản phẩm**: Hiển thị danh sách đầy đủ, cụ thể từng sản phẩm đã mua, số lượng, đơn giá và thành tiền tương ứng.
+  - **Tích hợp nút hành động trực tiếp**:
+    - Nút "Thanh toán ngay" (chỉ khi đơn hàng đang ở trạng thái `PENDING`).
+    - Nút "Hỏi đáp AI" trực tiếp cạnh mỗi đầu sách để vào phòng chat ngay khi đơn hàng chuyển sang `DELIVERED`. Với các trạng thái khác, nút sẽ chuyển thành dạng khoá và hiển thị `AI Chat (Khi đã giao)`.
+  - **Điều hướng mượt mà**: Bổ sung nút quay lại trang Lịch sử đơn hàng và nút "Chi tiết" trên mỗi thẻ đơn hàng tại trang `/orders`.
+

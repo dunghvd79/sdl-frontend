@@ -1,0 +1,68 @@
+# Kế Hoạch Xác Minh & Tăng Cường Phân Quyền Quản Lý Đơn Hàng
+
+Chúng ta cần phân quyền hệ thống rõ ràng theo đúng yêu cầu:
+1. **Admin và Curator**: Được phép xem danh sách tất cả đơn hàng và quản lý cập nhật trạng thái đơn hàng.
+2. **Người dùng thông thường (Customer)**: Chỉ được phép xem danh sách đơn hàng đã đặt của chính mình, xem chi tiết đơn hàng của mình, và thực hiện thanh toán lại cho đơn hàng `PENDING` của mình. Họ tuyệt đối không thể thay đổi trạng thái đơn hàng thủ công hoặc xem đơn hàng của người khác.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> - Chúng ta đã rà soát toàn diện cơ chế bảo mật ở cả **Frontend** và **Backend** để đảm bảo không có lỗ hổng rò rỉ thông tin hoặc bỏ qua bước xác thực quyền.
+> - Phát hiện một điểm cần thắt chặt bảo mật ở Backend: API tạo link thanh toán VNPay (`/api/payments/url/:orderId`) hiện tại chưa kiểm tra quyền sở hữu đơn hàng của người gọi. Chúng ta sẽ bổ sung kiểm tra quyền sở hữu tại đây.
+
+---
+
+## Proposed Changes
+
+### 1. Backend (`E:\sdl-project`)
+
+#### [MODIFY] [paymentController.js](file:///E:/sdl-project/src/controllers/paymentController.js)
+- Thêm kiểm tra quyền sở hữu đơn hàng trong API `getPaymentUrl`:
+  - Lấy thông tin đơn hàng bằng `Order.findById(orderId)`.
+  - Nếu người dùng có role là `CUSTOMER` và `order.user_id !== req.user.id`, trả về lỗi `403 Forbidden` ("Bạn không có quyền thanh toán cho đơn hàng này!").
+
+---
+
+## Current Security Overview (Đã Hoạt Động Ổn Định)
+
+### A. Frontend Phân Quyền Hành Vi
+1. **Bảo vệ Route `/admin`**:
+   - Route `/admin` được bọc bởi component `<ProtectedRoute roles={['ADMIN', 'CURATOR']}>` tại [App.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/App.jsx#L57).
+   - Nếu người dùng thuộc role `CUSTOMER` cố tình truy cập vào `/admin`, họ sẽ tự động bị chuyển hướng về trang chủ `/`.
+2. **Ẩn các Menu Quản Trị**:
+   - Menu dẫn đến trang Admin (icon Settings trên Navbar) được ẩn đi đối với role `CUSTOMER` tại [Navbar.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/components/Navbar.jsx#L155).
+3. **Trang Chi Tiết Đơn Hàng Khách Hàng**:
+   - Trang [OrderDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderDetailPage.jsx) của khách hàng được thiết kế hoàn toàn ở chế độ **Chỉ xem (Read-only)**.
+   - Khách hàng chỉ xem được tiến trình giao hàng dưới dạng tĩnh (Timeline) và không có bất kỳ nút cập nhật trạng thái hay hủy đơn hàng nào (ngoại trừ nút "Thanh toán ngay" nếu đơn hàng là `PENDING`).
+
+### B. Backend Xác Thực & Phân Quyền Dữ Liệu
+1. **Middleware Xác Thực Role**:
+   - Middleware `requireRole` tại [auth.js](file:///E:/sdl-project/src/middleware/auth.js#L30) chặn đứng tất cả request không đúng role được cấu hình ở route.
+2. **Bảo Vệ API Danh Sách Đơn Hàng**:
+   - API lấy danh sách toàn bộ đơn hàng `/api/admin/orders` và API cập nhật trạng thái đơn hàng `/api/admin/orders/:orderId/status` đều yêu cầu quyền `['ADMIN', 'CURATOR']` qua middleware `requireRole`.
+3. **Ràng Buộc Dữ Liệu Khách Hàng**:
+   - API lấy danh sách đơn hàng cá nhân `/api/orders` chỉ truy vấn đơn hàng của chính user đang đăng nhập dựa trên ID giải mã từ Token: `OrderService.getUserOrders(req.user.id)`.
+   - API lấy chi tiết đơn hàng `/api/orders/:id` kiểm tra: Nếu user không phải nhân viên (`ADMIN`/`CURATOR`) và không phải chủ sở hữu đơn hàng (`order.user_id !== req.user.id`), hệ thống lập tức từ chối bằng lỗi `403 Forbidden` tại [orderController.js](file:///E:/sdl-project/src/controllers/orderController.js#L41).
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Kiểm tra quá trình compile / build dự án Frontend không gặp lỗi linter hay cấu trúc:
+  ```powershell
+  npm run build
+  ```
+
+### Manual Verification
+1. Đăng nhập với tài khoản **Customer** (Ví dụ: Dai Bui):
+   - Truy cập vào trang chủ, Navbar không hiện icon Settings.
+   - Thử truy cập trực tiếp URL `/admin`, hệ thống chuyển hướng ngược về `/`.
+   - Gọi API `/api/admin/orders` hoặc `/api/admin/orders/1/status` bằng công cụ API/Postman (sử dụng Token của Customer) xem có nhận về lỗi `403 Forbidden` không.
+   - Kiểm tra trang `/orders` và `/orders/:id` chỉ hiển thị đơn hàng của chính mình. Thử thay đổi ID đơn hàng trên thanh địa chỉ sang ID đơn hàng của người khác xem có nhận lỗi `403` hoặc thông báo lỗi không.
+   - Thử lấy link thanh toán cho đơn hàng của người khác thông qua API `/api/payments/url/:orderId` xem có bị chặn `403` không.
+2. Đăng nhập với tài khoản **Admin/Curator**:
+   - Icon Settings xuất hiện trên Navbar để truy cập trang quản trị `/admin`.
+   - Có thể xem danh sách đơn hàng và thực hiện chuyển trạng thái đơn hàng bình thường.

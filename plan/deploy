@@ -1,0 +1,83 @@
+# Kế hoạch triển khai: Deploy ứng dụng Smart Digital Library lên Production (Vercel & Render)
+
+Tài liệu này vạch ra chiến lược và kế hoạch từng bước để triển khai toàn bộ hệ thống lên môi trường chạy thực tế công khai (Production).
+
+---
+
+## 🎯 Mục tiêu
+1. **Frontend**: Triển khai trang tĩnh React (Vite) lên **Vercel** để tối ưu hóa hiệu suất, tốc độ tải và khả năng tự động cập nhật từ Git.
+2. **Backend**: Triển khai Express server lên **Render** (hoặc **Railway**) chạy môi trường Node.js ổn định.
+3. **Database**: Khởi tạo cơ sở dữ liệu **PostgreSQL** trên mây và thực thi di cư dữ liệu (migrations).
+4. **Kết nối Full-stack**: Đảm bảo cổng thanh toán PayOS hoạt động hoàn hảo và liên thông bảo mật HTTPS giữa Vercel và Render.
+
+---
+
+## 🗺️ Kế hoạch hành động 5 giai đoạn
+
+### Giai đoạn 1: Chuẩn bị mã nguồn và tách Repository (GitHub)
+Do hiện tại ứng dụng đang nằm chung trong một không gian làm việc cục bộ, chúng ta cần tách chúng thành 2 kho lưu trữ GitHub độc lập:
+1. **Repository 1: `sdl-backend`** (chứa toàn bộ thư mục [sdl-project](file:///e:/it-project/smart_digital_library/sdl-project))
+2. **Repository 2: `sdl-frontend`** (chứa toàn bộ thư mục [sdl-frontend](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend))
+
+---
+
+### Giai đoạn 2: Khởi tạo và đồng bộ Cơ sở dữ liệu (PostgreSQL Cloud)
+Chúng ta sẽ tạo một cơ sở dữ liệu PostgreSQL trực tuyến miễn phí trên **Render** (hoặc **Supabase**):
+1. Đăng nhập vào Render, tạo một dịch vụ **PostgreSQL** mới.
+2. Sao chép chuỗi kết nối Database trực tuyến (External Connection String).
+3. **Mẹo chạy Migration an toàn**:
+   - Tại máy cục bộ, tạm thời sửa tệp `.env` của backend, trỏ các thông số `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` tới cơ sở dữ liệu trực tuyến vừa tạo.
+   - Chạy lệnh di cư dữ liệu để khởi tạo toàn bộ bảng trên mây:
+     ```bash
+     npm run migrate
+     ```
+   - Chạy các tệp script di cư bổ sung (như `migrate_articles.js`, `migration_coupons.js`...) nếu có để đảm bảo cấu trúc database trực tuyến hoàn thiện 100%.
+   - Chạy lệnh `npm run seed:users` để nạp sẵn các tài khoản thử nghiệm (`admin@test.vn`, `curator@test.vn`, `customer@test.vn`).
+   - Trả lại thông số `.env` cục bộ về kết nối `localhost` để tiếp tục làm việc offline.
+
+---
+
+### Giai đoạn 3: Triển khai Backend (`sdl-backend`) lên Render
+1. Tạo một **Web Service** mới trên Render và liên kết với kho lưu trữ GitHub `sdl-backend`.
+2. Thiết lập cấu hình chạy:
+   - **Environment**: `Node`
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start` (thực thi `node src/server.js`)
+3. Thêm các biến môi trường cấu hình tại mục **Environment** của Render:
+   - `NODE_ENV`: `production`
+   - `PORT`: `3000` (hoặc để Render tự định nghĩa)
+   - Các biến kết nối Database trực tuyến: `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`.
+   - Khóa bảo mật: `JWT_SECRET` (khóa tự chọn để mã hóa token).
+   - Khóa cổng thanh toán: `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY`.
+4. Nhấn **Deploy** và chờ Render cấp URL chính thức (dạng `https://your-backend.onrender.com`).
+
+---
+
+### Giai đoạn 4: Triển khai Frontend (`sdl-frontend`) lên Vercel
+1. Đăng nhập vào **Vercel** bằng GitHub.
+2. Nhấn **Add New Project** -> Chọn kho lưu trữ `sdl-frontend`.
+3. Cấu hình cài đặt dự án (Vercel tự động nhận diện Vite):
+   - **Framework Preset**: `Vite`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+4. Cấu hình **Environment Variables**:
+   - Thêm biến `VITE_API_URL` trỏ về địa chỉ backend đã deploy:
+     `https://your-backend.onrender.com/api`
+5. Nhấn **Deploy**. Vercel sẽ biên dịch dự án tĩnh và cấp cho bạn một tên miền HTTPS miễn phí (dạng `https://your-frontend.vercel.app`).
+
+---
+
+### Giai đoạn 5: Cấu hình cổng thanh toán & Kiểm thử E2E
+1. **Cập nhật URL trên PayOS**:
+   - Đăng nhập vào cổng quản trị PayOS.
+   - Cập nhật địa chỉ Webhook thành:
+     `https://your-backend.onrender.com/api/payments/payos_webhook`
+2. **Kiểm thử E2E (End-to-End)**:
+   - Truy cập vào trang web trên Vercel của bạn.
+   - Thử nghiệm toàn bộ luồng đăng nhập, mua sách, thanh toán VietQR qua PayOS, đối soát tự động thành công và mở khóa tủ sách RAG AI.
+
+---
+
+## 🔒 Kiểm tra Bảo mật & Lưu ý quan trọng
+* [WARNING] Tuyệt đối không đẩy tệp `.env` lên GitHub công khai. Luôn thêm `.env` vào tệp `.gitignore` trước khi push code.
+* [NOTE] Môi trường Render miễn phí (Free Tier) sẽ tự động đi vào trạng thái "ngủ" (spin down) sau 15 phút không có lượt truy cập. Ở lượt truy cập đầu tiên sau khi ngủ, server sẽ mất khoảng 50 giây để khởi động lại. Điều này hoàn toàn bình thường đối với gói dịch vụ miễn phí.

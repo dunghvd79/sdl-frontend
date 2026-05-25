@@ -1,0 +1,60 @@
+# Kế Hoạch Thiết Kế Lại Trang Đơn Hàng Của Tôi (Order History Page)
+
+Chúng ta sẽ tái cấu trúc và thiết kế lại giao diện trang Lịch sử đơn hàng (`OrderHistoryPage.jsx`) của người dùng để nâng tầm trải nghiệm, mang phong cách tinh tế, hiện đại và chuyên nghiệp (phù hợp với định hướng thiết kế Editorial / Premium của Pigeon Bookstore).
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> - Chúng ta sẽ thiết kế một bảng thống kê nhỏ ở đầu trang hiển thị: **Tổng đơn hàng**, **Đơn đang giao**, **Đơn hoàn thành**, và **Tổng tích lũy** (chỉ tính đơn đã giao thành công).
+> - Thêm bộ lọc Tab ngang động phân chia theo các trạng thái đơn hàng (`Tất cả`, `Chờ xác nhận`, `Đang xử lý`, `Đang giao`, `Đã giao`, `Đã hủy`) kèm theo số lượng đơn cụ thể ở mỗi trạng thái để người dùng dễ quản lý.
+> - Thêm tính năng **Tìm kiếm đơn hàng** theo mã đơn hoặc tên sách.
+> - Bổ sung ảnh bìa đại diện của các cuốn sách nằm trong đơn hàng (sử dụng API ảnh seed như trang chủ) để giao diện trực quan và thu hút hơn thay vì danh sách chữ thuần túy.
+
+---
+
+## Proposed Changes
+
+### 1. Frontend (`sdl-frontend`)
+
+#### [MODIFY] [OrderHistoryPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderHistoryPage.jsx)
+- **Cải tiến Header & Tabs chính**:
+  - Thiết kế lại phần chuyển hướng Tab giữa "Hồ sơ cá nhân" và "Đơn hàng của tôi" bằng phong cách tinh gọn hơn, có icon trực quan (User, Shopping Bag).
+- **Thêm Bảng Chỉ số Tổng quan (Stats Grid)**:
+  - 4 thẻ thống kê: Tổng đơn hàng, Đang xử lý & giao, Đã giao thành công, Tổng chi tiêu tích lũy.
+  - Sử dụng Font Serif sang trọng cho số liệu lớn và Font Sans cho nhãn mô tả.
+- **Thêm Thanh Tìm kiếm & Bộ lọc Trạng thái (Filter Tabs)**:
+  - Bộ lọc Tab ngang hiển thị số lượng đơn hàng tương ứng với từng trạng thái: `Tất cả` | `Chờ xác nhận` | `Đang xử lý` (bao gồm Confirmed & Packaging) | `Đang giao` | `Đã giao` | `Đã hủy`.
+  - Ô tìm kiếm thanh lịch bên cạnh bộ lọc để tìm kiếm nhanh theo Mã đơn hàng hoặc Tên sách.
+- **Thiết kế lại Thẻ Đơn hàng (Order Card)**:
+  - **Khung chứa**: Tăng khoảng cách, thêm bóng đổ nhẹ `shadow-sm` và hiệu ứng hover nổi lên `hover:shadow-md hover:border-ink/20 transition-all duration-300`.
+  - **Phần đầu (Header)**:
+    - Có icon lịch trước ngày đặt hàng và icon hóa đơn trước mã đơn.
+    - Trạng thái badge được cách điệu mềm mại hơn, có chấm tròn màu sắc biểu thị trạng thái (Ví dụ: `● Đã giao` màu xanh lá cây, `● Chờ xác nhận` màu vàng nhấp nháy).
+  - **Danh sách sản phẩm**:
+    - Hiển thị ảnh bìa thu nhỏ cho mỗi cuốn sách bằng cách sử dụng link seed ảnh giống `BookCard.jsx` (`https://picsum.photos/seed/{bookId}/120/160`).
+    - Bố cục thông tin: Tên sách (font Serif, in đậm nhẹ), Tác giả, số lượng, đơn giá và tổng phụ.
+    - Đặt nút **Hỏi đáp AI** tinh gọn ngay bên cạnh mỗi cuốn sách (nếu đơn hàng có trạng thái `DELIVERED`). Nút này sẽ có hover chuyển màu terracotta sang trọng.
+  - **Phần chân (Footer)**:
+    - Hiển thị tổng số tiền với kích thước chữ lớn, font Serif, màu terracotta nổi bật (`text-[#c56017]`).
+    - Nút hành động: "Chi tiết" (màu tối tối giản, viền mảnh), "Thanh toán ngay" (nổi bật bằng màu terracotta).
+- **Thiết kế Trạng thái Trống (Empty State)**:
+  - Thiết kế trang nhã với hình minh họa túi hàng trống (SVG), thông điệp rõ ràng và nút "Khám phá Cửa hàng" để dẫn dắt hành vi mua sắm của người dùng.
+
+---
+
+## Verification Plan
+
+### Kiểm tra tự động
+- Chạy thử biên dịch production để đảm bảo không có lỗi linter hay lỗi cú pháp:
+  ```powershell
+  npm run build
+  ```
+
+### Kiểm tra thủ công
+1. Đăng nhập tài khoản khách hàng và truy cập `/orders`.
+2. Kiểm tra giao diện hiển thị các chỉ số thống kê (Stats) và tính đúng đắn của các con số (ví dụ: Tổng tích lũy có khớp với tổng tiền các đơn `DELIVERED` không).
+3. Bấm qua lại các tab bộ lọc trạng thái (`Tất cả`, `Chờ xác nhận`, `Đang giao`, v.v.) và kiểm tra xem danh sách đơn hàng có cập nhật chính xác theo tab được chọn không.
+4. Thử tìm kiếm đơn hàng bằng cách gõ mã đơn hoặc tên sách vào thanh tìm kiếm.
+5. Kiểm tra tính thẩm mỹ của ảnh bìa sách, căn chỉnh các trường thông tin trên thiết bị di động (Responsive) và máy tính.

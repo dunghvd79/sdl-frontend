@@ -1,0 +1,512 @@
+import React, { useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../services/api';
+import { useToast } from '../context/ToastContext';
+import { useCart } from '../context/CartContext';
+import { getImageUrl } from '../services/image';
+import ConfirmDialog from '../components/ConfirmDialog';
+
+export default function OrderDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const { fetchCartCount } = useCart();
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+
+  // 1. Fetch chi tiết đơn hàng
+  const { data: orderResponse, isLoading, isError, refetch } = useQuery({
+    queryKey: ['orderDetail', id],
+    queryFn: async () => {
+      const response = await api.get(`/orders/${id}`);
+      return response.data.data;
+    }
+  });
+
+  const order = orderResponse || null;
+
+  // 2. Mutation để thanh toán lại đơn hàng PENDING
+  const payMutation = useMutation({
+    mutationFn: async (orderId) => {
+      const response = await api.get(`/payments/url/${orderId}`);
+      return response.data.paymentUrl;
+    },
+    onSuccess: (paymentUrl) => {
+      window.location.href = paymentUrl;
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || err.message, { title: 'Lỗi thanh toán' });
+    }
+  });
+
+  const handlePayNow = (orderId) => {
+    payMutation.mutate(orderId);
+  };
+
+  const reorderMutation = useMutation({
+    mutationFn: async (items) => {
+      const payload = items.map(item => ({ bookId: item.bookId, quantity: item.quantity }));
+      return api.post('/cart/add-batch', { items: payload });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['cartDetail']);
+      fetchCartCount();
+      toast.success('Đã thêm toàn bộ sản phẩm của đơn cũ vào giỏ hàng!', { title: 'Mua lại thành công 🛒' });
+      navigate('/cart');
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || err.message, { title: 'Lỗi mua lại' });
+    }
+  });
+
+  const handleReorder = (items) => {
+    if (!items || items.length === 0) {
+      toast.warning('Đơn hàng không có sản phẩm nào để mua lại!', { title: 'Lỗi mua lại' });
+      return;
+    }
+    reorderMutation.mutate(items);
+  };
+
+  const cancelOrderMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.put(`/orders/${id}/cancel`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['orderDetail', id]);
+      queryClient.invalidateQueries(['myOrders']);
+      toast.success('Hủy đơn hàng thành công!', { title: 'Đã hủy đơn hàng' });
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || err.message, { title: 'Lỗi hủy đơn hàng' });
+    }
+  });
+
+  // Xác định vị trí trạng thái trong Timeline
+  const getStepIndex = (status) => {
+    switch (status) {
+      case 'PENDING': return 0;
+      case 'CONFIRMED': return 1;
+      case 'PACKAGING': return 2;
+      case 'DELIVERING': return 3;
+      case 'DELIVERED': return 4;
+      default: return -1;
+    }
+  };
+
+  const steps = [
+    { label: 'Chờ xác nhận', desc: 'Đơn chờ hệ thống xử lý' },
+    { label: 'Đã xác nhận', desc: 'Đã thanh toán / Đã duyệt' },
+    { label: 'Đóng gói', desc: 'Đang soạn và đóng gói sách' },
+    { label: 'Đang giao', desc: 'Đang vận chuyển đến bạn' },
+    { label: 'Đã giao', desc: 'Giao hàng thành công' }
+  ];
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'PENDING':
+        return (
+          <span className="border border-amber-300 text-amber-700 bg-amber-50/50 text-[10px] font-semibold px-3 py-1 rounded-none uppercase tracking-wider">
+            Chờ xác nhận
+          </span>
+        );
+      case 'CONFIRMED':
+        return (
+          <span className="border border-blue-200 text-blue-700 bg-blue-50/50 text-[10px] font-semibold px-3 py-1 rounded-none uppercase tracking-wider">
+            Đã xác nhận
+          </span>
+        );
+      case 'PACKAGING':
+        return (
+          <span className="border border-indigo-200 text-indigo-700 bg-indigo-50/50 text-[10px] font-semibold px-3 py-1 rounded-none uppercase tracking-wider">
+            Đóng gói
+          </span>
+        );
+      case 'DELIVERING':
+        return (
+          <span className="border border-orange-200 text-orange-700 bg-orange-50/50 text-[10px] font-semibold px-3 py-1 rounded-none uppercase tracking-wider">
+            Đang giao
+          </span>
+        );
+      case 'DELIVERED':
+        return (
+          <span className="border border-green-200 text-green-700 bg-green-50/50 text-[10px] font-semibold px-3 py-1 rounded-none uppercase tracking-wider">
+            Đã giao
+          </span>
+        );
+      case 'CANCELLED':
+      default:
+        return (
+          <span className="border border-red-200 text-red-700 bg-red-50/50 text-[10px] font-semibold px-3 py-1 rounded-none uppercase tracking-wider">
+            Đã hủy
+          </span>
+        );
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-6xl mx-auto py-16 px-4 flex-grow w-full">
+        <div className="animate-pulse space-y-6">
+          <div className="h-6 w-32 bg-[#f0ece7]"></div>
+          <div className="h-10 w-64 bg-[#f0ece7]"></div>
+          <div className="h-40 bg-[#f0ece7]"></div>
+          <div className="h-60 bg-[#f0ece7]"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !order) {
+    return (
+      <div className="max-w-6xl mx-auto py-20 px-4 text-center flex-grow w-full">
+        <div className="border border-red-200 p-8 bg-white inline-block rounded-none">
+          <p className="text-sm font-medium text-red-700 mb-4">Không thể tải thông tin đơn hàng này.</p>
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={() => refetch()}
+              className="bg-ink hover:bg-ink-light text-white px-6 py-2.5 rounded-none transition-colors font-medium text-xs uppercase tracking-wider"
+            >
+              Thử lại
+            </button>
+            <Link
+              to="/orders"
+              className="border border-divider hover:bg-surface-warm text-ink px-6 py-2.5 rounded-none transition-colors font-medium text-xs uppercase tracking-wider"
+            >
+              Quay lại danh sách
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const currentStep = getStepIndex(order.status);
+  const orderDate = new Date(order.created_at).toLocaleDateString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  return (
+    <div className="max-w-6xl mx-auto py-12 px-4 flex-grow w-full text-ink">
+      {/* Breadcrumbs & Header */}
+      <div className="mb-8">
+        <Link
+          to="/orders"
+          className="inline-flex items-center text-xs uppercase tracking-wider text-ink-light hover:text-ink transition-colors font-semibold gap-1.5"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Quay lại Lịch sử đơn hàng
+        </Link>
+        <div className="flex flex-wrap justify-between items-center gap-4 mt-4 border-b border-divider pb-6">
+          <div>
+            <h1 className="text-3xl font-serif font-medium text-ink">ĐƠN HÀNG #{order.id}</h1>
+            <p className="text-ink-light text-xs mt-1.5">Đặt ngày: {orderDate}</p>
+          </div>
+          <div className="flex items-center gap-4">
+            {order.status === 'DELIVERED' && (
+              <button
+                onClick={() => handleReorder(order.items)}
+                disabled={reorderMutation.isPending}
+                className="border border-[#2C4A3B] text-[#2C4A3B] hover:bg-[#2C4A3B] hover:text-white bg-white font-bold py-2 px-6 rounded-none text-xs transition-all shadow-sm hover:shadow uppercase tracking-wider flex items-center gap-1.5 active:translate-y-px disabled:opacity-50"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89" />
+                </svg>
+                Mua lại
+              </button>
+            )}
+            {['PENDING', 'CONFIRMED', 'PACKAGING'].includes(order.status) && (
+              <button
+                onClick={() => setIsCancelDialogOpen(true)}
+                disabled={cancelOrderMutation.isPending}
+                className="border border-red-200 hover:bg-red-50 text-red-600 font-bold py-2 px-5 rounded-none text-xs transition-all shadow-sm hover:shadow uppercase tracking-wider flex items-center gap-1.5 active:translate-y-px disabled:opacity-50"
+              >
+                Hủy đơn
+              </button>
+            )}
+            {getStatusBadge(order.status)}
+            {order.status === 'PENDING' && order.payment_method !== 'COD' && (
+              <button
+                onClick={() => handlePayNow(order.id)}
+                disabled={payMutation.isPending}
+                className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-medium py-2 px-6 rounded-none text-xs transition-colors shadow-none uppercase tracking-wider"
+              >
+                Thanh toán ngay
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Stepper Timeline */}
+      <div className="bg-white border border-divider rounded-none p-8 mb-8 shadow-none">
+        <h3 className="text-xs uppercase tracking-wider font-semibold text-ink-light mb-8">Trạng thái vận chuyển</h3>
+        
+        {order.status === 'CANCELLED' ? (
+          <div className="border border-red-200 bg-red-50/30 p-5 rounded-none flex items-start gap-4">
+            <div className="bg-red-100 text-red-700 p-2 rounded-none">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-serif font-semibold text-red-800 text-sm">ĐƠN HÀNG ĐÃ BỊ HỦY</h4>
+              <p className="text-red-700/80 text-xs mt-1">Đơn hàng này không được tiếp tục xử lý. Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ bộ phận hỗ trợ khách hàng của thư viện.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="relative">
+            {/* Line connector for large screens */}
+            <div className="absolute top-5 left-1/10 right-1/10 h-0.5 bg-divider hidden md:block z-0" />
+            
+            {/* Steps Container */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 md:gap-4 relative z-10">
+              {steps.map((step, idx) => {
+                const isCompleted = idx < currentStep;
+                const isActive = idx === currentStep;
+                const isFuture = idx > currentStep;
+
+                return (
+                  <div key={idx} className="flex md:flex-col items-start md:items-center text-left md:text-center gap-4 md:gap-2">
+                    {/* Circle Indicator */}
+                    <div
+                      className={`w-10 h-10 flex items-center justify-center border font-mono text-xs font-bold transition-all ${
+                        isCompleted
+                          ? 'bg-[#2C4A3B] border-[#2C4A3B] text-white'
+                          : isActive
+                          ? 'bg-white border-[#2C4A3B] text-[#2C4A3B] ring-4 ring-[#2C4A3B]/10 animate-pulse'
+                          : 'bg-white border-divider text-ink-light'
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        idx + 1
+                      )}
+                    </div>
+
+                    {/* Step Text Info */}
+                    <div className="flex-grow">
+                      <h4
+                        className={`text-xs uppercase tracking-wider font-semibold ${
+                          isActive
+                            ? 'text-[#2C4A3B]'
+                            : isCompleted
+                            ? 'text-ink font-medium'
+                            : 'text-ink-light'
+                        }`}
+                      >
+                        {step.label}
+                      </h4>
+                      <p className="text-[11px] text-ink-light mt-0.5 md:max-w-[140px] md:mx-auto">
+                        {step.desc}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Main Info Split Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left side: Items bought */}
+        <div className="lg:col-span-5 flex flex-col">
+          <div className="bg-white border border-divider rounded-none p-6 shadow-none flex-grow">
+            <h3 className="text-xs uppercase tracking-wider font-semibold text-ink-light mb-6 border-b border-divider pb-3">Chi tiết sản phẩm</h3>
+            <div className="divide-y divide-divider">
+              {order.items.map((item, idx) => {
+                const title = item.bookTitle || 'Cuốn sách chưa rõ tên';
+                const author = item.bookAuthor || 'Khuyết danh';
+                const price = Number(item.price);
+                const subtotal = price * item.quantity;
+                const coverUrl = item.cover_url 
+                  ? getImageUrl(item.cover_url) 
+                  : `https://picsum.photos/seed/${item.bookId}/800/1000`;
+
+                return (
+                  <div key={idx} className="py-4 first:pt-0 last:pb-0 flex items-start gap-4">
+                    {/* Book Cover Thumbnail */}
+                    <div className="w-14 sm:w-16 aspect-[3/4] border border-divider bg-surface-warm flex-shrink-0 overflow-hidden shadow-none">
+                      <img 
+                        src={coverUrl} 
+                        alt={title} 
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        onError={(e) => { e.target.src = `https://picsum.photos/seed/${item.bookId}/800/1000`; }}
+                      />
+                    </div>
+
+                    {/* Text info and actions */}
+                    <div className="flex-grow flex flex-col sm:flex-row justify-between items-start gap-3">
+                      <div className="space-y-1 flex-grow">
+                        <h4 className="font-serif font-semibold text-ink text-base leading-tight hover:text-[#2C4A3B] transition-colors line-clamp-2">
+                          <Link to={`/books/${item.bookId}`}>{title}</Link>
+                        </h4>
+                        <p className="text-ink-light text-xs">Tác giả: <span className="text-ink font-medium">{author}</span></p>
+                        <p className="text-ink-light text-xs font-mono">
+                          {item.quantity} x {price.toLocaleString('vi-VN')} đ
+                        </p>
+                      </div>
+
+                      <div className="text-left sm:text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2.5 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t border-dashed border-divider-lt sm:border-t-0 flex-shrink-0">
+                        <span className="font-semibold font-mono text-sm text-[#2C4A3B]">{subtotal.toLocaleString('vi-VN')} đ</span>
+                        {order.status === 'DELIVERED' ? (
+                          <Link
+                            to={`/books/${item.bookId}/chat`}
+                            className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white text-[10px] font-semibold py-1.5 px-4 rounded-none transition-colors uppercase tracking-wider inline-flex items-center gap-1.5"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            Hỏi đáp AI
+                          </Link>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[9px] text-ink-light uppercase tracking-wider font-semibold border border-divider px-2.5 py-1 bg-surface-warm/50 cursor-not-allowed">
+                            <svg className="w-3.5 h-3.5 text-ink-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            AI Chat (Khi đã giao)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Middle side: Payment summary & general info */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* Thông tin khách hàng */}
+          <div className="bg-white border border-divider rounded-none p-6 shadow-none">
+            <h3 className="text-xs uppercase tracking-wider font-semibold text-ink-light mb-4 border-b border-divider pb-3">Thông tin khách hàng</h3>
+            <div className="space-y-3.5 text-xs font-sans">
+              <div>
+                <span className="text-ink-light uppercase tracking-wider block mb-1">Người nhận:</span>
+                <span className="font-semibold text-ink text-sm block">{order.shipping_name || order.full_name || 'Người dùng thư viện'}</span>
+              </div>
+              <div>
+                <span className="text-ink-light uppercase tracking-wider block mb-1">Số điện thoại:</span>
+                <span className="font-medium text-ink block">{order.shipping_phone || 'Chưa cung cấp'}</span>
+              </div>
+              <div>
+                <span className="text-ink-light uppercase tracking-wider block mb-1">Địa chỉ giao hàng:</span>
+                <span className="font-medium text-ink block leading-relaxed">{order.shipping_address || 'Chưa cung cấp'}</span>
+              </div>
+              <div className="border-t border-divider pt-3.5">
+                <span className="text-ink-light uppercase tracking-wider block mb-1">Tài khoản (Email):</span>
+                <span className="font-mono text-ink-light block break-all">{order.email}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Thông tin đơn hàng */}
+          <div className="bg-white border border-divider rounded-none p-6 shadow-none">
+            <h3 className="text-xs uppercase tracking-wider font-semibold text-ink-light mb-4 border-b border-divider pb-3">Thông tin đơn hàng</h3>
+            <div className="space-y-3.5 text-xs font-sans">
+              <div className="flex justify-between items-center">
+                <span className="text-ink-light uppercase tracking-wider">Ngày đặt:</span>
+                <span className="font-medium text-ink">{new Date(order.created_at).toLocaleDateString('vi-VN')}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-ink-light uppercase tracking-wider">Trạng thái:</span>
+                <span>{getStatusBadge(order.status)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-ink-light uppercase tracking-wider">Phương thức:</span>
+                <span className="font-medium text-ink">
+                  {order.payment_method === 'COD' ? 'Tiền mặt (COD)' : 'PayOS (VietQR) trực tuyến'}
+                </span>
+              </div>
+              {order.shipping_notes && (
+                <div className="border-t border-divider pt-3.5">
+                  <span className="text-ink-light uppercase tracking-wider block mb-1">Ghi chú:</span>
+                  <span className="text-ink italic leading-relaxed block bg-surface-warm/40 p-2.5 border border-divider/60">{order.shipping_notes}</span>
+                </div>
+              )}
+              
+              <div className="border-t border-divider pt-3.5 space-y-2">
+                {Number(order.discount_amount || 0) > 0 ? (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-ink-light uppercase tracking-wider">Tiền gốc:</span>
+                      <span className="font-medium text-ink">
+                        {(Number(order.total_amount) + Number(order.discount_amount || 0)).toLocaleString('vi-VN')} đ
+                      </span>
+                    </div>
+                    {order.coupon_code && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-ink-light uppercase tracking-wider">Mã giảm giá:</span>
+                        <span className="font-semibold text-[#2C4A3B] uppercase bg-[#fdfaf7] px-1.5 py-0.5 border border-[#2C4A3B]/20">
+                          {order.coupon_code}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center text-[#2C4A3B]">
+                      <span className="uppercase tracking-wider">Giảm giá:</span>
+                      <span className="font-medium">
+                        -{Number(order.discount_amount).toLocaleString('vi-VN')} đ
+                      </span>
+                    </div>
+                  </>
+                ) : null}
+                <div className="flex justify-between items-center pt-2 border-t border-divider/50">
+                  <span className="text-ink-light uppercase tracking-wider font-semibold">Tổng thanh toán:</span>
+                  <span className="font-serif font-bold text-[#2C4A3B] text-lg">
+                    {Number(order.total_amount).toLocaleString('vi-VN')} đ
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right side: Help box */}
+        <div className="lg:col-span-3 flex flex-col">
+          <div className="bg-[#faf8f5] border border-divider rounded-none p-6 shadow-none flex-grow flex flex-col justify-between">
+            <div>
+              <h3 className="text-xs uppercase tracking-wider font-semibold text-ink mb-4 border-b border-divider pb-3">Trợ giúp mua hàng</h3>
+              <div className="space-y-4">
+                <p className="text-xs text-ink-light leading-relaxed">
+                  Bạn có thể tự do đọc sách & tham gia hỏi đáp AI đối với cuốn sách đã mua ngay khi trạng thái đơn chuyển sang <strong>Đã giao thành công (DELIVERED)</strong>.
+                </p>
+                <p className="text-xs text-ink-light leading-relaxed">
+                  Nếu gặp khó khăn trong quá trình thanh toán hoặc giao nhận hàng, vui lòng nhắn tin trực tiếp tới Fanpage hoặc Hotline của thư viện để được hỗ trợ 24/7.
+                </p>
+              </div>
+            </div>
+            
+            <div className="pt-6 border-t border-divider/50 mt-6 text-center">
+              <span className="font-serif italic text-ink-light text-xs">Smart Digital Library</span>
+              <div className="text-[10px] uppercase tracking-widest text-ink-light/60 mt-1">Est. 2026</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        isOpen={isCancelDialogOpen}
+        title="Xác nhận hủy đơn"
+        message={`Bạn có chắc chắn muốn hủy đơn hàng #${order.id}?`}
+        confirmText="Hủy đơn hàng"
+        cancelText="Quay lại"
+        variant="danger"
+        onConfirm={() => cancelOrderMutation.mutate()}
+        onCancel={() => setIsCancelDialogOpen(false)}
+      />
+    </div>
+  );
+}

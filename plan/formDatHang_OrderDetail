@@ -1,0 +1,104 @@
+# Kế hoạch tích hợp Thông tin Giao hàng khi Đặt hàng
+
+Kế hoạch này bổ sung form thu thập thông tin giao nhận hàng (Họ tên người nhận, Số điện thoại, Địa chỉ giao hàng, Ghi chú đơn hàng) khi khách hàng thực hiện đặt hàng trên `CheckoutPage.jsx`. Các thông tin này sẽ được lưu trữ trong Cơ sở dữ liệu và hiển thị đầy đủ, trực quan tại trang Chi tiết đơn hàng của Khách hàng (`OrderDetailPage.jsx`) cũng như Modal chi tiết đơn hàng của Admin/Curator (`AdminDashboardPage.jsx`).
+
+---
+
+## Proposed Changes
+
+### 1. Database Schema
+Chúng ta sẽ bổ sung các cột lưu thông tin giao hàng vào bảng `orders` của PostgreSQL:
+- `shipping_name`: Họ tên người nhận (VARCHAR(255))
+- `shipping_phone`: Số điện thoại nhận hàng (VARCHAR(50))
+- `shipping_address`: Địa chỉ chi tiết nhận hàng (TEXT)
+- `shipping_notes`: Ghi chú đơn hàng (TEXT, tùy chọn)
+
+#### [NEW] [migration_shipping.js](file:///E:/sdl-project/src/utils/migration_shipping.js)
+Tạo tệp migration script kết nối cơ sở dữ liệu để chạy câu lệnh `ALTER TABLE orders ADD COLUMN IF NOT EXISTS ...` một cách an toàn.
+
+---
+
+### 2. Backend API (`E:\sdl-project`)
+Cần chỉnh sửa các hàm xử lý đặt hàng để nhận và lưu trữ thông tin giao hàng, đồng thời trả về các trường này trong truy vấn chi tiết đơn hàng.
+
+#### [MODIFY] [Order.js](file:///E:/sdl-project/src/models/Order.js)
+- Cập nhật hàm `Order.create` để nhận thêm 4 tham số: `shippingName`, `shippingPhone`, `shippingAddress`, `shippingNotes`.
+- Thêm các tham số này vào câu lệnh `INSERT INTO orders`.
+- Hàm `Order.findById` và `Order.getUserOrders` vốn sử dụng `SELECT o.*` nên tự động bao gồm các cột mới.
+
+#### [MODIFY] [orderService.js](file:///E:/sdl-project/src/services/orderService.js)
+- Cập nhật hàm `OrderService.checkout(userId, shippingInfo)` nhận thêm `shippingInfo` object từ controller.
+- Truyền `shippingInfo` (`shippingName`, `shippingPhone`, `shippingAddress`, `shippingNotes`) vào `Order.create`.
+
+#### [MODIFY] [orderController.js](file:///E:/sdl-project/src/controllers/orderController.js)
+- Nhận thông tin giao hàng từ `req.body` trong hàm `OrderController.checkout`.
+- Thực hiện kiểm tra/validate dữ liệu đầu vào cơ bản (Họ tên, SĐT, Địa chỉ không được để trống).
+- Truyền thông tin đã validate sang `OrderService.checkout`.
+
+#### [MODIFY] [adminController.js](file:///E:/sdl-project/src/controllers/adminController.js)
+- Cập nhật câu lệnh SELECT trong hàm `AdminController.getAllOrders` để chọn thêm các cột `shipping_name`, `shipping_phone`, `shipping_address`, `shipping_notes` từ bảng `orders` (`o.shipping_name`, `o.shipping_phone`, v.v.).
+
+---
+
+### 3. Frontend UI (`e:\it-project\smart_digital_library\code_frontend\sdl-frontend`)
+Cập nhật giao diện thanh toán và chi tiết đơn hàng theo thiết kế tinh tế, trực quan kiểu các sàn thương mại lớn (Shopee, TikTok Shop) nhưng giữ nguyên phong cách tối giản và sang trọng của thư viện.
+
+#### [MODIFY] [CheckoutPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/CheckoutPage.jsx)
+- Thêm form nhập thông tin giao hàng ở cột bên trái hoặc ngay phía trên phần "Tóm tắt thanh toán".
+- Form bao gồm:
+  - **Họ và tên người nhận**: Input text, bắt buộc, pre-fill từ `user.full_name` trong `useAuth()`.
+  - **Số điện thoại nhận hàng**: Input text/tel, bắt buộc, validate định dạng số điện thoại Việt Nam hợp lệ.
+  - **Địa chỉ giao hàng**: Textarea hoặc input text, bắt buộc, mô tả chi tiết địa điểm giao sách.
+  - **Ghi chú giao hàng**: Textarea, tùy chọn (VD: "Giao giờ hành chính", "Gọi trước khi giao", v.v.).
+- Đồng bộ hóa các trường thông tin này vào React State.
+- Cập nhật `orderMutation` để gửi thông tin giao hàng trong payload body:
+  ```javascript
+  const orderRes = await api.post('/orders/checkout', {
+    shippingName,
+    shippingPhone,
+    shippingAddress,
+    shippingNotes
+  });
+  ```
+- Thêm bước validate form trước khi cho phép click nút "Đặt hàng & Thanh toán". Nếu thiếu thông tin, hiển thị toast/error inline một cách tinh tế.
+
+#### [MODIFY] [OrderDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderDetailPage.jsx)
+- Cập nhật phần thông tin bên cột phải ("Hóa đơn & Thanh toán") hoặc thiết kế lại thành 2 khối khung viền phẳng "Thông tin khách hàng" và "Thông tin đơn hàng" tương tự phía admin nhưng tối giản hơn cho người dùng.
+- Hiển thị đầy đủ:
+  - **Thông tin khách hàng**: Họ tên người nhận, Số điện thoại nhận, Địa chỉ giao hàng, Email tài khoản.
+  - **Thông tin đơn hàng**: Ngày đặt, Trạng thái (kèm badge màu sắc tinh tế), Phương thức thanh toán (VNPay), Ghi chú đơn hàng (nếu có).
+
+#### [MODIFY] [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+- Tại modal chi tiết đơn hàng (`selectedOrder`), cập nhật 2 khối thông tin:
+  - **Thông tin khách hàng**:
+    - Thay thế họ tên tài khoản bằng **Họ tên người nhận** (`selectedOrder.shipping_name || selectedOrder.full_name`).
+    - Bổ sung trường **Số điện thoại** (`selectedOrder.shipping_phone` hoặc hiển thị "N/A" nếu đơn hàng cũ).
+    - Bổ sung trường **Địa chỉ giao hàng** (`selectedOrder.shipping_address` hoặc hiển thị "N/A" nếu đơn hàng cũ).
+    - Hiển thị Email tài khoản đặt hàng.
+  - **Thông tin đơn hàng**:
+    - Ngày đặt.
+    - Trạng thái đơn (kèm badge).
+    - Bổ sung trường **Ghi chú đơn hàng** (`selectedOrder.shipping_notes` nếu có) để Admin/Curator dễ dàng xem và lưu ý khi đóng gói/giao hàng.
+
+---
+
+## Verification Plan
+
+### 1. Database Migration
+- Chạy thử migration script `node src/utils/migration_shipping.js`.
+- Kiểm tra cấu trúc bảng `orders` bằng lệnh SQL hoặc kiểm tra log xem có bất kỳ lỗi nào không.
+
+### 2. Frontend & Backend Integration Test (Manual)
+1. **Quy trình Đặt hàng**:
+   - Thêm sách vào giỏ hàng, bấm "Tiến hành Thanh toán".
+   - Chuyển hướng sang `/checkout`, nhập thông tin giao hàng:
+     - Thử bỏ trống trường bắt buộc -> Bấm đặt hàng -> Hiện thông báo cảnh báo lỗi validate.
+     - Nhập số điện thoại sai định dạng -> Hiện cảnh báo.
+     - Nhập đầy đủ thông tin hợp lệ -> Bấm đặt hàng -> Giao dịch tạo thành công -> Chuyển đến PayGate.
+2. **Kiểm tra thông tin trên trang Chi tiết đơn hàng của User**:
+   - Sau khi thanh toán giả lập thành công, quay về trang chi tiết đơn hàng `/orders/:id`.
+   - Xác nhận thông tin Họ tên người nhận, SĐT, Địa chỉ giao, Ghi chú hiển thị đúng chuẩn.
+3. **Kiểm tra thông tin trên trang Admin Dashboard**:
+   - Đăng nhập tài khoản Admin/Curator.
+   - Mở Tab "Quản lý đơn hàng", click xem chi tiết đơn hàng vừa đặt.
+   - Xác nhận "Thông tin khách hàng" hiển thị chính xác SĐT và Địa chỉ giao hàng của đơn đó.

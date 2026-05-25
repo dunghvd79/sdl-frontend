@@ -1,0 +1,81 @@
+# Kế hoạch triển khai: Nâng cấp Phân hệ Admin (Thống kê báo cáo & Khóa tài khoản)
+
+Kế hoạch này tập trung triển khai đầy đủ các Use Case còn thiếu của **Actor Admin** dựa trên sơ đồ của bạn, tích hợp trực tiếp vào trang quản trị hiện tại nhằm nâng tầm trải nghiệm quản lý chuyên nghiệp và bảo mật.
+
+---
+
+## 1. Các thay đổi đề xuất (Proposed Changes)
+
+### A. Cơ sở dữ liệu & Model (Database Migration)
+Tạo file migration mới `src/utils/migration_admin_updates.js` để:
+* **Cập nhật bảng `users`**: Bổ sung cột `is_active` BOOLEAN DEFAULT TRUE để kiểm soát trạng thái hoạt động của tài khoản.
+* **Cập nhật Model `User.js`** (`src/models/User.js`):
+  * Cập nhật hàm `findById` và `findByEmail` để lấy thêm trường `is_active`.
+  * Thêm hàm `toggleStatus(userId, isActive)` để cập nhật trạng thái hoạt động của người dùng trong cơ sở dữ liệu.
+
+---
+
+### B. Backend API (`E:\sdl-project`)
+
+#### [MODIFY] [auth.js (Middleware)](file:///E:/sdl-project/src/middleware/auth.js)
+* Cập nhật middleware `verifyToken` để truy vấn cơ sở dữ liệu xác thực xem tài khoản đó có đang bị khóa (`is_active = false`) hay không.
+* Nếu tài khoản đã bị khóa, lập tức chặn quyền truy cập và trả về lỗi `403 Forbidden` ("Tài khoản của bạn đã bị khóa bởi quản trị viên"). Điều này đảm bảo an toàn tuyệt đối, vô hiệu hóa token của người dùng bị khóa ngay lập tức.
+
+#### [MODIFY] [authService.js](file:///E:/sdl-project/src/services/authService.js)
+* Trong hàm `login`, kiểm tra thêm trường `is_active`. Nếu `is_active` là `false`, ném ra lỗi để ngăn người dùng đăng nhập.
+
+#### [MODIFY] [adminController.js](file:///E:/sdl-project/src/controllers/adminController.js)
+* **Thêm API `GET /api/admin/stats` (`getDashboardStats`)**:
+  * Tính toán doanh thu thực tế (Tổng tiền của các đơn hàng có trạng thái khác `CANCELLED`).
+  * Tính toán tổng tiền giảm giá đã áp dụng qua Coupon.
+  * Thống kê số lượng đơn hàng theo từng trạng thái (PENDING, CONFIRMED, PACKAGING, DELIVERING, DELIVERED, CANCELLED).
+  * Thống kê số lượng người dùng theo từng Role (`CUSTOMER`, `CURATOR`, `ADMIN`).
+  * Thống kê tiến độ vector hóa RAG (số sách đã RAG vs tổng số sách).
+  * Lấy top 5 cuốn sách bán chạy nhất dựa trên tổng số lượng bán được từ bảng `order_items`.
+  * Lấy danh sách 5 đơn hàng mới đặt gần đây nhất để hiển thị nhanh.
+* **Thêm API `PUT /api/admin/users/:userId/status` (`toggleUserStatus`)**:
+  * Cho phép Admin đổi trạng thái `is_active` (true/false) của một người dùng khác.
+  * Ngăn cản Admin tự khóa tài khoản của chính mình.
+
+#### [MODIFY] [admin.js (Routes)](file:///E:/sdl-project/src/routes/admin.js)
+* Đăng ký route thống kê: `router.get('/stats', requireRole(['ADMIN', 'CURATOR']), AdminController.getDashboardStats);`
+* Đăng ký route khóa tài khoản: `router.put('/users/:userId/status', requireRole(['ADMIN']), AdminController.toggleUserStatus);`
+
+---
+
+### C. Frontend Integration (`sdl-frontend`)
+
+#### [MODIFY] [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+1. **Bổ sung Tab "TỔNG QUAN" (`overview`)** vào danh sách `TABS` và đặt ở vị trí đầu tiên. Cả `ADMIN` và `CURATOR` đều có quyền xem tab này.
+2. **Xây dựng Component `DashboardOverviewTab`**:
+   * **Thống kê dạng thẻ lớn (Stats Cards)**: Hiển thị Tổng doanh thu, Số lượng đơn hàng, Tổng người dùng và Tỉ lệ vector hóa sách.
+   * **Biểu đồ cột SVG thủ công (Custom SVG Bar Chart)**:
+     * Vẽ biểu đồ cột phẳng tối giản, thời trang theo phong cách tạp chí nghệ thuật để hiển thị **Top 5 sách bán chạy** và **Tỷ lệ trạng thái đơn hàng**.
+     * Hoàn toàn không import thư viện ngoài để giữ tốc độ tải trang cực nhanh và đảm bảo độ sắc nét phẳng (`rounded-none`).
+   * **Đơn hàng gần đây (Recent Orders)**: Hiển thị bảng 5 giao dịch mới nhất với các badge trạng thái màu sắc tinh tế, cho phép Admin click xem chi tiết ngay lập tức.
+   * **Xuất báo cáo (CSV Export)**: Tích hợp nút bấm xuất báo cáo đơn hàng ra file Excel/CSV bằng JavaScript thuần trên Client.
+3. **Nâng cấp `UserManagerTab`**:
+   * Thêm cột hiển thị trạng thái tài khoản: Badge xanh lá `Hoạt động` và Badge đỏ `Đã khóa`.
+   * Bổ sung nút **Khóa tài khoản / Mở khóa** (Block/Unblock Action Button) có hiệu ứng chuyển trạng thái tức thì. Ẩn nút này nếu tài khoản là của chính Admin đang đăng nhập.
+
+---
+
+## 2. Kịch bản xác thực (Verification Plan)
+
+### A. Kiểm tra di cư Database & Logic khóa tài khoản (API Tests)
+* Chạy migration và verify cột `is_active` được thêm thành công vào bảng `users`.
+* Gọi API login với một tài khoản bị khóa -> Kết quả mong muốn: Trả về lỗi đăng nhập kèm thông báo tài khoản bị khóa.
+* Sử dụng token của tài khoản bị khóa để gọi bất kỳ API bảo mật nào (như lấy giỏ hàng) -> Kết quả mong muốn: Trả về lỗi `403 Forbidden` lập tức.
+* Gọi API toggle status từ Admin -> Đảm bảo thay đổi giá trị `is_active` từ `true` sang `false` và ngược lại trong DB.
+
+### B. Kiểm tra tab Thống kê (Overview Tab Tests)
+* Truy cập tab **Tổng quan** với quyền Admin hoặc Curator:
+  * Xác nhận các thẻ số liệu hiển thị khớp với cơ sở dữ liệu thực tế (đơn hàng, người dùng, sách).
+  * Biểu đồ SVG hiển thị top sách bán chạy và cơ cấu đơn hàng chính xác, có tỉ lệ cột cân đối trên cả Desktop và Mobile.
+  * Nhấp nút **Xuất CSV** -> Xác nhận tải xuống file CSV chứa đầy đủ danh sách thông tin đơn hàng để mở được trong Excel.
+
+### C. Kiểm tra Tab Người dùng (User Manager Tests)
+* Truy cập tab **Người dùng**:
+  * Xác nhận nhìn thấy cột trạng thái hoạt động mới.
+  * Bấm nút khóa một tài khoản Khách hàng -> Tài khoản lập tức chuyển trạng thái sang "Đã khóa" đỏ. Bấm mở khóa -> Chuyển về xanh.
+  * Kiểm tra tài khoản của chính mình (Admin đang đăng nhập) -> Nút Khóa bị vô hiệu hóa hoặc ẩn đi.

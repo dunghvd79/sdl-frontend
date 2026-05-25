@@ -1,0 +1,97 @@
+# Kế hoạch triển khai: Tính năng Áp mã giảm giá (Coupon/Voucher)
+
+Tính năng này sẽ thực hiện đầy đủ nhánh mở rộng `<<extend>>` từ Use Case **Mua hàng** theo đúng sơ đồ Use Case của Actor **Khách Hàng**. Cho phép người dùng nhập mã giảm giá (phần trăm hoặc số tiền cố định), kiểm tra tính hợp lệ và áp dụng trực tiếp làm giảm số tiền phải thanh toán khi mua hàng.
+
+---
+
+## Proposed Changes
+
+### 1. Cơ sở dữ liệu (Backend Migration)
+Tạo tệp migration mới `src/utils/migration_coupons.js` thực thi các câu lệnh SQL để xây dựng:
+* **Bảng `coupons`**: Lưu trữ thông tin về mã giảm giá.
+  * `id` SERIAL PRIMARY KEY
+  * `code` VARCHAR(50) UNIQUE NOT NULL (Ví dụ: `GIAM10`, `SDL50K`)
+  * `discount_type` VARCHAR(20) NOT NULL CHECK (PERCENT hoặc FIXED)
+  * `discount_value` NUMERIC NOT NULL (Giá trị phần trăm hoặc số tiền cố định)
+  * `min_order_amount` NUMERIC DEFAULT 0 (Số tiền đơn hàng tối thiểu để áp dụng)
+  * `max_discount_amount` NUMERIC (Số tiền giảm tối đa đối với loại PERCENT)
+  * `start_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  * `end_date` TIMESTAMP NOT NULL
+  * `usage_limit` INTEGER DEFAULT 100 (Giới hạn lượt sử dụng trên hệ thống)
+  * `used_count` INTEGER DEFAULT 0 (Số lượt đã sử dụng thực tế)
+  * `is_active` BOOLEAN DEFAULT TRUE
+* **Bảng `user_coupons`**: Lưu lịch sử sử dụng của từng khách hàng để tránh việc một tài khoản sử dụng một mã giảm giá nhiều lần (Ràng buộc UNIQUE trên `user_id` và `coupon_id`).
+* **Cập nhật bảng `orders`**: Bổ sung cột `coupon_id` (FOREIGN KEY) và `discount_amount` (Số tiền đã giảm giá thực tế) để phục vụ cho hóa đơn, báo cáo.
+
+---
+
+### 2. Backend Implementation (`E:\sdl-project`)
+
+#### [NEW] [Coupon.js](file:///E:/sdl-project/src/models/Coupon.js)
+* Xây dựng Model để truy vấn và thao tác trên bảng `coupons` và `user_coupons`.
+* Các hàm cần thiết:
+  * `findByCode(code)`: Tìm kiếm mã giảm giá theo code.
+  * `checkUserUsed(userId, couponId)`: Kiểm tra xem người dùng đã dùng mã giảm giá này chưa.
+  * `recordUsage(userId, couponId)`: Lưu lại việc sử dụng coupon của user.
+  * `incrementUsedCount(couponId)`: Tăng số lượt đã sử dụng của coupon lên 1.
+
+#### [NEW] [couponController.js](file:///E:/sdl-project/src/controllers/couponController.js)
+* Endpoint `GET /api/coupons/validate?code=CODE&orderAmount=AMOUNT`:
+  * Xác thực người dùng (verifyToken).
+  * Validate các điều kiện: tồn tại, kích hoạt, hạn sử dụng, lượt dùng còn lại, đã dùng hay chưa, giá trị tối thiểu của đơn hàng.
+  * Tính toán số tiền được giảm (`discountAmount`). Trả về dữ liệu chi tiết coupon và số tiền được giảm.
+
+#### [NEW] [coupons.js](file:///E:/sdl-project/src/routes/coupons.js)
+* Định nghĩa router cho các endpoints liên quan đến coupon.
+* Register route `/api/coupons` trong [app.js](file:///E:/sdl-project/src/config/app.js).
+
+#### [MODIFY] [orderService.js](file:///E:/sdl-project/src/services/orderService.js) & [Order.js](file:///E:/sdl-project/src/models/Order.js)
+* Nâng cấp hàm `Order.create` và `OrderService.checkout` để:
+  * Nhận thêm `couponCode` từ frontend.
+  * Nếu có `couponCode`, thực hiện validate chặt chẽ ở backend (tính lại số tiền giảm để tránh gian lận).
+  * Lưu `coupon_id` và `discount_amount` vào bảng `orders`.
+  * Trừ số tiền giảm trực tiếp vào `total_amount` của đơn hàng (số tiền thực trả = tổng tiền gốc - `discount_amount`).
+  * Thực hiện insert vào bảng `user_coupons` và tăng `used_count` của coupon trong transaction database để đảm bảo tính toàn vẹn.
+
+---
+
+### 3. Frontend Integration (`sdl-frontend`)
+
+#### [MODIFY] [CheckoutPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/CheckoutPage.jsx)
+* **Giao diện**: Thêm một khung nhập mã giảm giá (Coupon Code Input) phẳng bên cạnh khu vực tóm tắt thanh toán.
+* **Tương tác**:
+  * Người dùng nhập mã giảm giá và nhấn nút "Áp dụng" (Apply).
+  * Gọi API `/api/coupons/validate` để xác thực mã giảm giá.
+  * Nếu hợp lệ: Hiển thị thông báo thành công dạng toast, cập nhật dòng "Số tiền được giảm" màu cam đất `#c56017` trong bảng Tóm tắt thanh toán, đồng thời trừ trực tiếp vào "Tổng thanh toán".
+  * Nếu không hợp lệ: Hiển thị toast lỗi rõ ràng (ví dụ: Coupon hết hạn, Đơn hàng chưa đạt giá trị tối thiểu, Bạn đã sử dụng mã này rồi...).
+* **Gửi Đơn hàng**: Truyền thêm `couponCode` trong payload gửi lên API `/api/orders/checkout`.
+
+#### [MODIFY] [OrderDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderDetailPage.jsx)
+* Cập nhật giao diện hóa đơn tóm tắt thanh toán: nếu đơn hàng có giảm giá, hiển thị thêm dòng "Giảm giá: -{discount_amount}đ" để khách hàng nắm rõ.
+
+#### [MODIFY] [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+* Tại Modal chi tiết đơn hàng của Admin, hiển thị số tiền được giảm và thông tin mã giảm giá đã sử dụng (nếu có) để Admin theo dõi chính xác doanh thu thực tế.
+
+---
+
+## Verification Plan
+
+### 1. Kiểm tra Di cư Cơ sở dữ liệu (Migration Verification)
+* Chạy script migration `migration_coupons.js`.
+* Thực hiện query trực tiếp kiểm tra các bảng `coupons`, `user_coupons` đã được tạo và các cột được thêm vào `orders`.
+
+### 2. Kiểm tra nghiệp vụ Validation (API Unit Tests)
+* Thử gọi API `/api/coupons/validate` với các mã giảm giá thử nghiệm:
+  * Mã không tồn tại (`ABC`): Phản hồi lỗi `404`.
+  * Mã hết hạn: Phản hồi lỗi `400` quá hạn.
+  * Mã chưa đạt giá trị đơn tối thiểu (VD: `SDL50K` cho đơn hàng dưới 150k): Báo lỗi giá trị đơn tối thiểu.
+  * Mã hợp lệ (`GIAM10`): Tính toán đúng 10% tổng tiền giỏ hàng hiện tại.
+
+### 3. Kiểm tra Luồng Mua hàng giảm giá (End-to-End Checkout Flow)
+* Thêm sách vào giỏ hàng sao cho tổng tiền đạt điều kiện của coupon.
+* Điền đầy đủ thông tin giao hàng tại trang Checkout, nhập mã `SDL50K`.
+* Kiểm tra:
+  * Bảng tóm tắt cập nhật dòng "Giảm giá: -50.000đ" và tổng thanh toán giảm đi 50k.
+  * Chọn `ONLINE` -> Click "Đặt hàng & Thanh toán" -> Chuyển hướng sang `SDL PayGate` với số tiền thanh toán hiển thị chính xác là số tiền sau giảm giá.
+  * Hoàn thành thanh toán -> Quay về trang Lịch sử đơn hàng -> Kiểm tra đơn hàng hiển thị đúng số tiền thực tế đã thanh toán và lưu đúng thông tin giảm giá.
+  * Tiến hành mua tiếp đơn hàng thứ hai và áp dụng lại mã `SDL50K` -> Hệ thống phải báo lỗi "Mã giảm giá này đã được bạn sử dụng".

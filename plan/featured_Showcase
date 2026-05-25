@@ -1,0 +1,59 @@
+# Kế hoạch thiết kế "Editor's Picks" (Bộ sưu tập tuyển chọn)
+
+Tài liệu này trình bày kế hoạch bổ sung phần trưng bày sách nghệ thuật **"Editor's Picks" (Tuyển chọn của biên tập viên)** ngay dưới Trang Hero trên `HomePage.jsx`, theo đúng nguyên mẫu nghệ thuật mà người dùng cung cấp.
+
+Chúng tôi sẽ sử dụng dữ liệu sách thực tế từ API để tăng tính tương tác, đồng thời vẽ các vật phẩm trang trí làm bệ đỡ bằng CSS/Tailwind siêu nhẹ và chân thực.
+
+---
+
+## Ý tưởng Thiết kế & Bố cục (Layout & Aesthetics)
+
+1. **Vị trí và Điều kiện hiển thị**:
+   - Vị trí: Đặt ngay phía dưới Trang Hero, trước bộ lọc danh mục và ô tìm kiếm (`#explore`).
+   - Điều kiện: Chỉ hiển thị khi người dùng ở chế độ xem mặc định (`!searchTerm && !selectedCategory`) để tránh làm phiền khi người dùng đang chủ động tìm kiếm sách.
+
+2. **Cách bài trí 4 tác phẩm nghệ thuật (Staggered Layout)**:
+   - Sử dụng một khung lưới lớn bất đối xứng (`lg:grid lg:grid-cols-12 lg:gap-8 lg:items-center py-12 px-6 bg-gradient-to-b from-stone-50/50 via-stone-100/30 to-stone-50/50 rounded-3xl relative overflow-hidden mb-16`).
+   - **Tác phẩm 1 (Bên trái - Cao)**:
+     - Đặt trên bệ đỡ **Vải lanh (Linen folds)**: thiết kế bằng các lớp CSS bo góc, đổ bóng mềm xếp lớp màu kem sữa.
+     - Sách đứng thẳng, thông tin sách hiển thị bên cạnh kèm nút thêm nhanh vào giỏ hàng.
+   - **Tác phẩm 2 (Giữa - Trên cao)**:
+     - Đặt trên bệ đỡ **Đá thiền Zen (Zen stone)**: hình elip đổ màu gradient xám tối 3D chân thực, bóng mờ dưới đáy sâu.
+     - Sách đứng thẳng, thông tin sách hiển thị bên phải.
+   - **Tác phẩm 3 (Giữa - Dưới thấp)**:
+     - Đặt trên bệ đỡ **Thớt gỗ (Wood slice)**: khối gỗ tròn vân nâu sẫm, độ dày 3D sắc nét.
+     - Sách đứng thẳng, thông tin hiển thị bên phải.
+   - **Tác phẩm 4 (Bên phải - Thấp)**:
+     - Đặt trên bệ đỡ **Chồng sách cổ (Leather books stack)**: 3 cuốn sách da cổ điển màu cam đất, nâu sẫm xếp chồng lên nhau làm bệ đỡ cho cuốn sách chính.
+     - Thông tin sách hiển thị trang trọng phía dưới kèm nút thêm vào giỏ hàng xanh rêu lớn.
+
+3. **Thiết kế bệ đỡ bằng CSS/Tailwind (No Asset Overhead)**:
+   - Sử dụng hoàn toàn CSS để tối ưu tốc độ tải trang cực nhanh và đảm bảo hiển thị sắc nét trên mọi mật độ điểm ảnh (Retina/4K).
+   - Thiết kế bóng đổ thực tế (`drop-shadow-[0_20px_20px_rgba(0,0,0,0.15)]`) cho từng cuốn sách đứng, tạo chiều sâu 3D chân thực.
+   - Khi di chuột qua mỗi khối sách, sách sẽ nâng nhẹ (`group-hover:-translate-y-2.5 transition-transform duration-500 ease-out`).
+
+4. **Tương thích thiết bị di động (Responsive)**:
+   - Trên thiết bị di động (`lg:hidden`): Chuyển thành một slider trượt ngang mượt mà (`overflow-x-auto snap-x flex gap-6 pb-6 hide-scrollbar`) để người dùng dễ dàng lướt xem từng tác phẩm trên điện thoại mà không tốn diện tích màn hình.
+
+---
+
+## Chi tiết Thay đổi Dự kiến (Proposed Changes)
+
+### [Component] Giao diện Trang chủ (code_frontend/sdl-frontend)
+
+#### [MODIFY] [HomePage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/HomePage.jsx)
+- Cập nhật JSX tại phần chuyển tiếp giữa Hero và phần Explore (khoảng dòng 178) để nhúng khối trưng bày nghệ thuật này.
+- Sử dụng 4 cuốn sách đầu tiên lấy từ mảng dữ liệu sách thực tế `books` để hiển thị.
+- Liên kết nút "Thêm giỏ hàng" với hàm `addToCart` hiện có trong Context để đảm bảo tính năng mua hàng hoạt động hoàn hảo.
+
+---
+
+## Kế hoạch Xác minh (Verification Plan)
+
+### Kiểm tra Thủ công
+1. **Kiểm tra chức năng giỏ hàng**:
+   - Click nút thêm giỏ hàng ở cả 4 vị trí sách nghệ thuật và kiểm tra số lượng trên Header tăng lên.
+2. **Kiểm tra độ phản hồi di động**:
+   - Co màn hình về dạng điện thoại để đảm bảo tính năng trượt ngang hoạt động trơn tru.
+3. **Biên dịch thử nghiệm**:
+   - Chạy lệnh `npm run build` để kiểm tra độ tin cậy của mã JSX mới.

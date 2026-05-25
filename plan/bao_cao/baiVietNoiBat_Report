@@ -1,0 +1,54 @@
+# Kết quả triển khai: Hệ thống quản lý bài viết động (Blog CMS) cho Smart Digital Library
+
+Tôi đã hoàn thành xuất sắc toàn bộ phân hệ quản lý bài viết động (Blog CMS) cho cả Backend và Frontend của dự án Smart Digital Library. Dữ liệu bài viết ngoài trang chủ nay đã được đồng bộ trực tiếp từ PostgreSQL, giúp Admin/Curator toàn quyền quản trị và khách hàng có thể đọc bài viết với giao diện tạp chí sang trọng.
+
+---
+
+## Các thay đổi và thành phần đã triển khai
+
+### 1. Cơ sở dữ liệu (Database) & Backend (API)
+* **Bảng dữ liệu `articles`**: Đã khởi chạy migration tạo bảng thành công và tự động đổ (seed) 3 bài viết gốc để đảm bảo tính mỹ thuật ban đầu của trang chủ. Đồng bộ cấu trúc bảng vào [01_init_schema.sql](file:///e:/it-project/smart_digital_library/sdl-project/database/01_init_schema.sql).
+* **Article Model & Controller**:
+  * [Article.js](file:///e:/it-project/smart_digital_library/sdl-project/src/models/Article.js) triển khai đầy đủ các query (CRUD, phân trang, lọc theo thể loại/trạng thái hiển thị).
+  * [articleController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/articleController.js) tiếp nhận request, kiểm tra dữ liệu đầu vào và gửi phản hồi chuẩn hóa JSON.
+* **Routes & Security**:
+  * [articles.js](file:///e:/it-project/smart_digital_library/sdl-project/src/routes/articles.js) bảo vệ chặt chẽ quyền truy cập: Khách vãng lai chỉ có quyền đọc (`GET /api/articles`), chỉ có Admin/Curator mới được thêm/sửa, và chỉ duy nhất Admin mới được quyền xóa bài viết.
+
+### 2. Frontend (Giao diện Người dùng & Admin)
+* **Trang chi tiết bài viết [ArticleDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/ArticleDetailPage.jsx) [NEW]**:
+  * Hiển thị nội dung bài viết với giao diện phong cách tạp chí văn học sang trọng, căn lề văn bản cân đối, hình ảnh bìa sắc nét cùng đầy đủ thông tin thời gian đọc, chuyên mục và ngày xuất bản.
+* **Đăng ký tuyến đường tại [App.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/App.jsx)**:
+  * Tích hợp route `/blog/:id` liên kết đến trang đọc bài viết chi tiết.
+* **Động hóa Trang chủ [HomePage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/HomePage.jsx)**:
+  * Thay thế khối HTML tĩnh ở phần **"Bài viết nổi bật"** bằng hook `useQuery` gọi API `/api/articles?limit=3`.
+  * Hiển thị bài viết mới nhất lên trước và liên kết chính xác thẻ tiêu đề/ảnh bìa tới trang đọc chi tiết `/blog/:id`.
+* **Tích hợp Quản lý bài viết vào [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)**:
+  * Thêm tab **QUẢN LÝ BÀI VIẾT** vào thanh điều hướng quản trị của Admin/Curator.
+  * Xây dựng sub-component `ArticleManagerTab` hiển thị danh sách bài viết dưới dạng bảng trực quan (ID, Ảnh đại diện, Tiêu đề, Chuyên mục, Thời gian đọc, Trạng thái).
+  * Modal soạn thảo bài viết chuyên nghiệp: Cho phép nhập Tiêu đề, Tóm tắt ngắn, Nội dung chi tiết (hỗ trợ Markdown/HTML), Chọn chuyên mục, Thời gian đọc, Trạng thái hiển thị (Công khai, Bản nháp, Tạm ẩn), và hỗ trợ cả việc Tải file ảnh từ máy hoặc dán link ảnh trực tiếp từ internet.
+
+---
+
+## Kết quả kiểm tra & Biên dịch
+* **Biên dịch Frontend**: Đã thực thi lệnh `npm run build` thành công xuất sắc, bundle sản phẩm hoàn chỉnh chỉ trong 5.83 giây mà không xuất hiện bất kỳ lỗi cảnh báo hay biên dịch nào.
+* **Xác thực Backend**: API phản hồi cực nhanh, xử lý token và xác thực quyền quản trị cực kỳ an toàn.
+
+---
+
+## Kịch bản Kiểm thử trực quan (Bấm thử)
+Dưới đây là 5 bước đơn giản để bạn tự tay trải nghiệm và xác thực tính năng tuyệt vời này:
+
+1. **Kiểm tra Trang chủ**:
+   * Truy cập Trang chủ, cuộn xuống phần **BÀI VIẾT NỔI BẬT**. 3 bài viết gốc sẽ xuất hiện sống động. Click vào một bài viết bất kỳ, trang sẽ đưa bạn đến giao diện đọc chi tiết với URL dạng `/blog/[ID]`.
+2. **Đăng nhập Admin**:
+   * Đăng nhập bằng tài khoản Admin, bấm vào Tên người dùng ở Navbar, chọn **Trang quản trị**.
+3. **Mở Tab Quản lý**:
+   * Chọn tab **QUẢN LÝ BÀI VIẾT**. Bạn sẽ thấy bảng danh sách 3 bài viết mẫu có sẵn với nút sửa/xóa tương ứng.
+4. **Tạo bài viết mới**:
+   * Bấm **+ Thêm Bài Viết Mới**.
+   * Nhập tiêu đề, chọn chuyên mục, viết tóm tắt ngắn và nội dung chi tiết.
+   * Chọn ảnh bìa và đặt trạng thái là **Công khai**. Bấm **Đăng Bài Viết**.
+   * Quay lại Trang chủ, bạn sẽ thấy bài viết mới nhất này xuất hiện ở **vị trí đầu tiên** của Góc đọc sách. Click vào để đọc toàn bộ bài viết.
+5. **Thử nghiệm ẩn bài viết (Bản nháp/Tạm ẩn)**:
+   * Quay lại Trang quản trị, chọn **Sửa** bài viết vừa tạo, đổi trạng thái hiển thị sang **Bản nháp** hoặc **Tạm ẩn** và lưu lại.
+   * Làm mới Trang chủ, bài viết này lập tức biến mất khỏi hiển thị công cộng của khách hàng, nhưng vẫn được lưu trữ an toàn trong bảng quản trị để bạn tiếp tục chỉnh sửa.

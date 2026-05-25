@@ -1,0 +1,14 @@
+# TODO List - Xây dựng trang Chi tiết đơn hàng & Timeline trạng thái
+
+- [x] Cập nhật Backend (`E:\sdl-project`)
+  - [x] Thêm phương thức lấy chi tiết đơn hàng trong `Order.js` (kết hợp lấy thông tin sách như title, cover_image)
+  - [x] Cập nhật `orderController.js` (thêm logic kiểm tra quyền xem đơn hàng của Customer/Admin và trả về chi tiết)
+  - [x] Cấu hình route mới `/api/orders/:id` trong `src/routes/orders.js`
+- [x] Xây dựng Frontend (`sdl-frontend`)
+  - [x] Đăng ký route `/orders/:id` trong `src/App.jsx`
+  - [x] Tạo trang `OrderDetailPage.jsx` với Timeline (Stepper) trạng thái 5 giai đoạn, bảng hiển thị sản phẩm và các nút hành động (Thanh toán ngay, Hỏi đáp AI, Quay lại)
+  - [x] Cập nhật `OrderHistoryPage.jsx` để thêm liên kết dẫn sang trang Chi tiết đơn hàng
+- [x] Kiểm thử & Xác minh
+  - [x] Chạy frontend `npm run build` để kiểm tra compile
+  - [x] Kiểm tra hiển thị Timeline trạng thái ứng với từng giai đoạn đơn hàng
+  - [x] Xác minh kiểm tra bảo mật (Customer không xem được đơn của người khác)

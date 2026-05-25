@@ -1,0 +1,28 @@
+# TODO List - Tính năng Áp mã giảm giá (Coupon/Voucher)
+
+## 1. Database Schema & Migration
+- [x] Tạo file migration `src/utils/migration_coupons.js` tạo bảng `coupons`, `user_coupons`, cập nhật các cột của bảng `orders`, và chèn một số coupon mẫu (`GIAM10`, `SDL50K`).
+- [x] Chạy file migration và xác nhận cấu trúc DB.
+
+## 2. Backend Implementation (`E:\sdl-project`)
+- [x] Tạo model `Coupon.js` (`src/models/Coupon.js`) để truy xuất dữ liệu giảm giá và lưu lịch sử dùng coupon.
+- [x] Tạo controller `couponController.js` (`src/controllers/couponController.js`) chứa logic validate coupon và tính tiền giảm giá.
+- [x] Tạo router `coupons.js` (`src/routes/coupons.js`) và đăng ký đường dẫn `/api/coupons` trong `src/config/app.js`.
+- [x] Cập nhật Model `Order.js` (`src/models/Order.js`) để hỗ trợ lưu `coupon_id` và `discount_amount`.
+- [x] Cập nhật Service `orderService.js` (`src/services/orderService.js`) để kiểm tra, tính toán số tiền giảm giá và lưu vết sử dụng coupon khi người dùng đặt hàng thành công.
+- [x] Cập nhật `AdminController.getAllOrders` (`src/controllers/adminController.js`) để lấy thông tin `discount_amount` và `coupon_code` (LEFT JOIN với bảng `coupons`).
+
+## 3. Frontend Implementation (`sdl-frontend`)
+- [x] Cập nhật `CheckoutPage.jsx` (`src/pages/CheckoutPage.jsx`):
+  - [x] Thêm khung nhập mã giảm giá, nút "Áp dụng" và gọi API kiểm tra tính hợp lệ.
+  - [x] Cập nhật hiển thị số tiền được giảm và tổng thanh toán mới sau giảm giá trong bảng Tóm tắt.
+  - [x] Truyền `couponCode` khi tạo đơn hàng (nút Đặt hàng & Thanh toán).
+- [x] Cập nhật `OrderDetailPage.jsx` (`src/pages/OrderDetailPage.jsx`) hiển thị thêm dòng giảm giá và số tiền thực trả.
+- [x] Cập nhật Modal chi tiết đơn hàng trong tab Quản lý đơn hàng của `AdminDashboardPage.jsx` (`src/pages/AdminDashboardPage.jsx`) hiển thị mã giảm giá và số tiền được giảm của đơn.
+
+## 4. Verification & Testing
+- [x] Kiểm tra di cư cơ sở dữ liệu thành công.
+- [x] Kiểm tra validate coupon bằng API trả về đúng số tiền giảm của các mã `GIAM10` (phần trăm) và `SDL50K` (cố định).
+- [x] Kiểm tra trường hợp lỗi: mã sai, chưa đủ đơn hàng tối thiểu, mã hết hạn, mã đã sử dụng rồi.
+- [x] Kiểm tra luồng đặt hàng (COD/Online) có áp dụng coupon: số tiền trên cổng thanh toán PayGate đúng số tiền sau giảm, giỏ hàng được xóa đúng lúc, lưu lịch sử vào DB chính xác.
+- [x] Đảm bảo ứng dụng compile thành công (`npm run build`).

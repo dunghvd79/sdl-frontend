@@ -1,0 +1,82 @@
+# Kế Hoạch Mở Rộng 6 Trạng Thái Đơn Hàng & Bảo Mật AI Chat
+
+Quy trình đơn hàng sẽ được mở rộng từ 3 trạng thái lên **6 trạng thái** để đáp ứng mô hình thư viện hỗn hợp (bán cả Ebook lẫn sách vật lý cần đóng gói, vận chuyển). Đồng thời, quyền truy cập vào tính năng **Hỏi đáp AI (AI Chat RAG)** sẽ được bảo mật cả ở Frontend và Backend: chỉ cho phép chat khi đơn hàng chứa cuốn sách đó đã được giao thành công (`DELIVERED`).
+
+---
+
+## Danh sách 6 trạng thái mới:
+1.  **`PENDING`** (Chờ xác nhận / Chờ thanh toán)
+2.  **`CONFIRMED`** (Đã xác nhận - Đã thanh toán nếu mua online hoặc xác nhận đơn COD)
+3.  **`PACKAGING`** (Đóng gói)
+4.  **`DELIVERING`** (Đang giao)
+5.  **`DELIVERED`** (Đã giao - Đủ điều kiện đọc & Hỏi đáp AI)
+6.  **`CANCELLED`** (Đã hủy)
+
+---
+
+## Proposed Changes
+
+### 1. Cơ sở dữ liệu (PostgreSQL Backend)
+
+#### [MODIFY] [Cập nhật Constraint Table](file:///E:/sdl-project/database/01_init_schema.sql)
+- Thực hiện một Script cập nhật cơ sở dữ liệu để thay đổi CHECK constraint của cột `status` trong bảng `orders`:
+  ```sql
+  ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check;
+  ALTER TABLE orders ADD CONSTRAINT orders_status_check CHECK (status IN ('PENDING', 'CONFIRMED', 'PACKAGING', 'DELIVERING', 'DELIVERED', 'CANCELLED'));
+  ```
+
+---
+
+### 2. Backend Code (`E:\sdl-project`)
+
+#### [MODIFY] [paymentService.js](file:///E:/sdl-project/src/services/paymentService.js)
+- Đổi trạng thái cập nhật khi Webhook báo thanh toán trực tuyến thành công từ `PAID` thành `CONFIRMED` (Đã xác nhận).
+
+#### [MODIFY] [adminController.js](file:///E:/sdl-project/src/controllers/adminController.js)
+- Cập nhật mảng validation `validStatuses` để chấp nhận 6 trạng thái mới.
+
+#### [MODIFY] [aiController.js](file:///E:/sdl-project/src/controllers/aiController.js)
+- Thêm kiểm tra quyền sở hữu trong API hỏi đáp `/api/ai/ask`:
+  - Cho phép `ADMIN` và `CURATOR` chat tự do với mọi sách.
+  - Đối với `CUSTOMER`: Truy vấn cơ sở dữ liệu để xác định xem có đơn hàng nào của khách hàng chứa cuốn sách này có trạng thái là `DELIVERED` hay chưa. Nếu không có, từ chối yêu cầu với mã lỗi `403 Forbidden`.
+
+---
+
+### 3. Frontend Code (`sdl-frontend`)
+
+#### [MODIFY] [OrderHistoryPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderHistoryPage.jsx)
+- Cập nhật hàm hiển thị badge trạng thái (`getStatusBadge`) với đầy đủ 6 trạng thái và màu sắc tương ứng (Tối giản Editorial, phẳng).
+- Cập nhật nút **Thanh toán ngay**: Chỉ hiển thị nếu đơn hàng ở trạng thái `PENDING`.
+- Cập nhật nút **Hỏi đáp AI**: Chỉ hiển thị nếu đơn hàng ở trạng thái `DELIVERED`.
+
+#### [MODIFY] [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+- Cập nhật dropdown lọc trạng thái trong `OrderManagerTab` để hỗ trợ 6 trạng thái mới.
+- Cập nhật dropdown chỉnh trạng thái trong bảng chính và Modal Chi tiết đơn hàng.
+- Cập nhật bảng màu giao diện `getStatusColor` phẳng cho 6 trạng thái.
+
+#### [MODIFY] [BookDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/BookDetailPage.jsx)
+- Tích hợp thêm truy vấn danh sách đơn hàng của người dùng thông qua `api.get('/orders')`.
+- Kiểm tra xem cuốn sách hiện tại đã có trong đơn hàng nào có trạng thái `DELIVERED` của user chưa.
+- Nếu chưa: Cập nhật nút **Chat hỏi đáp với Sách (AI RAG)** thành trạng thái bị khóa (hoặc hiển thị thông báo yêu cầu mua & nhận sách để kích hoạt).
+
+#### [MODIFY] [ChatPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/ChatPage.jsx)
+- Thêm kiểm tra bảo mật ở client khi mở trang: Nếu user (trừ admin/curator) truy cập trực tiếp vào chat của sách mà chưa sở hữu cuốn sách đó ở trạng thái `DELIVERED`, hiển thị giao diện thông báo khóa kèm nút quay lại trang chi tiết sách.
+
+---
+
+## Verification Plan
+
+### Kiểm tra tự động
+- Chạy build frontend để đảm bảo không lỗi cú pháp:
+  ```powershell
+  npm run build
+  ```
+
+### Kiểm tra thủ công
+1. **Kiểm tra luồng mua hàng và cập nhật:**
+   - Tạo đơn hàng mới -> Kiểm tra trạng thái ban đầu là `PENDING`.
+   - Giả lập thanh toán thành công -> Kiểm tra trạng thái đơn hàng tự động chuyển sang `CONFIRMED`.
+   - Vào Bảng Quản Trị (Admin) -> Cập nhật trạng thái qua từng bước: `PACKAGING` -> `DELIVERING` -> `DELIVERED`.
+2. **Kiểm tra logic AI Chat:**
+   - Khi đơn ở trạng thái `CONFIRMED` / `DELIVERING`: Kiểm tra xem nút Chat AI ở trang chi tiết sách và lịch sử đơn hàng có bị khóa/ẩn không. Thử vào thẳng URL chat xem có bị chặn không.
+   - Khi chuyển sang `DELIVERED`: Kiểm tra xem nút Chat AI đã mở khóa và có thể gửi câu hỏi bình thường hay chưa.

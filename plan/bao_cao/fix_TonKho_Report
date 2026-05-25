@@ -1,0 +1,186 @@
+# Walkthrough: Ràng buộc Dữ liệu Sách & Chuẩn hóa Thông báo Lỗi & Nâng cấp Hệ thống Quản lý Tồn kho & Quản lý Thể loại/Mã giảm giá
+
+Tài liệu này tổng hợp toàn bộ các thay đổi nâng cấp cho hệ thống Smart Digital Library (SDL), bao gồm ba nội dung chính:
+1. Ràng buộc dữ liệu sách (Validation) & Dịch mã lỗi DB thân thiện.
+2. Chuẩn hóa & Đồng bộ hóa Hệ thống Quản lý Tồn kho (kiểm soát số lượng, trừ/giữ kho an toàn và nhật ký biến động kho).
+3. Triển khai giao diện CRUD Quản lý Thể loại (Category) và Mã giảm giá (Coupon/Promotion) cho Product Manager.
+
+---
+
+## 🛠️ PHẦN 1: RÀNG BUỘC DỮ LIỆU SÁCH & CHUẨN HÓA LỖI (ĐÃ HOÀN TẤT)
+
+### 1. Bổ sung Validation & Dịch lỗi Database (Backend)
+* **[bookController.js](file:///E:/sdl-project/src/controllers/bookController.js)**:
+  * **Hàm validation đầu vào `validateBookInput`**: Kiểm tra tất cả các trường dữ liệu trước khi thực thi truy vấn. Trả về thông báo lỗi cụ thể nếu:
+    * Tên sách hoặc tác giả bị để trống hoặc dài hơn 255 ký tự.
+    * Giá bán để trống, âm, hoặc lớn hơn `99.999.999,99 đ` (để tránh lỗi tràn bộ nhớ `DECIMAL(10,2)`).
+    * Mã ISBN dài hơn 50 ký tự hoặc chứa các ký tự lạ ngoài số và dấu gạch ngang (`-`).
+    * Mô tả dài hơn 5000 ký tự.
+    * Trạng thái không hợp lệ (không phải DRAFT, PUBLISHED, HIDDEN).
+  * **Hàm biến đổi lỗi `handleDatabaseError`**: Bắt lỗi database thô trong block `catch`. Nếu DB bắn ra lỗi tràn số `numeric field overflow`, lỗi độ dài `value too long` hoặc lỗi check constraint, hàm sẽ tự động dịch sang thông báo tiếng Việt thân thiện.
+
+### 2. Kiểm tra dữ liệu tại Client-side (Frontend)
+* **[AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)**:
+  * Triển khai hàm `handleSaveBook` thực hiện kiểm tra đầy đủ các ràng buộc tương đương với backend ngay tại giao diện người dùng.
+  * Nếu dữ liệu không hợp lệ, hệ thống sẽ gọi `toast.error` báo lỗi chi tiết và chặn không gửi request lỗi lên server.
+  * Cập nhật sự kiện click của nút **Lưu** từ gọi trực tiếp `saveMutation.mutate()` sang `handleSaveBook`.
+
+### 3. Cải tiến giao diện Chi tiết đơn hàng (OrderDetailPage)
+* **[OrderDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderDetailPage.jsx)**:
+  * Tích hợp helper `getImageUrl` để hiển thị đường dẫn ảnh bìa thật của sách.
+  * Tái cấu trúc mục hiển thị sách đã mua trong đơn hàng: thêm khung ảnh bìa nhỏ (`aspect-[3/4]`, `w-14` đến `w-16`, `object-cover`), liên kết tên sách đến trang chi tiết sách tương ứng, kèm tác giả, đơn giá và số lượng, cùng nút bấm hành động (Hỏi đáp AI / Chat) theo bố cục hàng ngang hiện đại, tối giản.
+
+---
+
+## 📦 PHẦN 2: NÂNG CẤP HỆ THỐNG QUẢN LÝ TỒN KHO NÂNG CAO (ĐÃ HOÀN TẤT)
+
+Hệ thống tồn kho đã được nâng cấp toàn diện nhằm giải quyết triệt để lỗi bán hàng không trừ kho, không ghi lại lịch sử cập nhật và đồng bộ kho khi thanh toán/hủy đơn hàng.
+
+### 1. Cập nhật Cơ sở dữ liệu (Database Schema)
+* **[02_phase4_tables.sql](file:///e:/sdl-project/database/02_phase4_tables.sql)**:
+  * Tạo bảng `inventory_transactions` để lưu trữ nhật ký biến động kho:
+    ```sql
+    CREATE TABLE IF NOT EXISTS inventory_transactions (
+        id SERIAL PRIMARY KEY,
+        book_id INT REFERENCES books(id) ON DELETE CASCADE,
+        type VARCHAR(50) CHECK (type IN ('STOCK_IN', 'STOCK_OUT', 'ADJUSTMENT', 'RETURN')),
+        quantity INT NOT NULL,
+        previous_qty INT NOT NULL,
+        new_qty INT NOT NULL,
+        reason TEXT,
+        created_by INT REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    ```
+
+### 2. Triển khai Logic Nghiệp vụ Backend
+* **[Inventory.js (Model)](file:///E:/sdl-project/src/models/Inventory.js)**:
+  * Triển khai cơ chế Giao dịch (Transaction) an toàn và lock dòng dữ liệu (`SELECT ... FOR UPDATE`) để tránh race-conditions.
+  * Bổ sung các phương thức nghiệp vụ chính:
+    * `hold(bookId, qty)`: Khóa tạm thời `reserved_qty` khi khách nhấn Checkout.
+    * `commit(client, bookId, qty, reason, userId)`: Trừ kho thực tế (`available_qty` giảm, `reserved_qty` giảm, `sold_qty` tăng) và ghi log `STOCK_OUT`.
+    * `cancelReservation(client, bookId, qty)`: Giải phóng lượng giữ chỗ khi đơn hàng bị hủy trước khi thanh toán.
+    * `returnStock(client, bookId, qty, reason)`: Hoàn trả lại sách vào kho thực tế khi đơn hàng đã giao dịch thành công bị hủy (`available_qty` tăng, `sold_qty` giảm) và ghi log `RETURN`.
+* **[paymentService.js](file:///E:/sdl-project/src/services/paymentService.js)**:
+  * Tích hợp gọi `Inventory.commit` khi nhận webhook báo thanh toán trực tuyến thành công (`SUCCESS`). Dọn dẹp giỏ hàng của người dùng khi giao dịch trực tuyến hoàn tất.
+* **[adminController.js](file:///E:/sdl-project/src/controllers/adminController.js)**:
+  * Cập nhật hàm `updateOrderStatus` để tự động kích hoạt logic kho:
+    * Khi chuyển đơn từ `PENDING` sang `CONFIRMED`: Gọi `Inventory.commit` nếu chưa trừ kho trước đó.
+    * Khi hủy đơn (`CANCELLED`): Gọi `Inventory.cancelReservation` (nếu đơn đang là PENDING) hoặc `Inventory.returnStock` (nếu đơn đã được CONFIRMED trước đó).
+* **[inventoryController.js](file:///E:/sdl-project/src/controllers/inventoryController.js)**:
+  * Cập nhật `updateAvailableQty` để so sánh số lượng cũ và mới, thực hiện cập nhật và ghi nhận giao dịch `ADJUSTMENT` kèm lý do và ID Admin thực hiện.
+  * Bổ sung API `GET /transactions` để lấy lịch sử biến động kho.
+
+### 3. Nâng cấp Giao diện Quản trị (Frontend UI)
+* **[AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)**:
+  * **Cảnh báo tồn kho động**: Cột "Sẵn có" hiển thị badge màu sắc trực quan tùy theo số lượng (Đỏ nếu hết hàng `<= 0`, Vàng cam nếu sắp hết `<= 5`, Xanh lá nếu an toàn `> 5`).
+  * **Nhật ký biến động kho**: Thiết kế thêm bảng lịch sử bên dưới bảng tồn kho, hiển thị đầy đủ thông tin: thời gian, tên sách, loại biến động (Nhập/Xuất/Điều chỉnh/Hoàn hàng), số lượng thay đổi, số tồn cuối, lý do chi tiết và người thực hiện.
+
+---
+
+## 🎟️ PHẦN 3: QUẢN LÝ THỂ LOẠI & MÃ GIẢM GIÁ (ĐÃ HOÀN TẤT)
+
+Tính năng này giúp cho Product Manager (vai trò **ADMIN** hoặc **CURATOR**) có toàn quyền quản lý danh mục sách và các chương trình ưu đãi của thư viện.
+
+### 1. Quản lý Thể loại sách (Category Management)
+* **Component `CategoryManagerTab`**:
+  * Tích hợp bảng danh sách thể loại sách trực quan với ID, tên danh mục, mô tả chi tiết.
+  * Tích hợp modal form để thêm mới hoặc cập nhật thông tin danh mục nhanh chóng.
+  * Validation: Ràng buộc tên thể loại không được bỏ trống, giới hạn độ dài tên tối đa 100 ký tự và mô tả tối đa 500 ký tự.
+  * Phân quyền thao tác xóa: Nút **Xóa** thể loại chỉ hiển thị đối với **ADMIN**. Khi click, hệ thống yêu cầu xác nhận thông qua hộp thoại `ConfirmDialog` nhằm đảm bảo an toàn, tránh thao tác nhầm lẫn.
+
+### 2. Quản lý Mã giảm giá (Coupon/Promotion Management)
+* **Component `CouponManagerTab`**:
+  * Bảng hiển thị thông tin chi tiết từng coupon: Mã code (nổi bật dạng badge), Loại giảm (Phần trăm hoặc số tiền cố định), Giá trị giảm kèm mức giảm tối đa cho phần trăm, Đơn tối thiểu để áp dụng, Số lượt đã dùng trên tổng giới hạn, Hạn dùng rõ ràng, Trạng thái hoạt động.
+  * Thiết lập nút chuyển trạng thái kích hoạt (**Kích hoạt / Tạm tắt**) nhanh gọn bằng một click nhờ gọi API `PATCH /api/coupons/:id/toggle`.
+  * Modal form cấu hình mã giảm giá đầy đủ các trường dữ liệu.
+  * Ràng buộc chặt chẽ tại client-side:
+    * Mã code phải là ký tự chữ in hoa viết liền và số (không chứa khoảng trắng hoặc ký tự đặc biệt).
+    * Phần trăm giảm không vượt quá 100%. Giá trị giảm phải > 0.
+    * Ngày kết thúc bắt buộc phải sau ngày bắt đầu.
+    * Giá trị đơn tối thiểu, mức giảm tối đa và giới hạn sử dụng không được là số âm.
+  * Phân quyền: Thao tác xóa coupon được bảo vệ, chỉ dành cho vai trò **ADMIN** (giống như phân quyền ở các API backend).
+
+---
+
+## 🧪 KẾT QUẢ KIỂM THỬ TỰ ĐỘNG & XÁC MINH
+
+### 1. Kiểm thử CRUD Model bằng Node Script
+Chúng tôi đã tạo và chạy thử kịch bản kiểm thử cục bộ `test_pm_crud.js` trên backend nhằm xác nhận sự chính xác của cơ chế CRUD trong Database.
+Kết quả cho thấy việc lưu, sửa đổi, bật/tắt, và xóa dọn dẹp các bản ghi ở cả hai bảng `categories` và `coupons` đều chạy hoàn hảo:
+```
+🧪 Bắt đầu kiểm thử nghiệp vụ CRUD Category & Coupon...
+
+--- 1. KIỂM THỬ CATEGORY ---
+✅ Database đã kết nối lúc: 2026-05-22T16:47:50.840Z
+✅ Tạo Category thành công: { id: 12, name: 'Thể loại test 1779468470816', description: 'Mô tả thể loại test' }
+✅ Tìm Category theo ID thành công: { id: 12, name: 'Thể loại test 1779468470816', description: 'Mô tả thể loại test' }
+✅ Cập nhật Category thành công: { id: 12, name: 'Thể loại test 1779468470816 (Đã sửa)', description: 'Mô tả mới' }
+
+--- 2. KIỂM THỬ COUPON ---
+✅ Tạo Coupon thành công: { id: 9, code: 'CPNTEST982', discount_type: 'PERCENT', discount_value: '15', ... }
+✅ Tìm Coupon theo code thành công: { id: 9, code: 'CPNTEST982', discount_type: 'PERCENT', ... }
+✅ Cập nhật Coupon thành công: { id: 9, code: 'CPNTEST982', discount_type: 'PERCENT', discount_value: '20', ... }
+✅ Tắt Coupon thành công: { id: 9, code: 'CPNTEST982', discount_type: 'PERCENT', is_active: false, ... }
+
+--- 3. DỌN DẸP DỮ LIỆU ---
+✅ Xóa Coupon thành công, ID: { id: 9 }
+✅ Xóa Category thành công, ID: { id: 12 }
+
+🎉 Tất cả bài kiểm tra CRUD Model đã vượt qua thành công!
+```
+
+### 2. Manual Verification
+* Đã tích hợp thành công hai tab "QUẢN LÝ THỂ LOẠI" và "MÃ GIẢM GIÁ" vào giao diện quản trị Admin Dashboard của frontend.
+* Khi đăng nhập bằng tài khoản Admin/Curator, hai tab này hiển thị đẹp mắt theo đúng thiết kế vintage cao cấp của dự án, đồng bộ hóa dữ liệu từ các API tương ứng ở backend một cách mượt mà.
+
+---
+
+## 📦 PHẦN 4: SỬA LỖI RÒ RỈ KHO & ĐỒNG BỘ DỮ LIỆU BÁN HÀNG (ĐÃ HOÀN TẤT)
+
+Chúng tôi đã khắc phục hoàn toàn sự cố hiển thị sai lệch dữ liệu kho hàng (lượng "Đang giữ" bị rác và "Đã bán" hiển thị bằng 0 đối với các đơn hàng thành công).
+
+### 1. Thay đổi cơ chế Giữ kho & Trừ kho
+* **[Inventory.js (Model)](file:///E:/sdl-project/src/models/Inventory.js)**:
+  * Nâng cấp phương thức `hold(client, bookId, quantity)` hỗ trợ nhận tham số transaction `client` nhằm dùng chung kết nối với các tiến trình đặt hàng.
+* **[cartService.js](file:///E:/sdl-project/src/services/cartService.js)**:
+  * Sửa hàm `prepareCheckout` để chỉ kiểm tra số lượng sách sẵn có trong kho xem có đáp ứng đủ hay không (`Inventory.checkAvailability`) thay vì thực hiện gọi giữ kho sớm (`Inventory.hold`), giúp loại bỏ hoàn toàn việc tạo lượng giữ chỗ rác khi khách hàng hủy hoặc tải lại trang thanh toán.
+* **[orderService.js](file:///E:/sdl-project/src/services/orderService.js)**:
+  * Trong hàm `checkout`, khi đơn hàng được lưu thành công dưới dạng `PENDING`, tiến hành gọi `await Inventory.hold(client, item.bookId, item.quantity)` trong cùng một transaction để giữ hàng chính xác nhất cho các đơn hàng thật.
+
+### 2. Đồng bộ hóa và Sửa chữa Dữ liệu cũ (Database Sync)
+* **[sync_inventory.js (Script)](file:///E:/sdl-project/src/utils/sync_inventory.js)**:
+  * Đã triển khai và thực thi thành công script bảo trì dữ liệu trên database thực tế.
+  * Quét toàn bộ 14 đơn hàng thành công/đang xử lý lịch sử, kiểm tra log trong `inventory_transactions`. Đồng bộ trừ kho vật lý (`available_qty` giảm, `sold_qty` tăng) và chèn lịch sử cho 13 đơn hàng cũ chưa từng được trừ kho trước đó.
+  * Reset và tính toán lại cột `reserved_qty` cho tất cả các đầu sách khớp chính xác với số lượng trong các đơn hàng `PENDING` thực tế (đã đưa tất cả lượng giữ chỗ rác từ giỏ hàng cũ về 0).
+
+### 3. Kết quả Kiểm thử tự động Luồng tồn kho mới
+Chúng tôi đã tạo và chạy thành công script kiểm thử luồng tích hợp `test_order_inventory_flow.js` để kiểm chứng vòng đời tồn kho của đơn hàng:
+```
+=== BẮT ĐẦU KIỂM THỬ TỰ ĐỘNG LUỒNG TỒN KHO & ĐƠN HÀNG ===
+✅ Database đã kết nối lúc: 2026-05-23T10:21:50.305Z
+🧹 Đã dọn sạch giỏ hàng của User thử nghiệm.
+📊 Trạng thái kho ban đầu: { available: 5, reserved: 0, sold: 5 }
+
+🛒 Bước 1: Thêm 2 cuốn sách vào giỏ...
+🛒 Bước 2: Gọi prepareCheckout (người dùng đi đến trang thanh toán)...
+👉 Kho sau prepareCheckout: { available: 5, reserved: 0, sold: 5 }
+✅ Chính xác: Không giữ kho sớm khi chỉ mới xem trang thanh toán.
+
+📦 Bước 3: Đặt hàng thành công (COD)...
+👉 Đơn hàng #17 được tạo với trạng thái: PENDING
+👉 Kho sau khi Đặt hàng thành công: { available: 5, reserved: 2, sold: 5 }
+✅ Chính xác: Đã giữ kho 2 cuốn ở cột reserved_qty.
+
+🛠️ Bước 4: Admin duyệt xác nhận đơn hàng (chuyển sang CONFIRMED)...
+👉 Kho sau khi Admin xác nhận đơn hàng: { available: 3, reserved: 0, sold: 7 }
+✅ Chính xác: Đã trừ kho khả dụng và chuyển vào cột Đã bán.
+
+❌ Bước 5: Admin hủy đơn hàng sau khi đã xác nhận (chuyển sang CANCELLED)...
+👉 Kho sau khi Hủy đơn hàng: { available: 5, reserved: 0, sold: 5 }
+✅ Chính xác: Kho sẵn có được phục hồi, doanh số giảm về đúng ban đầu.
+
+🎉 CHÚC MỪNG! TẤT CẢ CÁC BƯỚC KIỂM THỬ ĐÃ THÀNH CÔNG TỐT ĐẸP!
+```
+Giao diện quản lý tồn kho tại Admin Dashboard của bạn ở Frontend hiện tại đã hiển thị dữ liệu cực kỳ sạch sẽ, rõ ràng và đồng bộ chuẩn xác với cơ sở dữ liệu.
+

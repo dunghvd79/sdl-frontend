@@ -1,0 +1,69 @@
+# Kế hoạch triển khai: Lọc đơn hàng theo ngày đặt hàng trong Quản trị viên (Admin/Curator)
+
+Kế hoạch này mô tả việc bổ sung tính năng **lọc danh sách đơn hàng theo ngày** tại Bảng Quản trị (dành cho vai trò `ADMIN` và `CURATOR`). Tính năng này tối ưu hóa quy trình kiểm hàng ngày, tăng tốc độ truy vấn cơ sở dữ liệu và cải thiện trải nghiệm vận hành của hệ thống.
+
+---
+
+## Nghiệp vụ chi tiết
+
+1. **Bộ lọc Ngày đặt hàng (Date Filter)**:
+   - Quản trị viên có thể chọn một ngày cụ thể (định dạng `YYYY-MM-DD`) từ thanh công cụ của tab **Đơn hàng**.
+   - **Tất cả ngày (Mặc định)**: Nếu không chọn ngày, hệ thống sẽ trả về toàn bộ đơn hàng trong cơ sở dữ liệu như hiện tại.
+   - **Lọc theo ngày**: Chỉ hiển thị các đơn hàng được đặt chính xác trong ngày đã chọn.
+   - **Nút hành động nhanh**:
+     - Nút **"Hôm nay"**: Nhấn để tự động lọc nhanh các đơn hàng trong ngày hôm nay.
+     - Nút **"Tất cả ngày"**: Nhấn để xóa bộ lọc ngày hiện tại và hiển thị đầy đủ lịch sử đơn hàng.
+
+2. **Cập nhật Chỉ số Thống kê trạng thái (Pipeline Stats)**:
+   - Các con số thống kê trên thanh Tiến trình (TẤT CẢ, CHỜ XÁC NHẬN, ĐÃ XÁC NHẬN, v.v.) sẽ tự động cập nhật để hiển thị **đúng số lượng đơn hàng tương ứng với ngày đang được chọn lọc**.
+
+3. **Thông báo Không có đơn hàng**:
+   - Nếu trong ngày được chọn lọc không có bất kỳ đơn hàng nào (hoặc không có đơn hàng nào ở trạng thái đang lọc), bảng giao diện sẽ hiển thị thông báo chi tiết: *"Không có đơn hàng nào trong ngày [Ngày/Tháng/Năm]"* hoặc *"Không có đơn hàng nào ở trạng thái [Tên trạng thái] trong ngày [Ngày/Tháng/Năm]"*.
+
+---
+
+## Proposed Changes
+
+### Component: Backend (API Controller)
+
+#### [MODIFY] [adminController.js](file:///E:/it-project/smart_digital_library/sdl-project/src/controllers/adminController.js)
+- **Phương thức `getAllOrders`**:
+  - Hỗ trợ nhận thêm tham số query `date` (định dạng `YYYY-MM-DD` truyền từ client).
+  - Tái cấu trúc logic xây dựng mệnh đề `WHERE` để hỗ trợ lọc đồng thời hoặc độc lập các thuộc tính: `status` và `date` (`DATE(o.created_at) = $param`).
+  - Đảm bảo tính toàn vẹn của mệnh đề `GROUP BY`, `ORDER BY` và các ràng buộc phân trang (`LIMIT`, `OFFSET`).
+
+---
+
+### Component: Frontend UI (Admin Dashboard Pages)
+
+#### [MODIFY] [AdminDashboardPage.jsx](file:///E:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+- **OrderManagerTab**:
+  - Thêm state quản lý bộ lọc ngày đặt hàng:
+    ```js
+    const [dateFilter, setDateFilter] = useState('');
+    ```
+  - Cập nhật React Query `useQuery` của khóa `['adminOrders']`:
+    - Thêm `dateFilter` vào mảng queryKey `['adminOrders', dateFilter]`.
+    - Truyền tham số `date` vào tham số gửi đi của API `api.get('/admin/orders', { params: { date: dateFilter } })`.
+  - Thiết kế thêm thanh công cụ bộ lọc ngày nằm bên dưới thanh Tiến trình trạng thái (Pipeline Stats Bar):
+    - Ô chọn ngày `<input type="date" />` thời trang và tối giản.
+    - Nút **"Hôm nay"** đặt kế bên giúp chuyển nhanh về ngày hiện tại.
+    - Nút **"Tất cả ngày"** giúp reset nhanh bộ lọc.
+  - Cập nhật thông báo rỗng (Empty State) tại dòng `<tr>` cuối cùng của bảng dữ liệu để báo chính xác tình trạng không có đơn hàng theo ngày/trạng thái đã chọn.
+
+---
+
+## Verification Plan
+
+### Automated Verification
+- Kiểm tra cuộc gọi mạng API:
+  - Khi không chọn ngày: Gửi request `GET /api/admin/orders` và nhận về đầy đủ đơn hàng.
+  - Khi chọn lọc ngày: Gửi request `GET /api/admin/orders?date=2026-05-24` và nhận về danh sách đơn của ngày đó.
+
+### Manual Verification
+1. Đăng nhập với tài khoản **ADMIN** hoặc **CURATOR**.
+2. Truy cập tab **Đơn hàng** trên Dashboard.
+3. Kiểm tra xem thanh công cụ bộ lọc ngày đã xuất hiện đầy đủ chưa.
+4. Nhấn nút **Hôm nay** và xác nhận xem danh sách hiển thị đúng các đơn hàng được đặt trong ngày hôm nay hay không. Thống kê trên thanh tiến trình có cập nhật lại tương ứng với ngày hôm nay không.
+5. Chọn một ngày trong tương lai (ví dụ: ngày mai) mà chắc chắn không có đơn hàng nào, kiểm tra xem bảng có hiển thị thông điệp: *"Không có đơn hàng nào trong ngày [Ngày/Tháng/Năm]"* hay không.
+6. Nhấn nút **Tất cả ngày** hoặc click **Xóa lọc** và xác nhận xem danh sách đơn hàng đã quay lại chế độ hiển thị đầy đủ ban đầu hay chưa.

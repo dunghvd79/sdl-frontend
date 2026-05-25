@@ -1,0 +1,104 @@
+# BẢN PHÂN TÍCH CHUYÊN SÂU: ACTOR KHÁCH HÀNG (CUSTOMER)
+*Smart Digital Library (SDL) - Đối chiếu Sơ đồ Use Case & Tiêu chuẩn Thị trường*
+
+Tài liệu này đánh giá hiện trạng phát triển các tính năng dành cho **Khách hàng** trong hệ thống Smart Digital Library, so sánh với sơ đồ Use Case yêu cầu và các sản phẩm thư viện số/nhà sách điện tử hàng đầu trên thị trường hiện nay (Waka, Kindle, Google Play Books, Fonos).
+
+---
+
+## 1. ĐỐI CHIẾU SƠ ĐỒ USE CASE (YÊU CẦU VS. THỰC TẾ)
+
+Dựa trên sơ đồ Use Case của bạn, dưới đây là bảng đối chiếu chi tiết giữa thiết kế và những gì hệ thống đã/chưa làm được:
+
+| Các Use Case chính | Yêu cầu nhánh (Include/Extend) | Hiện trạng triển khai | Nhận xét & Đánh giá khoảng trống |
+| :--- | :--- | :--- | :--- |
+| **1. Quản lý tài khoản** | — | **ĐÃ HOÀN THÀNH** | Khách hàng đã có thể Đăng ký, Đăng nhập, Xem thông tin hồ sơ, Cập nhật thông tin (Họ tên, SĐT, Địa chỉ) và Đổi mật khẩu. |
+| **2. Quản lý Giỏ hàng** | — | **ĐÃ HOÀN THÀNH** | Khách hàng thêm/bớt/sửa số lượng sách trong giỏ, giữ kho tạm thời, xóa giỏ hàng khi thanh toán thành công. |
+| **3. Mua hàng** | **Đăng nhập** (`<<include>>`) | **ĐÃ HOÀN THÀNH** | Bắt buộc người dùng phải đăng nhập mới được vào trang Checkout. |
+| | **Kiểm tra & Giữ kho** (`<<include>>`) | **ĐÃ HOÀN THÀNH** | Hệ thống tự động kiểm tra số lượng tồn kho thực tế của sách và khóa giữ kho tạm thời trước khi thanh toán. |
+| | **Thanh toán Online** (`<<extend>>`) | **ĐÃ HOÀN THÀNH** | Đã tích hợp cổng giả lập **SDL PayGate**, tự động chuyển hướng, xử lý webhook bất đồng bộ và khôi phục giỏ hàng nếu thất bại. |
+| | **Thanh toán COD** (`<<extend>>`) | **ĐÃ HOÀN THÀNH** | Đã hỗ trợ tiền mặt, chuyển hướng trực tiếp trang thành công và dọn sạch giỏ hàng ngay lập tức. |
+| | **Áp mã giảm giá** (`<<extend>>`) | ❌ **CHƯA CÓ** | **KHOẢNG TRỐNG LỚN:** Sơ đồ Use Case yêu cầu có tính năng `Áp mã giảm giá` mở rộng từ `Mua hàng`, tuy nhiên mã nguồn hiện tại hoàn toàn chưa có bảng dữ liệu `coupons`/`vouchers` hay ô nhập code giảm giá ở trang Checkout. |
+| **4. Quản lý đơn hàng cá nhân** | — | **ĐÃ HOÀN THÀNH** | Khách hàng xem lịch sử đơn hàng, xem timeline 6 trạng thái chi tiết, thanh toán lại đơn `PENDING`, và tính năng **"Mua lại" (Reorder)** sao chép nhanh đơn cũ vào giỏ hiện tại. |
+| **5. Tương tác với sản phẩm** | — | **ĐÃ HOÀN THÀNH** | Tìm kiếm theo tên/ID, lọc theo thể loại, bộ lọc giá tức thì (Price range slider), giao diện trống có gợi ý "Có thể bạn sẽ thích". |
+| **6. Đánh giá** | — | **ĐÃ HOÀN THÀNH** | Đánh giá sao (1-5⭐) và viết nhận xét chi tiết kèm biểu đồ phân tích sao trực quan tại trang chi tiết sách. |
+
+> [!IMPORTANT]
+> **Điểm cần khắc phục gấp theo sơ đồ Use Case:** Tính năng **Áp mã giảm giá (Coupon/Voucher)**. Chúng ta cần bổ sung thực thể Coupon trong DB, API áp dụng mã giảm giá và ô nhập mã trên giao diện CheckoutPage để khớp 100% sơ đồ Use Case.
+
+---
+
+## 2. SO SÁNH VỚI CÁC THƯ VIỆN SỐ TRÊN THỊ TRƯỜNG
+
+Khi đặt Smart Digital Library (SDL) cạnh các nền tảng thương mại lớn (Waka, Kindle, Fonos, Google Play Books), hệ thống của chúng ta sở hữu thế mạnh công nghệ vượt trội nhưng vẫn thiếu một số tính năng vận hành tiêu chuẩn:
+
+### 🌟 Những điểm SDL làm tốt hơn (Lợi thế cạnh tranh)
+1. **Chatbot AI RAG chuyên sâu theo từng cuốn sách:** 
+   - *SDL:* Sau khi mua sách thành công (`DELIVERED`), người dùng có quyền chat trực tiếp với AI RAG để hỏi đáp, tóm tắt và phân tích nội dung cuốn sách đó dựa trên file PDF gốc đã được vector hóa.
+   - *Thị trường:* Hầu hết các thư viện số thương mại lớn hiện nay (Waka, Kindle) **chưa tích hợp** tính năng này trực tiếp. Người dùng chỉ có thể đọc thụ động chứ không thể tương tác hai chiều thông minh như SDL.
+2. **Quy trình Quản lý vòng đời đơn hàng chặt chẽ (6 trạng thái):**
+   - Hỗ trợ đầy đủ vòng đời từ lúc đặt hàng -> xác nhận -> đóng gói -> đang giao -> đã giao -> hủy đơn. Có sự phân quyền rõ ràng giữa Khách hàng và Admin/Curator.
+3. **Giữ kho thông minh (Inventory Reservation):**
+   - Đảm bảo sách trong giỏ được giữ chỗ tạm thời tránh tình trạng thanh toán xong bị thiếu hàng (Overselling).
+
+---
+
+### ⚠️ Những điểm SDL còn thiếu (Khoảng trống so với thị chuẩn thị trường)
+
+Để trở thành một nền tảng chuyên nghiệp thực thụ, Actor Khách Hàng cần được bổ sung các nhóm tính năng sau:
+
+#### A. Tủ sách cá nhân (My Bookshelf / Personal Library)
+* **Thực trạng SDL:** Người dùng sau khi mua thành công chỉ có thể đọc sách bằng cách vào lịch sử đơn hàng hoặc vào trang chi tiết của cuốn sách đó để nhấn nút "Đọc thử/Đọc sách".
+* **Tiêu chuẩn thị trường:** Phải có một trang **"Thư viện của tôi"** hoặc **"Tủ sách cá nhân"**. Nơi đây gom tất cả các tài sản số (sách PDF, audiobook) mà người dùng đã mua hoặc mượn về một chỗ để dễ dàng quản lý và truy cập nhanh.
+
+#### B. Trình đọc sách High-Fidelity trực tuyến
+* **Thực trạng SDL:** Sử dụng trình xem PDF cơ bản.
+* **Tiêu chuẩn thị trường:** Trình đọc Ebook cần hỗ trợ các tính năng tăng trải nghiệm đọc:
+  - Lưu vị trí đang đọc dở (Bookmark / Reading Progress).
+  - Đổi màu nền (Dark mode, Sepia để đọc ban đêm đỡ mỏi mắt).
+  - Thay đổi kích thước và font chữ (đối với định dạng EPUB).
+  - Highlight từ vựng, ghi chú (Note-taking) trực tiếp trên dòng chữ.
+
+#### C. Mô hình Mượn sách (Borrowing) & Đăng ký Hội viên (Subscription/VIP)
+* **Thực trạng SDL:** Chỉ hỗ trợ mua đứt (Outright Purchase) từng cuốn sách.
+* **Tiêu chuẩn thị trường:** 
+  - **Mượn sách (Borrow):** Người dùng được đọc sách trong thời gian giới hạn (ví dụ: 14 ngày) với mức phí rẻ hơn mua đứt. Hết hạn hệ thống tự động khóa quyền đọc.
+  - **Gói VIP (Subscription - giống Waka VIP / Kindle Unlimited):** Trả phí cố định theo tháng/năm để đọc không giới hạn toàn bộ hoặc một danh mục sách được chỉ định.
+
+#### D. Sách nói (Audiobook)
+* **Thực trạng SDL:** Chỉ hỗ trợ định dạng đọc PDF.
+* **Tiêu chuẩn thị trường (Fonos, Voiz FM):** Tích hợp Audiobook đầu phát âm thanh (audio player) có khả năng:
+  - Điều chỉnh tốc độ phát (0.75x - 2x).
+  - Hẹn giờ tắt ứng dụng (Sleep Timer).
+  - Chạy background (phát khi tắt màn hình điện thoại).
+
+---
+
+## 3. ĐỀ XUẤT LỘ TRÌNH NÂNG CẤP HỆ THỐNG
+
+Để hoàn thiện Actor Khách Hàng tối ưu nhất, chúng tôi đề xuất lộ trình phát triển tiếp theo gồm 3 giai đoạn:
+
+```mermaid
+graph TD
+    A[Giai đoạn 1: Khớp Use Case] --> B(Triển khai Áp mã giảm giá - Coupon)
+    B --> C[Giai đoạn 2: Tối ưu trải nghiệm]
+    C --> D(Xây dựng trang Tủ sách của tôi)
+    C --> E(Tối ưu hóa trình đọc PDF & lưu tiến độ đọc)
+    C --> F(Thêm chức năng Hủy đơn hàng PENDING)
+    D --> G[Giai đoạn 3: Mở rộng mô hình]
+    G --> H(Mô hình Mượn sách giới hạn ngày)
+    G --> I(Gói Subscription thành viên VIP)
+```
+
+1. **Giai đoạn 1: Khớp 100% Use Case Yêu Cầu (Ưu tiên Cao)**
+   * Thiết lập bảng `coupons` trong cơ sở dữ liệu.
+   * Xây dựng API kiểm tra mã giảm giá và trừ tiền trực tiếp trên tổng đơn hàng.
+   * Cập nhật UI trang Checkout để Khách hàng có thể nhập mã coupon và hiển thị số tiền được giảm tức thì.
+   * Thêm chức năng cho phép Khách hàng tự bấm **Hủy đơn hàng** nếu đơn hàng đang ở trạng thái `PENDING`.
+
+2. **Giai đoạn 2: Nâng cấp Trải nghiệm Độc giả (Ưu tiên Trung bình)**
+   * Tạo trang **Tủ sách của tôi (`/my-library`)** làm màn hình trung tâm chứa sách đã mua.
+   * Nâng cấp trình đọc PDF tích hợp khả năng ghi nhớ trang đang đọc để lần sau người dùng mở ra đọc tiếp mà không cần cuộn từ đầu.
+
+3. **Giai đoạn 3: Thương mại hóa nâng cao (Ưu tiên Thấp)**
+   * Phát triển tính năng mượn sách có thời hạn.
+   * Tích hợp cổng thanh toán thực tế (VNPAY / PayOS).

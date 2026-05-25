@@ -1,0 +1,68 @@
+# Kế Hoạch Xây Dựng Trang Chi Tiết Đơn Hàng & Timeline Trạng Thái (Order Details Page)
+
+Chúng ta sẽ bổ sung tính năng xem chi tiết cụ thể thông tin một đơn hàng (mua gì, bao giờ, giá cả, và đặc biệt là timeline cập nhật trạng thái đơn hàng theo từng giai đoạn).
+
+---
+
+## User Review Required
+
+> [!NOTE]
+> Trang chi tiết đơn hàng sẽ có địa chỉ URL `/orders/:id`. Chúng ta sẽ thiết kế một bộ chỉ báo tiến trình (Stepper / Timeline) phẳng tối giản theo đúng phong cách Editorial của thư viện (viền mỏng 1px, không bo góc `rounded-none`, màu sắc nhẹ nhàng).
+
+---
+
+## Proposed Changes
+
+### 1. Backend (`E:\sdl-project`)
+
+#### [MODIFY] [Order.js](file:///E:/sdl-project/src/models/Order.js)
+- Cập nhật hàm `findById` hoặc viết hàm mới `getOrderDetail` để kết hợp bảng `books` nhằm lấy tên sách (`title`) và các thông tin sách cần thiết khác, thay vì chỉ lấy ID.
+- Đảm bảo trả về cấu trúc dữ liệu đầy đủ bao gồm các thông tin khách hàng liên kết.
+
+#### [MODIFY] [orderController.js](file:///E:/sdl-project/src/controllers/orderController.js)
+- Thêm phương thức `getOrderDetails(req, res)` để lấy thông tin chi tiết một đơn hàng.
+- Kiểm tra quyền sở hữu đơn hàng: Nếu người dùng có vai trò `CUSTOMER`, họ chỉ có thể xem đơn hàng của chính mình (so sánh `order.user_id` với `req.user.id`). Nếu là `ADMIN` hoặc `CURATOR`, họ được quyền xem bất kỳ đơn hàng nào.
+
+#### [MODIFY] [orders.js](file:///E:/sdl-project/src/routes/orders.js)
+- Đăng ký route mới: `router.get('/:id', orderController.getOrderDetails);` để lấy thông tin một đơn hàng cụ thể theo ID.
+
+---
+
+### 2. Frontend (`sdl-frontend`)
+
+#### [NEW] [OrderDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderDetailPage.jsx)
+- Tạo trang hiển thị chi tiết một đơn hàng:
+  - **Mã đơn & Ngày đặt**: Định dạng thời gian rõ ràng, đẹp mắt.
+  - **Timeline trạng thái (Order Stepper)**: Hiển thị thanh tiến trình 5 giai đoạn chính (`PENDING` -> `CONFIRMED` -> `PACKAGING` -> `DELIVERING` -> `DELIVERED`). Các giai đoạn đã qua hoặc hiện tại sẽ được sáng màu, giai đoạn tiếp theo mờ hơn. Nếu trạng thái là `CANCELLED`, hiển thị timeline ở trạng thái bị hủy (màu đỏ).
+  - **Danh sách sản phẩm**: Hiển thị bảng chi tiết các sách đã mua gồm: ảnh bìa (nếu có), tên sách, đơn giá, số lượng, thành tiền.
+  - **Nút hành động**:
+    - Nút "Thanh toán ngay" (chỉ khi trạng thái là `PENDING`).
+    - Nút "Hỏi đáp AI" kế bên mỗi sản phẩm (chỉ khi trạng thái là `DELIVERED`).
+    - Nút "Quay lại" quay về trang Lịch sử đơn hàng.
+
+#### [MODIFY] [App.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/App.jsx)
+- Đăng ký Route `/orders/:id` trỏ đến `OrderDetailPage.jsx`.
+
+#### [MODIFY] [OrderHistoryPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderHistoryPage.jsx)
+- Thay đổi liên kết hoặc thêm nút "Chi tiết" ở mỗi đơn hàng để dẫn sang `/orders/:id`.
+
+---
+
+## Verification Plan
+
+### Kiểm tra tự động
+- Chạy biên dịch frontend để đảm bảo không lỗi cú pháp:
+  ```powershell
+  npm run build
+  ```
+
+### Kiểm tra thủ công
+1. Đăng nhập tài khoản Customer:
+   - Truy cập trang Lịch sử đơn hàng (`/orders`), nhấp chọn nút "Chi tiết" của một đơn hàng bất kỳ.
+   - Xác nhận chuyển hướng đến `/orders/:id` thành công và hiển thị đúng thông tin: mã đơn, các cuốn sách đã mua, số tiền, ngày giờ.
+   - Kiểm tra xem Timeline tiến trình có hiển thị đúng theo trạng thái hiện tại của đơn hàng đó không.
+2. Kiểm tra quyền bảo mật:
+   - Thử sửa ID trên URL sang ID đơn hàng của người dùng khác để kiểm tra xem Backend có chặn quyền (`403 Forbidden`) hay không.
+3. Đăng nhập tài khoản Admin:
+   - Chuyển trạng thái đơn hàng của khách hàng qua từng bước (`CONFIRMED` -> `PACKAGING` -> `DELIVERING` -> `DELIVERED`).
+   - Đăng nhập lại tài khoản khách hàng, mở trang chi tiết đơn hàng đó và kiểm tra xem Timeline tiến trình có nhảy trạng thái tương ứng hay không.

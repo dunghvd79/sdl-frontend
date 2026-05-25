@@ -1,0 +1,84 @@
+# Kế hoạch triển khai: Tính năng Upload Ảnh Bìa Sách (Multer Integration)
+
+Kế hoạch này thay đổi cơ chế quản lý ảnh bìa sách từ nhập URL thủ công sang **tải file ảnh trực tiếp (Upload file)** từ máy tính, lưu trữ tại thư mục public của server và hiển thị đồng bộ trên toàn bộ website.
+
+---
+
+## 1. Phân tích Hiện trạng & Giải pháp
+
+### A. Backend (Đã có sẵn cấu trúc):
+* **Multer Config & Route**: Đã có sẵn router tại [upload.js](file:///E:/sdl-project/src/routes/upload.js) cho phép nhận file qua `POST /api/upload/cover`, lưu tại `E:/sdl-project/public/uploads/covers` và trả về đường dẫn tĩnh `/uploads/covers/cover-xxx.jpg`.
+* **Static Serving**: Đã có sẵn cấu hình trong [app.js](file:///E:/sdl-project/src/config/app.js) để phục vụ ảnh tĩnh qua path `/uploads`.
+
+### B. Thay đổi cần thực hiện:
+1. **Utility helper (`src/services/image.js`)**: Tạo hàm `getImageUrl(url)` để tự động chuyển đổi path tương đối `/uploads/...` thành URL tuyệt đối (ví dụ `http://localhost:3000/uploads/...`) bằng cách lấy base URL từ `VITE_API_URL`.
+2. **Frontend Book Form (`AdminDashboardPage.jsx`)**: 
+   * Thay thế input URL cũ bằng giao diện kéo thả/chọn file chuyên nghiệp.
+   * Khi người dùng chọn file, gửi request `POST /api/upload/cover` để tải ảnh lên server, nhận URL trả về và gán vào form.
+   * Cung cấp tùy chọn toggle "Hoặc dán URL" nếu họ vẫn muốn sử dụng URL bên ngoài.
+3. **Hiển thị đồng bộ**: Cập nhật các component hiển thị ảnh bìa để sử dụng `getImageUrl(book.cover_url)` thay vì ảnh Picsum ngẫu nhiên:
+   * [BookCard.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/components/BookCard.jsx)
+   * [BookDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/BookDetailPage.jsx)
+   * [CartPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/CartPage.jsx)
+   * [ChatPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/ChatPage.jsx)
+   * [OrderHistoryPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderHistoryPage.jsx)
+4. **Backend Order Model (`Order.js`)**: Cập nhật hàm `getUserOrders` và `findById` để truy vấn kèm trường `cover_url` của sách, giúp trang lịch sử mua hàng hiển thị đúng ảnh bìa đã upload.
+
+---
+
+## 2. Chi tiết các thay đổi (Proposed Changes)
+
+### Component: Frontend Services & Helpers
+#### [NEW] [image.js](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/services/image.js)
+* Định nghĩa và export hàm `getImageUrl(url)` xử lý logic format URL ảnh bìa.
+
+### Component: Backend Updates
+#### [MODIFY] [Order.js](file:///E:/sdl-project/src/models/Order.js)
+* Bổ sung cột `b.cover_url` vào cấu trúc JSON gom nhóm sản phẩm trong `getUserOrders` và `findById`.
+
+### Component: Frontend Pages & Components
+#### [MODIFY] [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+* Khai báo state `uploadingCover` (để hiển thị loading spinner khi đang upload) và `showUrlInput` (toggle ẩn/hiển thị input nhập URL thủ công).
+* Tạo hàm `handleCoverUpload` để gửi file dạng `multipart/form-data` lên `/api/upload/cover`.
+* Thiết kế lại Panel ảnh bìa:
+  * Nút "📁 Tải ảnh từ máy tính" trực quan.
+  * Preview ảnh bìa sắc nét kèm nút "Xóa ảnh" để reset.
+  * Nút toggle "🔗 Hoặc dán URL ảnh bìa" ẩn dưới dạng link nhỏ.
+
+#### [MODIFY] [BookCard.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/components/BookCard.jsx)
+* Đổi `defaultImage` thành:
+  ```javascript
+  const defaultImage = book.cover_url 
+    ? getImageUrl(book.cover_url) 
+    : `https://picsum.photos/seed/${book.id + 10}/800/1000`;
+  ```
+
+#### [MODIFY] [BookDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/BookDetailPage.jsx)
+* Đổi `defaultImage` tương tự để hiển thị ảnh bìa thật trong trang chi tiết.
+
+#### [MODIFY] [CartPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/CartPage.jsx)
+* Đổi ảnh bìa trong giỏ hàng sử dụng `getImageUrl(item.book?.cover_url)`.
+
+#### [MODIFY] [ChatPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/ChatPage.jsx)
+* Đổi ảnh bìa trong khung chat sách và các avatar mini.
+
+#### [MODIFY] [OrderHistoryPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderHistoryPage.jsx)
+* Đổi ảnh bìa trong danh sách lịch sử mua hàng sử dụng `getImageUrl(item.cover_url)`.
+
+---
+
+## 3. Kịch bản xác minh (Verification Plan)
+
+### A. Kiểm tra Upload trực tiếp
+1. Mở modal **Thêm Sách mới**.
+2. Click nút **Tải ảnh từ máy tính**, chọn một file ảnh (.jpg/.png).
+3. Đợi loading spinner chạy và biến mất. Xác nhận ảnh được hiển thị preview thành công.
+4. Kiểm tra trong thư mục backend `E:/sdl-project/public/uploads/covers` xem file ảnh mới đã được lưu chưa.
+
+### B. Kiểm tra Lưu & Hiển thị
+1. Điền đầy đủ thông tin sách mới và lưu lại.
+2. Kiểm tra sách trong bảng Admin hiển thị đúng ảnh preview.
+3. Ra trang chủ (Storefront), kiểm tra Book Card hiển thị đúng ảnh vừa upload thay vì ảnh Picsum.
+4. Click xem chi tiết sách, kiểm tra trang chi tiết hiển thị đúng ảnh.
+5. Thêm sách vào giỏ hàng và kiểm tra xem trong giỏ hàng có hiển thị ảnh này không.
+6. Tiến hành đặt hàng, kiểm tra trang lịch sử mua hàng (Order History) hiển thị đúng ảnh bìa của sách.

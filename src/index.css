@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1a1714;
+  --color-surface-warm: #faf8f5;
+  --color-surface-subtle: #f0ece7;
+  --color-divider: #ccc7c1;
+  --color-divider-lt: #e2ddd8;
+  --color-beige: #f4f3ee;
+  --color-beige-dark: #e8e6df;
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-surface-warm text-ink font-sans antialiased;
+  }
+}
+
+/* Hide scrollbars but keep functionality */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Custom Float Animation for Hero Collage */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}

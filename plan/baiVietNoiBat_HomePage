@@ -1,0 +1,151 @@
+# Kế hoạch triển khai: Hệ thống quản lý bài viết động (Blog CMS) cho Smart Digital Library
+
+Kế hoạch này chi tiết hóa việc chuyển đổi phần "Bài viết nổi bật" ở cuối trang chủ từ tĩnh (hardcoded) sang động hoàn toàn. Hệ thống sẽ tích hợp một hệ quản trị nội dung (CMS) đơn giản giúp Admin/Curator có toàn quyền đăng bài viết mới, chỉnh sửa hoặc tạm ẩn bài viết, và cho phép khách hàng xem chi tiết từng bài viết.
+
+---
+
+## Ý tưởng & Kiến trúc phân hệ Blog CMS
+
+### 1. Dữ liệu bài viết (Articles Table)
+Tạo bảng `articles` lưu trữ thông tin các bài viết với các cột chính:
+* `id` SERIAL PRIMARY KEY
+* `title` VARCHAR(255) NOT NULL (Tiêu đề bài viết)
+* `summary` TEXT (Tóm tắt ngắn hiển thị ngoài danh sách)
+* `content` TEXT NOT NULL (Nội dung chi tiết - hỗ trợ văn bản thô hoặc mã HTML)
+* `cover_url` VARCHAR(500) (Đường dẫn ảnh bìa bài viết)
+* `category` VARCHAR(100) DEFAULT 'Chiêm nghiệm' (Phân loại: *Chiêm nghiệm, Gợi ý tuyển đọc, Kinh nghiệm...*)
+* `reading_time` VARCHAR(50) DEFAULT '5 phút đọc' (Thời gian đọc ước tính)
+* `status` VARCHAR(50) DEFAULT 'PUBLISHED' (Trạng thái: `PUBLISHED`, `DRAFT`, `HIDDEN`)
+* `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+---
+
+## Các thay đổi & Thành phần cần triển khai
+
+### 1. Cơ sở dữ liệu (Database)
+
+#### [NEW] [migrate_articles.js](file:///e:/it-project/smart_digital_library/sdl-project/src/utils/migrate_articles.js)
+* Tạo script Node.js chạy một lần để tạo bảng bài viết trong PostgreSQL:
+  ```sql
+  CREATE TABLE IF NOT EXISTS articles (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      summary TEXT,
+      content TEXT NOT NULL,
+      cover_url VARCHAR(500),
+      category VARCHAR(100) DEFAULT 'Chiêm nghiệm',
+      reading_time VARCHAR(50) DEFAULT '5 phút đọc',
+      status VARCHAR(50) CHECK (status IN ('DRAFT', 'PUBLISHED', 'HIDDEN')) DEFAULT 'PUBLISHED',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
+* Thực hiện chèn thử nghiệm **3 bài viết mẫu** khớp chính xác với giao diện cũ để bảo toàn tính thẩm mỹ ban đầu khi chưa có bài viết mới.
+
+---
+
+### 2. Backend (API)
+
+#### [NEW] [Article.js](file:///e:/it-project/smart_digital_library/sdl-project/src/models/Article.js)
+* Xây dựng model truy vấn cơ sở dữ liệu cho bài viết:
+  * `create(data)`: Thêm bài viết mới.
+  * `getAll({ limit, offset, status, adminMode })`: Lấy danh sách bài viết.
+  * `findById(id)`: Lấy chi tiết bài viết.
+  * `update(id, data)`: Cập nhật thông tin bài viết.
+  * `delete(id)`: Xóa bài viết.
+
+#### [NEW] [articleController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/articleController.js)
+* Định nghĩa các API handler tương ứng:
+  * `getAllArticles(req, res)`: Hỗ trợ tìm kiếm, lọc theo phân mục, phân trang.
+  * `getArticle(req, res)`: Xem chi tiết bài viết.
+  * `createArticle(req, res)` & `updateArticle(req, res)`: Xác thực đầu vào và lưu trữ.
+  * `deleteArticle(req, res)`: Thực hiện xóa khỏi DB.
+
+#### [NEW] [articles.js (Routes)](file:///e:/it-project/smart_digital_library/sdl-project/src/routes/articles.js)
+* Tạo tệp định tuyến đăng ký các Endpoint:
+  * `GET /` (Công khai - Ai cũng xem được danh sách)
+  * `GET /:id` (Công khai - Xem chi tiết bài)
+  * `POST /` (Quyền ADMIN / CURATOR)
+  * `PUT /:id` (Quyền ADMIN / CURATOR)
+  * `DELETE /:id` (Quyền ADMIN)
+
+#### [MODIFY] [app.js](file:///e:/it-project/smart_digital_library/sdl-project/src/config/app.js)
+* Đăng ký tệp router mới vào ứng dụng Express:
+  ```javascript
+  app.use('/api/articles', require('../routes/articles'));
+  ```
+
+---
+
+### 3. Frontend (Giao diện)
+
+#### [NEW] [ArticleDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/ArticleDetailPage.jsx)
+* Trang chi tiết hiển thị nội dung toàn vẹn của một bài viết:
+  * Đọc `id` bài viết từ URL (`/blog/:id`).
+  * Gọi API lấy chi tiết bài viết và render tiêu đề lớn, thông tin tác giả/ngày đăng, ảnh đại diện nổi bật, và render trực tiếp nội dung bài viết.
+  * Hỗ trợ giao diện sạch sẽ, căn lề văn bản chữ rộng dạng ấn phẩm tạp chí văn học cao cấp.
+
+#### [MODIFY] [App.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/App.jsx)
+* Đăng ký route mới cho trang chi tiết bài viết:
+  ```jsx
+  import ArticleDetailPage from './pages/ArticleDetailPage';
+  ...
+  <Route path="/blog/:id" element={<ArticleDetailPage />} />
+  ```
+
+#### [MODIFY] [HomePage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/HomePage.jsx)
+* Thay thế khối HTML tĩnh ở phần **Featured Articles Showcase Section** thành dynamic query gọi `api.get('/articles?limit=3')`.
+* Sửa đổi các thẻ `<article>` để hiển thị dữ liệu thật từ API trả về.
+* Sửa liên kết thẻ `Link` để dẫn sang trang chi tiết động `/blog/${article.id}` thay vì đứng im ở trang chủ.
+
+#### [MODIFY] [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+* **Thêm Tab mới:** Bổ sung `{ id: 'articles', label: 'QUẢN LÝ BÀI VIẾT' }` vào danh sách `TABS`.
+* **Tạo Sub-component `ArticleManagerTab`**:
+  * Chức năng tương tự quản lý sách: Hiển thị bảng danh sách các bài viết với các thông tin (ID, Ảnh bìa, Tiêu đề, Chuyên mục, Trạng thái, Ngày đăng).
+  * Nút **Thêm Bài Viết Mới** và nút **Sửa/Xóa** cho từng bài viết.
+  * **Modal form soạn thảo bài viết**: Gồm các ô nhập Tiêu đề, Chọn chuyên mục, Tóm tắt ngắn, Soạn thảo nội dung (Textarea rộng hỗ trợ Markdown/HTML), Chọn ảnh bìa (cho phép up từ máy tính hoặc dán URL), chọn Trạng thái (`PUBLISHED`, `DRAFT`, `HIDDEN`).
+* Đăng ký hiển thị Component quản lý này khi chọn Tab tương ứng.
+
+---
+
+## Kịch bản Kiểm thử & Xác minh (Chi tiết từng bước)
+
+Dưới đây là quy trình cụ thể 6 bước kiểm thử thủ công để kiểm chứng toàn bộ luồng hoạt động từ Admin đến Khách hàng:
+
+### Bước 1: Tạo bảng và đổ dữ liệu bài viết giả định
+* **Hành động:** 
+  1. Chạy lệnh: `node src/utils/migrate_articles.js` từ console backend.
+  2. Mở ứng dụng quản lý PostgreSQL (như pgAdmin) kiểm tra bảng `articles` và đảm bảo có 3 bài viết mẫu được tự động chèn vào thành công.
+* **Kết quả:** Bảng được tạo thành công, console thông báo "✅ Tạo bảng và seed 3 bài viết thành công!".
+
+### Bước 2: Xác thực trang chủ tự động tải bài viết động
+* **Hành động:** Mở Trang chủ hệ thống, cuộn xuống phần **BÀI VIẾT NỔI BẬT**.
+* **Kết quả:** Giao diện hiển thị đúng 3 bài viết ban đầu (do dữ liệu mẫu chèn đúng ảnh và tiêu đề cũ). Bấm thử nút "Xem tất cả" hoặc click thử vào bài viết, trang phải điều hướng tới `/blog/:id` thành công.
+
+### Bước 3: Đăng nhập Admin và truy cập Tab quản lý mới
+* **Hành động:** Đăng nhập tài khoản có quyền `ADMIN`. Bấm vào tài khoản mở dropdown, chọn **Trang quản trị**.
+* **Kết quả:** Trên thanh Tab có thêm tùy chọn **QUẢN LÝ BÀI VIẾT**. Bấm vào tab này, hệ thống hiển thị danh sách 3 bài viết mẫu có sẵn với nút thêm/sửa/xóa tương ứng.
+
+### Bước 4: Tạo bài viết mới ở trạng thái Công khai
+* **Hành động:**
+  1. Bấm **+ Thêm Bài Viết Mới**.
+  2. Điền Tiêu đề: `"Review sách Nhà Giả Kim - Hành trình tìm kiếm ước mơ"`
+  3. Chọn Chuyên mục: `"Gợi ý tuyển đọc"`
+  4. Nhập Tóm tắt: `"Nhà Giả Kim không chỉ là câu chuyện về kho báu, mà còn là chiếc chìa khóa định vị số mệnh của riêng bạn..."`
+  5. Nhập Nội dung chi tiết: Một đoạn dài khoảng 3-4 đoạn giới thiệu chi tiết.
+  6. Chọn một ảnh bìa sách hoặc dán URL ảnh bìa, chọn Trạng thái: **Công khai**.
+  7. Bấm **Thêm bài viết**.
+* **Kết quả:** Bài viết mới xuất hiện ngay lập tức trong bảng quản lý của Admin.
+
+### Bước 5: Kiểm tra bài viết mới xuất hiện ngoài Trang chủ
+* **Hành động:** Quay lại Trang chủ, làm mới trang.
+* **Kết quả:** 
+  * Bài viết mới xuất hiện ở **vị trí đầu tiên** của khung bài viết nổi bật (vì là bài viết mới nhất).
+  * Click vào bài viết này: Hệ thống dẫn sang trang đọc bài chi tiết `/blog/[ID]`, hiển thị đầy đủ tiêu đề, ảnh bìa lớn sắc nét, thông tin chuyên mục và toàn bộ văn bản nội dung chi tiết bạn đã soạn thảo.
+
+### Bước 6: Kiểm tra tính năng Tạm ẩn bài viết (Draft/Hidden)
+* **Hành động:**
+  1. Quay lại trang Admin, bấm **Sửa** bài viết vừa tạo.
+  2. Đổi trạng thái hiển thị thành **Tạm ẩn** hoặc **Bản nháp**.
+  3. Bấm **Lưu thay đổi**.
+  4. Quay lại Trang chủ và làm mới trang.
+* **Kết quả:** Bài viết vừa tạo lập tức biến mất khỏi khung hiển thị ngoài trang chủ (chỉ còn lại 3 bài viết mẫu ban đầu), nhưng vẫn được bảo toàn trong bảng quản lý của Admin để chờ xuất bản lần sau.

@@ -1,0 +1,73 @@
+# Kế hoạch triển khai: Tích hợp cổng thanh toán PayOS (VietQR)
+
+Tài liệu này mô tả chi tiết phương án kỹ thuật để thay thế hoàn toàn cổng thanh toán VNPay bằng **PayOS** (hỗ trợ chuyển khoản nhanh VietQR tự động khớp đơn) cho cả môi trường chạy thử (Sandbox) và chạy thật (Production).
+
+---
+
+## Lý do chuyển đổi sang PayOS
+1. **Thanh toán VietQR tiện lợi**: Khách hàng chỉ cần mở ứng dụng ngân hàng quét mã QR hiển thị sẵn, không cần nhập thông tin thẻ thủ công.
+2. **Khớp đơn tự động miễn phí**: Tự động nhận diện giao dịch chuyển khoản thành công và cập nhật trạng thái đơn hàng.
+3. **Thư viện tích hợp hiện đại**: SDK chính thức của PayOS hỗ trợ Node.js đơn giản, sạch sẽ và bảo mật hơn VNPay rất nhiều.
+
+---
+
+## Các thay đổi đề xuất
+
+### 1. Cấu hình môi trường (`.env`)
+Thêm các biến môi trường cấu hình PayOS mới nhận từ dashboard [my.payos.vn](https://my.payos.vn/):
+
+```env
+# Cấu hình PayOS
+PAYOS_CLIENT_ID=your_client_id
+PAYOS_API_KEY=your_api_key
+PAYOS_CHECKSUM_KEY=your_checksum_key
+```
+
+### 2. Cài đặt thư viện SDK PayOS (`package.json`)
+Cài đặt thư viện chính thức của PayOS cho Node.js:
+```bash
+npm install @payos/node
+```
+
+### 3. Tích hợp Logic Dịch vụ (`paymentService.js`)
+#### [MODIFY] [paymentService.js](file:///e:/it-project/smart_digital_library/sdl-project/src/services/paymentService.js)
+* **Khởi tạo PayOS**:
+  ```javascript
+  const PayOS = require('@payos/node');
+  const payos = new PayOS({
+      clientId: process.env.PAYOS_CLIENT_ID,
+      apiKey: process.env.PAYOS_API_KEY,
+      checksumKey: process.env.PAYOS_CHECKSUM_KEY
+  });
+  ```
+* **Hàm `createPayOSPaymentLink(orderId, amount)`**:
+  Tạo mã thanh toán trực tuyến. `orderCode` của PayOS yêu cầu định dạng số nguyên (integer), hoàn toàn khớp với `orderId` kiểu SERIAL trong PostgreSQL của chúng ta.
+* **Hàm `verifyAndProcessPayOSPayment(paymentLinkId)`**:
+  Khi người dùng hoàn tất thanh toán và quay về trang `returnUrl`, backend sẽ trực tiếp gọi API an toàn của PayOS để xác thực trạng thái giao dịch thực tế trên cổng (`status === 'PAID'`), giúp chống gian lận thông số URL và hoạt động ổn định 100% ở localhost (không cần ngrok).
+* **Hàm `processPayOSWebhook(webhookBody)`**:
+  Xác thực chữ ký số webhook của PayOS gửi ngầm server-to-server và cập nhật trạng thái đơn hàng tương ứng.
+
+### 4. Xử lý API Controller (`paymentController.js`)
+#### [MODIFY] [paymentController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/paymentController.js)
+* **`getPaymentUrl`**: Thay thế VNPay bằng việc gọi tạo link thanh toán qua PayOS.
+* **`payosReturn`**: Endpoint nhận chuyển hướng trình duyệt từ PayOS khi thanh toán thành công, gọi dịch vụ xác thực giao dịch và điều hướng người dùng về trang kết quả ở Frontend (`/payment-result?status=success` hoặc `fail`).
+* **`payosCancel`**: Endpoint nhận chuyển hướng khi người dùng chủ động bấm hủy thanh toán trên cổng.
+* **`payosWebhook`**: Nhận thông báo sự kiện thanh toán ngầm tự động từ PayOS.
+
+### 5. Khai báo API Route (`payments.js`)
+#### [MODIFY] [payments.js](file:///e:/it-project/smart_digital_library/sdl-project/src/routes/payments.js)
+Đăng ký các route xử lý tương ứng cho PayOS:
+* `GET /api/payments/payos_return` (Nhận chuyển hướng thành công)
+* `GET /api/payments/payos_cancel` (Nhận chuyển hướng hủy)
+* `POST /api/payments/payos_webhook` (Nhận thông báo tự động nền)
+
+---
+
+## Quy trình kiểm thử và xác minh (Verification Plan)
+
+### Kiểm thử thủ công:
+1. Đăng ký/đăng nhập tài khoản trên cổng [PayOS](https://my.payos.vn/) để lấy các khóa API thử nghiệm.
+2. Thêm sách vào giỏ hàng, chọn phương thức thanh toán **Chuyển khoản (Online)**.
+3. Bấm **Đặt hàng & Thanh toán** và kiểm tra xem có được chuyển hướng trơn tru sang giao diện thanh toán VietQR của PayOS hay không.
+4. Quét mã QR giả lập thanh toán thành công hoặc bấm nút giả lập thanh toán thành công trên cổng PayOS.
+5. Quan sát quá trình chuyển hướng quay lại trang web của chúng ta, kiểm tra đơn hàng đã chuyển trạng thái `CONFIRMED` và giỏ hàng được dọn sạch hay chưa.

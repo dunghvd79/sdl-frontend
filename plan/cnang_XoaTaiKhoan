@@ -1,0 +1,81 @@
+# Kế hoạch triển khai: Chức năng Xóa tài khoản người dùng từ trang Quản lý Admin
+
+Kế hoạch này mô tả chi tiết việc bổ sung tính năng **Xóa vĩnh viễn tài khoản người dùng** cho quản trị viên (**ADMIN**). Tính năng này bao gồm giao diện xác nhận an toàn ở Frontend và xử lý cơ sở dữ liệu có ràng buộc khóa ngoại (Foreign Key Constraints) thông qua Database Transaction ở Backend.
+
+---
+
+## Nghiệp vụ chi tiết
+
+1. **Phân quyền thao tác**:
+   - Chỉ người dùng có vai trò `ADMIN` mới có quyền thực hiện xóa tài khoản người dùng.
+   - **Ràng buộc bảo mật**: Tránh tình trạng tự khóa (lockout), ADMIN **không được phép tự xóa tài khoản của chính mình**. Nút xóa tài khoản của chính Admin đang đăng nhập sẽ hiển thị trạng thái "Không khả dụng".
+
+2. **Xử lý ràng buộc cơ sở dữ liệu (Database Integrity)**:
+   Do bảng `orders` (Đơn hàng) thiết lập khóa ngoại `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT` nhằm bảo vệ lịch sử thanh toán, việc xóa trực tiếp một `user` trong bảng `users` sẽ bị PostgreSQL chặn và ném ra lỗi ràng buộc khóa ngoại.
+   
+   Để hỗ trợ việc xóa triệt để tài khoản phục vụ cho việc kiểm thử thủ công (ví dụ: xóa tài khoản thử nghiệm để đăng ký lại với cùng email), chúng ta sẽ thực hiện xóa tuần tự toàn bộ dữ liệu liên quan trong một **Database Transaction** an toàn:
+   - Xóa chi tiết giỏ hàng (`cart_items`) của user.
+   - Xóa giỏ hàng (`carts`) của user.
+   - Xóa hồ sơ mở rộng (`user_profiles`) của user.
+   - Xóa các đánh giá sách (`reviews`) của user.
+   - Xóa lịch sử mã giảm giá (`user_coupons`) của user.
+   - Xóa toàn bộ tin nhắn chat RAG (`messages`) trong các phiên chat của user.
+   - Xóa các phiên chat RAG (`chat_sessions`) của user.
+   - Xóa chi tiết đơn hàng (`order_items`) thuộc tất cả đơn hàng của user.
+   - Xóa toàn bộ đơn hàng (`orders`) của user.
+   - Cuối cùng, thực hiện xóa bản ghi của người dùng trong bảng `users`.
+
+---
+
+## Proposed Changes
+
+### Component: Backend (Routes & Controllers)
+
+#### [MODIFY] [admin.js](file:///E:/it-project/smart_digital_library/sdl-project/src/routes/admin.js)
+- Thêm route `DELETE` cho việc xóa tài khoản dưới quyền ADMIN:
+  ```js
+  router.delete('/users/:userId', requireRole(['ADMIN']), AdminController.deleteUser);
+  ```
+
+#### [MODIFY] [adminController.js](file:///E:/it-project/smart_digital_library/sdl-project/src/controllers/adminController.js)
+- Triển khai phương thức `static async deleteUser(req, res)`:
+  - Kiểm tra xem `userId` cần xóa có trùng với `req.user.id` (ID của Admin đang thực hiện yêu cầu) hay không. Nếu trùng, trả về lỗi `400` ("Không thể tự xóa tài khoản của chính mình!").
+  - Mở kết nối Database Client và bắt đầu một `Transaction` (`BEGIN`).
+  - Lần lượt thực hiện các câu lệnh `DELETE` các bảng phụ thuộc như mô tả ở phần Nghiệp vụ chi tiết.
+  - Xóa bản ghi trong bảng `users`. Nếu không tìm thấy người dùng, thực hiện `ROLLBACK` và trả về mã lỗi `404`.
+  - Thực hiện `COMMIT` transaction và trả về thông tin người dùng bị xóa kèm thông điệp thành công.
+  - Quản lý lỗi ngoại lệ bằng việc gọi `ROLLBACK` để đảm bảo tính toàn vẹn của Database.
+
+---
+
+### Component: Frontend UI (Admin Dashboard Pages)
+
+#### [MODIFY] [AdminDashboardPage.jsx](file:///E:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+- **UserManagerTab**:
+  - Nhập và quản lý thêm state cục bộ `confirmDialog` cho việc hiển thị hộp thoại xác nhận xóa người dùng:
+    ```js
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false });
+    ```
+  - Triển khai `deleteUserMutation` gọi API `DELETE /api/admin/users/:userId`. Khi xóa thành công, tiến hành invalidate query `['adminUsers']` để cập nhật bảng giao diện và hiển thị thông báo toast thành công.
+  - Viết hàm `handleDeleteClick(userToDelete)` kích hoạt component `ConfirmDialog` với thông tin cảnh báo nghiêm trọng (Xóa vĩnh viễn và không thể khôi phục dữ liệu).
+  - Tăng độ rộng cột Thao tác trong bảng Quản lý người dùng (`w-36` thành `w-48`) để hiển thị đẹp mắt 2 nút tác vụ.
+  - Bổ sung nút **XÓA** màu đỏ nổi bật bên cạnh nút **KHÓA / MỞ KHÓA** tại cột Thao tác (chỉ hiển thị khi `isMe` là `false`).
+  - Render component `<ConfirmDialog>` dưới cùng của Tab Quản lý người dùng.
+
+---
+
+## Verification Plan
+
+### Automated Verification
+- Kiểm tra mã phản hồi HTTP sau khi tích hợp API xóa tài khoản:
+  - Trường hợp xóa tài khoản thành công: Phản hồi mã `200` kèm thông tin user vừa bị xóa.
+  - Trường hợp tự xóa chính mình: Phản hồi mã `400` kèm thông báo lỗi cụ thể.
+
+### Manual Verification
+1. Đăng nhập với tài khoản **ADMIN**.
+2. Truy cập tab **Quản lý người dùng** trên trang Dashboard.
+3. Tìm kiếm và chọn một người dùng thử nghiệm (ví dụ: `huy@gmail.com`).
+4. Click nút **XÓA**. Xác nhận xem hộp thoại cảnh báo có hiển thị chi tiết và đúng chuẩn thiết kế của dự án không.
+5. Click **Xác nhận xóa**. Kiểm tra xem người dùng đó có biến mất khỏi danh sách người dùng quản trị hay không.
+6. Thử đăng ký lại một tài khoản mới với email vừa xóa để kiểm chứng việc giải phóng email trong hệ thống đã hoạt động chính xác.
+7. Đảm bảo nút xóa của tài khoản Admin hiện tại hiển thị trạng thái "Không khả dụng".

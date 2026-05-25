@@ -1,0 +1,17 @@
+# TODO List - Mở rộng 6 trạng thái đơn hàng & khóa AI Chat
+
+- [x] Cập nhật cơ sở dữ liệu (PostgreSQL)
+  - [x] Chạy lệnh ALTER TABLE để cập nhật CHECK constraint cho `status` trong `orders`
+- [x] Cập nhật Backend
+  - [x] Cập nhật `paymentService.js` (chuyển sang `CONFIRMED` khi thanh toán thành công)
+  - [x] Cập nhật `adminController.js` (chấp nhận 6 trạng thái mới)
+  - [x] Cập nhật `aiController.js` (kiểm tra quyền mua hàng của customer đối với bookId và status `DELIVERED`)
+- [x] Cập nhật Frontend
+  - [x] Cập nhật `OrderHistoryPage.jsx` (badge 6 trạng thái, khóa nút chat AI nếu chưa `DELIVERED`)
+  - [x] Cập nhật `AdminDashboardPage.jsx` (dropdown lọc và sửa trạng thái, map màu cho 6 trạng thái)
+  - [x] Cập nhật `BookDetailPage.jsx` (ẩn/khóa/hiển thị trạng thái nút Chat AI nếu chưa mua/giao thành công)
+  - [x] Cập nhật `ChatPage.jsx` (kiểm tra ở Client-side và hiển thị thông báo chặn nếu chưa giao)
+- [x] Kiểm thử & Xác minh
+  - [x] Chạy frontend `npm run build` để kiểm tra compile
+  - [x] Xác minh luồng thanh toán và cập nhật trạng thái đơn hàng qua Admin Dashboard
+  - [x] Xác minh bảo mật AI Chat khi đơn hàng chưa giao và khi đơn hàng đã giao

@@ -1,0 +1,23 @@
+# TODO List - Thiết kế lại trang Đơn hàng của tôi & Phân quyền Quản lý
+
+## 1. Thiết kế lại trang Đơn hàng của tôi
+- [x] Chuẩn bị và khởi tạo các thay đổi thiết kế
+- [x] Cập nhật giao diện trong [OrderHistoryPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderHistoryPage.jsx)
+  - [x] Thiết kế lại Tabs điều hướng chính (Hồ sơ cá nhân / Đơn hàng) kèm theo các icon đẹp
+  - [x] Thêm bảng thống kê chỉ số tổng quan (Tổng đơn hàng, Đang xử lý, Đã hoàn thành, Tổng chi tiêu)
+  - [x] Thêm bộ lọc trạng thái ngang kèm theo đếm số lượng đơn của mỗi trạng thái
+  - [x] Tích hợp thanh tìm kiếm đơn hàng theo Mã đơn hoặc Tên sách
+  - [x] Thiết kế lại thẻ Đơn hàng (Order Card) theo phong cách Editorial thanh lịch, thêm ảnh bìa sách thu nhỏ
+  - [x] Thiết kế lại các Badge trạng thái đơn hàng có chấm tròn chỉ thị màu sắc tương ứng
+  - [x] Cải tiến nút bấm hành động (Chi tiết, Hỏi đáp AI, Thanh toán ngay)
+  - [x] Nâng cấp thiết kế trạng thái trống (Empty State) khi không có đơn hàng
+- [x] Xác minh & Kiểm thử
+  - [x] Chạy build frontend (`npm run build`) để kiểm tra compile
+  - [x] Kiểm thử thủ công chức năng lọc, tìm kiếm và liên kết hỏi đáp AI
+  - [x] Kiểm tra hiển thị responsive trên các kích thước màn hình khác nhau
+
+## 2. Phân quyền và bảo mật (RBAC) cho Đơn hàng
+- [x] Cập nhật Backend để bảo mật API thanh toán: Thêm kiểm tra quyền sở hữu đơn hàng trong API `getPaymentUrl` của [paymentController.js](file:///E:/sdl-project/src/controllers/paymentController.js)
+- [x] Xác minh bảo vệ route Frontend (`ProtectedRoute` & `Navbar` Link hiển thị)
+- [x] Xác minh các API Backend (`requireRole` trên `/admin/orders` và kiểm tra quyền sở hữu trên `/orders/:id`)
+- [x] Kiểm thử biên dịch toàn hệ thống (`npm run build` trên Frontend)

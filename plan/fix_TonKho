@@ -1,0 +1,71 @@
+# Kế hoạch triển khai: Sửa lỗi và đồng bộ tồn kho (Sẵn có, Đang giữ, Đã bán) khi xử lý đơn hàng
+
+Kế hoạch này giải quyết triệt để lỗi số lượng "Đã bán" (sold_qty) hiển thị bằng 0 và số lượng "Đang giữ" (reserved_qty) bị rò rỉ (tăng cao bất thường) trong Bảng Quản lý kho, đồng thời đảm bảo số lượng sách đồng bộ chính xác giữa Frontend và Database.
+
+---
+
+## Nguyên nhân sự cố
+
+1. **Rò rỉ số lượng "Đang giữ" (reserved_qty)**:
+   * Hiện tại, hệ thống gọi `Inventory.hold` để giữ chỗ sách ngay khi người dùng nhấn nút chuyển sang trang Thanh toán (`CartService.prepareCheckout`).
+   * Nếu người dùng tải lại trang thanh toán, rời khỏi trang, hoặc thay đổi số lượng giỏ hàng, các yêu cầu giữ chỗ trước đó không bao giờ được giải phóng. Điều này làm cột `reserved_qty` tích tụ và tăng cao vô hạn.
+2. **Số lượng "Đã bán" (sold_qty) của các đơn hàng cũ bằng 0**:
+   * Hệ thống quản lý kho mới được bổ sung gần đây. Các đơn hàng cũ đã ở trạng thái `DELIVERED` từ trước khi bảng `inventory` và cơ chế trừ kho được kích hoạt nên chưa từng được thực hiện `Inventory.commit` để trừ hàng sẵn có và tăng số lượng đã bán.
+
+---
+
+## Giải pháp đề xuất
+
+### 1. Thay đổi cơ chế Giữ kho (Hold) và Trừ kho (Commit)
+* **Không giữ kho sớm tại bước chuẩn bị thanh toán**: Thay vì gọi `Inventory.hold` trong `CartService.prepareCheckout`, bước này sẽ chỉ kiểm tra xem số lượng sách có sẵn trong kho có đáp ứng đủ hay không (`Inventory.checkAvailability`).
+* **Giữ kho chính xác khi Đặt hàng thành công**: Thực hiện gọi `Inventory.hold` trong transaction tạo đơn hàng (`OrderService.checkout`) khi đơn hàng được lưu dưới trạng thái `PENDING`.
+* **Cập nhật Inventory Model**: Hỗ trợ truyền tham số `client` (để dùng chung Transaction) vào hàm `Inventory.hold`, tránh deadlock và đảm bảo tính nguyên tử (atomic) khi tạo đơn hàng.
+
+### 2. Đồng bộ và sửa chữa dữ liệu cũ (Repair & Sync Database)
+* Viết và chạy một script bảo trì cơ sở dữ liệu (`sync_inventory.js`) thực hiện:
+  1. Reset `reserved_qty` của tất cả sách khớp chính xác với tổng số lượng trong các đơn hàng đang ở trạng thái `PENDING` (các yêu cầu giữ chỗ rác từ giỏ hàng cũ sẽ bị xóa bỏ).
+  2. Quét toàn bộ đơn hàng ở trạng thái đã được thanh toán hoặc xác nhận (`CONFIRMED`, `PACKAGING`, `DELIVERING`, `DELIVERED`).
+  3. Đối với mỗi đơn hàng, kiểm tra xem đã có log trừ kho trong bảng `inventory_transactions` chưa. Nếu chưa, thực hiện trừ `available_qty`, cộng `sold_qty`, và ghi log giao dịch tương ứng.
+
+---
+
+## Proposed Changes
+
+### Component: Backend Models & Services
+
+#### [MODIFY] [Inventory.js](file:///E:/sdl-project/src/models/Inventory.js)
+* Cập nhật hàm `static async hold(client, bookId, quantity)` để chấp nhận tham số `client` tùy chọn (tương tự hàm `commit`). Nếu truyền `client`, hàm sẽ sử dụng kết nối transaction hiện tại thay vì mở kết nối và transaction mới.
+
+#### [MODIFY] [cartService.js](file:///E:/sdl-project/src/services/cartService.js)
+* Cập nhật hàm `prepareCheckout(userId)`: Bỏ lệnh gọi `Inventory.hold(item.bookId, item.quantity)`. Chỉ thực hiện vòng lặp gọi `Inventory.checkAvailability` để đảm bảo còn đủ sách trong kho trước khi đi tiếp.
+
+#### [MODIFY] [orderService.js](file:///E:/sdl-project/src/services/orderService.js)
+* Cập nhật hàm `checkout(userId, shippingInfo, paymentMethod, couponCode)`:
+  * Trong vòng lặp lưu các chi tiết món hàng (`order_items`), bổ sung lệnh gọi `await Inventory.hold(client, item.bookId, item.quantity)` để giữ hàng chính thức trong kho khi đơn hàng được tạo dưới dạng `PENDING`.
+
+---
+
+### Component: Database Maintenance & Repair
+
+#### [NEW] [sync_inventory.js](file:///E:/sdl-project/src/utils/sync_inventory.js)
+* Xây dựng script đồng bộ tồn kho:
+  * Kết nối cơ sở dữ liệu.
+  * Phân tích các giao dịch kho đã thực hiện qua bảng `inventory_transactions` để lọc ra danh sách các đơn hàng đã được trừ kho trước đó.
+  * Tìm tất cả các đơn hàng thành công/đang xử lý (`CONFIRMED`, `PACKAGING`, `DELIVERING`, `DELIVERED`) chưa được trừ kho. Thực hiện trừ kho vật lý (`available_qty` giảm, `sold_qty` tăng) và chèn nhật ký biến động kho tương ứng.
+  * Đếm tổng số lượng sách đang chờ xử lý thực tế trong các đơn hàng `PENDING` và cập nhật lại cột `reserved_qty` của từng đầu sách về đúng con số này.
+  * Script này sẽ được chạy một lần trên máy chủ để sửa toàn bộ dữ liệu lịch sử và đưa kho về trạng thái đồng bộ chính xác.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+* Viết script test luồng (`test_order_inventory_flow.js`) thực hiện giả lập vòng đời của đơn hàng COD và Online để đảm bảo:
+  1. Tạo đơn hàng -> `reserved_qty` tăng, `available_qty` không đổi.
+  2. Xác nhận đơn hàng (hoặc thanh toán online thành công) -> `reserved_qty` giảm, `available_qty` giảm, `sold_qty` tăng.
+  3. Hủy đơn hàng sau khi xác nhận -> `available_qty` tăng lại, `sold_qty` giảm về ban đầu.
+
+### Manual Verification
+1. Chạy script đồng bộ dữ liệu `sync_inventory.js` và kiểm tra xem bảng quản lý kho trên Frontend đã cập nhật đúng số lượng "Đã bán" (ví dụ: Mắt Biếc = 5, Ngày Xưa Có Một Chuyện Tình = 2, Đắc Nhân Tâm = 6, Tôi Thấy Hoa Vàng Trên Cỏ Xanh = 6) và số lượng "Đang giữ" quay về 0.
+2. Thử đặt một đơn hàng mới (COD), kiểm tra xem cột "Đang giữ" của sách đó tăng lên đúng bằng số lượng đặt.
+3. Vào trang Quản lý đơn hàng, chuyển trạng thái đơn hàng đó sang "Đã xác nhận", kiểm tra xem cột "Đang giữ" giảm đi và cột "Đã bán" tăng lên, "Sẵn có" giảm đi tương ứng.

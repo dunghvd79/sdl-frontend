@@ -1,0 +1,91 @@
+# Kế hoạch triển khai: Chức năng Danh sách yêu thích & Trung tâm thông báo cho Khách hàng
+
+Kế hoạch này phác thảo thiết kế chi tiết để xây dựng hai tính năng nâng cấp lớn tiếp theo: **Danh sách yêu thích (Wishlist)** và **Trung tâm thông báo (Notification Center)**, đồng bộ hóa trải nghiệm người dùng từ việc lưu trữ sách yêu thích tới việc nhận thông báo tự động khi trạng thái đơn hàng thay đổi.
+
+---
+
+## Nghiệp vụ chi tiết
+
+### 1. Tính năng Danh sách yêu thích (Wishlist / Bookmarks)
+* **Cơ sở dữ liệu**:
+  * Tạo bảng mới `wishlists` quản lý mối quan hệ n-n giữa `users` và `books` với ràng buộc duy nhất `UNIQUE(user_id, book_id)`.
+* **Backend API**:
+  * `POST /api/wishlists/toggle`: Nhận `bookId`. Nếu sách chưa có trong wishlist, thêm vào; nếu đã có, xóa đi. Trả về trạng thái `isLiked` hiện tại.
+  * `GET /api/wishlists`: Lấy danh sách các cuốn sách nằm trong danh sách yêu thích của khách hàng hiện tại.
+  * `GET /api/admin/wishlists/stats`: (Chỉ Admin) Thống kê danh sách sách được yêu thích nhiều nhất trong hệ thống kèm số lượt thích để tối ưu hóa nhập kho.
+* **Frontend UI**:
+  * Cập nhật biểu tượng **Heart** trên `Navbar.jsx` trỏ tới trang `/wishlist` (Danh sách yêu thích của tôi).
+  * Thiết kế trang `/wishlist` hiển thị toàn bộ sách khách hàng đã thả tim dưới dạng Grid.
+  * Trên các trang danh sách sách (Trang chủ) và chi tiết sách (`BookDetailPage.jsx`), bổ sung nút thả tim (Heart icon) tương tác cập nhật real-time.
+
+---
+
+### 2. Tính năng Trung tâm thông báo (Notification Center)
+* **Cơ sở dữ liệu**:
+  * Tạo bảng mới `notifications` lưu trữ thông tin: ID, user_id, title, content, type (ORDER | PROMOTION | ACCOUNT), is_read (mặc định FALSE), created_at.
+* **Tự động hóa thông báo (Real-time triggers)**:
+  * Khi Admin cập nhật trạng thái đơn hàng (trong hàm `updateOrderStatus` của `adminController.js`), hệ thống tự động sinh một thông báo cho Khách hàng tương ứng:
+    * *Ví dụ*: *"Đơn hàng #28 của bạn đã chuyển sang trạng thái: Đang đóng gói"*.
+  * Khi Admin tạo mã giảm giá mới: Tự động gửi thông báo khuyến mãi tới toàn bộ khách hàng.
+* **Backend API**:
+  * `GET /api/notifications`: Lấy toàn bộ thông báo của khách hàng hiện tại, sắp xếp theo thời gian mới nhất (`created_at DESC`).
+  * `PUT /api/notifications/:id/read`: Đánh dấu thông báo cụ thể là đã đọc.
+  * `PUT /api/notifications/read-all`: Đánh dấu toàn bộ thông báo là đã đọc.
+* **Frontend UI**:
+  * Thay đổi nút ẩn trên Navbar thành biểu tượng **Quả chuông (Bell)** hiển thị số lượng thông báo chưa đọc màu cam đất nổi bật.
+  * Khi click quả chuông, mở một Dropdown Box hiển thị 5 thông báo gần nhất kèm phân loại biểu tượng (Giỏ hàng cho Đơn hàng, Thẻ tag cho khuyến mãi, User cho tài khoản) và nút **Đánh dấu tất cả đã đọc**.
+  * Bổ sung trang xem đầy đủ thông báo `/notifications`.
+
+---
+
+## Proposed Changes
+
+### Component: Database Migrations
+#### [NEW] [migration_wishlist_notification.js](file:///E:/it-project/smart_digital_library/sdl-project/src/utils/migration_wishlist_notification.js)
+* Tạo script di cư để thiết lập cấu trúc 2 bảng mới `wishlists` và `notifications`.
+
+---
+
+### Component: Backend API Layer
+
+#### [NEW] [wishlistRouter.js](file:///E:/it-project/smart_digital_library/sdl-project/src/routes/wishlists.js)
+* Đăng ký các endpoints yêu thích: `POST /toggle`, `GET /`, `GET /admin/stats`.
+
+#### [NEW] [notificationRouter.js](file:///E:/it-project/smart_digital_library/sdl-project/src/routes/notifications.js)
+* Đăng ký các endpoints thông báo: `GET /`, `PUT /:id/read`, `PUT /read-all`.
+
+#### [MODIFY] [adminController.js](file:///E:/it-project/smart_digital_library/sdl-project/src/controllers/adminController.js)
+* Tích hợp thêm truy vấn tự động chèn thông báo (`INSERT INTO notifications`) khi thay đổi trạng thái đơn hàng của khách.
+
+---
+
+### Component: Frontend UI Layer
+
+#### [MODIFY] [Navbar.jsx](file:///E:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/components/Navbar.jsx)
+* Thay thế nút Heart bằng liên kết `/wishlist`.
+* Tích hợp biểu tượng **Bell** cùng Badge số lượng thông báo động sử dụng React Query `useQuery` gọi API `/notifications`.
+* Thiết kế Dropdown hiển thị danh sách 5 thông báo gần nhất và nút **Đọc tất cả**.
+
+#### [MODIFY] [App.jsx](file:///E:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/App.jsx)
+* Đăng ký 2 Route mới: `/wishlist` trỏ đến `WishlistPage` và `/notifications` trỏ đến `NotificationsPage`.
+
+#### [NEW] [WishlistPage.jsx](file:///E:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/WishlistPage.jsx)
+* Trang quản lý sách yêu thích của khách hàng.
+
+#### [NEW] [NotificationsPage.jsx](file:///E:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/NotificationsPage.jsx)
+* Trang lịch sử toàn bộ thông báo.
+
+---
+
+## Verification Plan
+
+### Automated Verification
+* Chạy build dự án để kiểm tra tính toàn vẹn:
+  ```bash
+  npm run build
+  ```
+
+### Manual Verification
+1. Đăng nhập Customer, thả tim cuốn sách *Phía Sau Nghi Can X*. Mở trang **Yêu thích** kiểm tra sự xuất hiện của sách.
+2. Đăng nhập Admin, đổi trạng thái đơn hàng của Customer từ *Chờ xử lý* sang *Đã xác nhận*.
+3. Đăng nhập lại Customer, xác nhận quả chuông thông báo hiển thị số 1 đỏ, click mở ra đọc thấy thông điệp cập nhật trạng thái đơn hàng đúng cấu trúc.

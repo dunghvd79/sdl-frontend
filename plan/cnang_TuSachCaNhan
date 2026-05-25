@@ -1,0 +1,85 @@
+# Kế hoạch triển khai: Chức năng Tủ sách số của tôi (My Digital Shelf) cho Khách hàng
+
+Tài liệu này phác thảo kế hoạch kỹ thuật để xây dựng và tích hợp tính năng **Tủ sách số của tôi (My Digital Shelf)** dành cho khách hàng (`Customer`). Tính năng này biến Pigeon Bookstore thành một Thư viện số thực thụ, cho phép người dùng quản lý tất cả sách giấy/sách điện tử đã mua thành công, đọc trực tiếp qua giao diện giả lập cao cấp, và kết nối nhanh tới trợ lý RAG AI để tư vấn chuyên sâu.
+
+---
+
+## Nghiệp vụ chi tiết
+
+1. **Điều kiện sở hữu Sách số**:
+   * Sách được ghi nhận vào tủ sách của khách hàng khi họ có đơn hàng chứa cuốn sách đó ở trạng thái giao thành công (**DELIVERED**).
+   * Dữ liệu được trích xuất an toàn bằng cách giao chiếu API đơn hàng cá nhân `/orders` và danh mục sách `/books`.
+
+2. **Giao diện Tủ sách số (`/shelf`)**:
+   * Thiết kế theo phong cách tối giản sang trọng, sử dụng tone màu kem/nâu gỗ chủ đạo (`bg-surface-warm`), mô phỏng các giá sách thực tế.
+   * Thanh tìm kiếm nhanh tên sách/tác giả trực quan.
+   * Bộ lọc thông minh:
+     * **Tất cả sách**: Hiển thị toàn bộ ấn phẩm đã mua thành công.
+     * **Sẵn sàng AI (AI Ready)**: Chỉ lọc ra các cuốn sách đã được Admin nạp dữ liệu vector hóa RAG (`rag_indexed_at IS NOT NULL`), sẵn sàng hỏi đáp AI.
+   * Danh sách sách hiển thị dưới dạng lưới (Grid Card) với hiệu ứng bóng mờ nổi lên khi di chuột (hover-scale micro-animations). Mỗi thẻ bao gồm:
+     * Ảnh bìa sách tỉ lệ vàng 3:4.
+     * Tiêu đề sách viết bằng font Serif quý phái.
+     * Huy hiệu "Sẵn sàng AI" (nếu đã vector hóa).
+     * Nút **ĐỌC SÁCH**: Mở giao diện đọc giả lập.
+     * Nút **AI TƯ VẤN**: Mở phòng chat RAG AI (`/books/:id/chat`).
+     * Nút **ĐÁNH GIÁ**: Mở hộp thoại đánh giá nhanh từ tủ sách.
+
+3. **Giao diện Đọc sách Giả lập cao cấp (Immersive E-book Reader Modal)**:
+   * Mở dưới dạng Overlay toàn màn hình với thiết kế mô phỏng trang giấy thật.
+   * **Cột trái - Mục lục**: Danh sách chương (Chương 1, Chương 2, Chương 3...) cho phép nhảy nhanh tới nội dung chương đó.
+   * **Khu vực trung tâm - Trang đọc sách**:
+     * Trình bày văn bản đẹp mắt, có thanh đo tiến độ đọc trực quan (ví dụ: "Đã đọc 45%").
+     * Bộ công cụ đọc sách: Tăng/giảm cỡ chữ tùy ý (Font Size), thay đổi giao diện nền đọc (Trang giấy kem ấm áp, Giao diện tối Dark Mode, Trắng hiện đại).
+     * Nội dung mẫu được biên soạn công phu, trích xuất thông tin tóm tắt và trích đoạn nổi bật của từng cuốn sách để tạo cảm giác đọc chân thực nhất.
+   * **Thanh bên phải - Trợ lý AI**:
+     * Cho phép truy cập nhanh và trò chuyện với trợ lý AI của cuốn sách đó mà không cần thoát khỏi giao diện đọc.
+
+4. **Giao diện Đánh giá nhanh (Quick Review Modal)**:
+   * Khách hàng có thể chọn số sao (1-5 sao, biểu tượng ngôi sao vàng óng) và viết bình luận cảm nghĩ.
+   * Khi gửi, dữ liệu được ghi nhận vào database thông qua API chuẩn `POST /api/books/:id/reviews`.
+
+---
+
+## Proposed Changes
+
+### Component: Frontend UI (Customer Pages & Navigation)
+
+#### [MODIFY] [Navbar.jsx](file:///E:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/components/Navbar.jsx)
+* Tích hợp thêm mục **Tủ sách của tôi** vào dropdown tài khoản cá nhân (Tài khoản của tôi), đặt nằm giữa **Đơn hàng của tôi** và **Đăng xuất**.
+* Sử dụng icon dạng quyển sách đang mở tinh tế và nhất quán.
+
+#### [MODIFY] [App.jsx](file:///E:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/App.jsx)
+* Khai báo Route mới `/shelf` trỏ đến trang `<MyShelfPage />`.
+* Bọc trang này trong `<ProtectedRoute>` để chỉ cho phép người dùng đã đăng nhập truy cập.
+
+#### [NEW] [MyShelfPage.jsx](file:///E:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/MyShelfPage.jsx)
+* Tạo mới tệp trang giao diện tủ sách số hoàn chỉnh:
+  * Sử dụng `@tanstack/react-query` để lấy dữ liệu từ hai API có sẵn: `GET /orders` và `GET /books`.
+  * Thực hiện logic lọc và kết hợp (Map-Reduce) để tìm ra các đầu sách duy nhất đã mua thành công.
+  * Phát triển component con `BookReaderModal` chứa giao diện giả lập đọc sách E-book, thay đổi theme đọc sách, tăng giảm font chữ, và liên kết AI Chat.
+  * Phát triển component con `ShelfReviewModal` gọi API `POST /api/books/:id/reviews` để đăng nhận xét nhanh trực tiếp tại tủ sách.
+
+---
+
+## Verification Plan
+
+### Automated Verification
+* Chạy build dự án Vite:
+  ```bash
+  npm run build
+  ```
+  Xác nhận quá trình đóng gói không xảy ra lỗi JSX hoặc cấu trúc.
+
+### Manual Verification
+1. Đăng nhập tài khoản Customer: `customer@test.vn` / `password123`.
+2. Mở Dropdown tài khoản trên Navbar → Click chọn **Tủ sách của tôi**.
+3. Xác nhận giao diện hiển thị danh sách sách đã mua (sách *Phía Sau Nghi Can X* được tự động hiển thị trên kệ gỗ ấm áp).
+4. Kiểm thử thanh tìm kiếm và bộ lọc **Sẵn sàng AI**.
+5. Click **ĐỌC SÁCH**:
+   * Thay đổi cỡ chữ và màu nền trang đọc (Kem, Tối, Sáng).
+   * Kiểm tra thanh tiến trình đọc sách và chuyển chương từ mục lục.
+6. Click **ĐÁNH GIÁ**:
+   * Viết đánh giá 5 sao kèm bình luận.
+   * Bấm gửi và chuyển qua tài khoản Admin để xác nhận đánh giá đã được hiển thị lập tức trong CRM hoạt động của khách hàng.
+7. Click **AI TƯ VẤN**:
+   * Xác nhận hệ thống chuyển hướng chính xác đến phòng chat AI của cuốn sách.

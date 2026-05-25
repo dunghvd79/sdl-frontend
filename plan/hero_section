@@ -1,0 +1,66 @@
+# Kế hoạch thiết kế lại Trang Hero - Pigeon Bookstore
+
+Tài liệu này trình bày kế hoạch thiết kế và lập trình lại trang Hero cho **Pigeon Bookstore** trên trang chủ `HomePage.jsx`, dựa trên mẫu thiết kế Editorial cao cấp và tinh tế mà người dùng cung cấp.
+
+Chúng tôi sẽ nâng tầm thiết kế này bằng cách kết hợp cách căn chỉnh chữ sang trọng (Typography), hiệu ứng bất đối xứng hiện đại, hệ thống thống kê ấn tượng và bộ sưu tập ảnh (Collage) động mượt mà.
+
+---
+
+## Ý tưởng Thiết kế & Bố cục (Layout & Aesthetics)
+
+1. **Kiến trúc Bố cục (Grid & Flex Layout)**:
+   - Thay thế bố cục căn giữa đơn giản hiện tại bằng bố cục **2 cột (Two-Column Layout)** hiện đại trên màn hình lớn (`lg:grid lg:grid-cols-12 lg:gap-12 lg:items-center`):
+     - **Cột Trái (6/12 hoặc 7/12 phần rộng)**: Khu vực thông tin thương hiệu, kiểu chữ lớn nghệ thuật, slogan truyền cảm hứng, danh mục nổi bật, bộ đôi nút hành động (CTAs) và bảng chỉ số thống kê uy tín.
+     - **Cột Phải (5/12 hoặc 6/12 phần rộng)**: Lưới ảnh sách nghệ thuật sắp xếp bất đối xứng dạng Mosaic quyến rũ với góc bo tròn mềm mại và các tương tác micro-interaction.
+   - Trên màn hình nhỏ (Mobile & Tablet): Bố cục tự động chuyển sang dạng xếp dọc dọc (stacked) với khoảng cách tối ưu để đảm bảo trải nghiệm đọc và sử dụng trơn tru.
+
+2. **Hệ thống Kiểu chữ Nghệ thuật (Editorial Typography)**:
+   - Sử dụng phông chữ serif cao cấp `font-serif` (Playfair Display) đã được tích hợp sẵn.
+   - Thiết kế tiêu đề (Headline) phân tầng nghệ thuật:
+     - Dòng 1: `Nơi mỗi cuốn sách` (Serif đậm, đứng, sang trọng).
+     - Dòng 2: `tìm thấy người đọc` (Serif nghiêng - *Italic*, mang cảm giác thơ mộng, lôi cuốn).
+   - Huy hiệu thương hiệu phía trên: `- HÀ ĐÔNG · HÀ NỘI · EST. 2024` đi kèm đường kẻ ngang tinh tế làm điểm nhấn trực quan.
+   - Đoạn trích dẫn (Slogan/Quote): `"Tuyển chọn kỹ lưỡng — từng cuốn sách là một lời mời gọi đến những chân trời mới."` (Sử dụng phông chữ nghiêng nhạt, màu mực nhẹ, mang tính chất tâm tình).
+   - Danh sách thể loại mỏng: `VĂN HỌC · KIẾN THỨC · THIẾU NHI · TRIẾT HỌC · KỸ NĂNG` viết hoa hoàn toàn với độ giãn chữ lớn (`tracking-[0.2em]`).
+
+3. **Lưới Ảnh Sách Mosaic (Book Collage Grid)**:
+   - Sắp xếp 3 bức ảnh sách nghệ thuật cao cấp với màu sắc đồng điệu theo phong cách ấm áp (beige/warm wood/editorial) để tôn vinh nội dung sách:
+     - **Ảnh 1 (Cột Trái - Dọc)**: Ảnh chụp cận cảnh gáy sách xếp chồng nhiều màu sắc hoặc bìa sách vintage (`rounded-2xl`, tạo chiều sâu thị giác).
+     - **Ảnh 2 (Cột Phải - Trên)**: Ảnh bàn tay cầm cuốn sách tối giản hoặc khoảnh khắc đọc sách thư thái.
+     - **Ảnh 3 (Cột Phải - Dưới)**: Các trang sách mở hoặc góc làm việc đầy cảm hứng với sách.
+   - Thêm hiệu ứng di chuột (Hover Effect) thu phóng nhẹ (`scale-105`) và đổ bóng mịn (`shadow-md` sang `shadow-xl`) đi kèm hiệu ứng chuyển động chậm (`transition-all duration-700`).
+   - Tạo chuyển động nhẹ nhàng tự nhiên (Floating Effect) cho cả khối ảnh để giao diện trông sinh động và "sống" hơn.
+
+4. **Bộ đôi CTAs & Thống kê uy tín (Buttons & Social Proof)**:
+   - **Nút khám phá chính**: Thiết kế màu đen tuyền (`bg-ink`) hoặc cam đất của thương hiệu, đi kèm biểu tượng mũi tên đi ngang mượt mà, hover đổi sang màu thương hiệu.
+   - **Nút xem danh mục phụ**: Viền mảnh (`border-divider`), nền trong suốt, tương tác đổi nền khi hover.
+   - **Chỉ số thống kê (Stats)**:
+     - `500+` Đầu sách tuyển chọn
+     - `2,400+` Khách hàng tin tưởng
+     - `4.9 ★` Đánh giá tích cực
+     - Có đường kẻ phân tách mảnh mai tinh tế.
+
+---
+
+## Chi tiết Thay đổi Dự kiến (Proposed Changes)
+
+### [Component] Giao diện Trang chủ (code_frontend/sdl-frontend)
+
+#### [MODIFY] [HomePage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/HomePage.jsx)
+- Cập nhật cấu trúc HTML/JSX của phần Hero (dòng 61-81) để chuyển sang bố cục 2 cột.
+- Thêm các icon từ thư viện `lucide-react` để hỗ trợ hiển thị đẹp mắt (ví dụ: `ArrowRight`, `Star`).
+- Nhúng các liên kết ảnh chất lượng cao, đồng bộ tông màu ấm áp từ Unsplash (đã qua chọn lọc) để tạo cảm giác trang nhã, đồng thời đảm bảo tốc độ tải trang cực nhanh.
+- Giữ nguyên các hàm chức năng, xử lý logic tìm kiếm, phân trang và truy vấn dữ liệu của trang chủ.
+
+---
+
+## Kế hoạch Xác minh (Verification Plan)
+
+### Kiểm tra Thủ công (Manual Verification)
+1. **Kiểm tra độ phản hồi (Responsive Design)**:
+   - Co giãn trình duyệt từ kích thước Mobile (375px) đến Desktop rộng (1440px) để đảm bảo bố cục tự động thích ứng mượt mà, không bị tràn viền hay lệch vị trí.
+   - Đảm bảo lưới ảnh Mosaic xếp chồng thông minh hoặc ẩn gọn gàng trên các thiết bị màn hình rất nhỏ để tăng diện tích hiển thị thông tin.
+2. **Kiểm tra trải nghiệm tương tác (Micro-interactions)**:
+   - Di chuột qua các nút bấm, ảnh collage, và các liên kết để kiểm tra tốc độ phản hồi và độ mượt của các hiệu ứng chuyển động.
+3. **Kiểm tra liên kết điều hướng**:
+   - Đảm bảo các nút bấm cuộn mượt xuống phần `#explore` bên dưới đúng mục đích.

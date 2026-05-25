@@ -1,0 +1,20 @@
+# TODO List - Chức năng "Mua lại" (Reorder) cho đơn hàng thành công
+
+## 1. Backend API (`E:\sdl-project`)
+- [x] Tạo service method `addBatchToCart` trong [cartService.js](file:///e:/sdl-project/src/services/cartService.js)
+- [x] Thêm controller method `addBatchToCart` trong [cartController.js](file:///e:/sdl-project/src/controllers/cartController.js)
+- [x] Đăng ký endpoint POST `/api/cart/add-batch` trong [cart.js](file:///e:/sdl-project/src/routes/cart.js)
+
+## 2. Frontend Integration (`sdl-frontend`)
+- [x] Tích hợp logic "Mua lại" bằng React Query `useMutation` trên trang Lịch sử đơn hàng [OrderHistoryPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderHistoryPage.jsx)
+- [x] Tích hợp logic "Mua lại" bằng React Query `useMutation` trên trang Chi tiết đơn hàng [OrderDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderDetailPage.jsx)
+- [x] Cải tiến hiển thị: Nút "Mua lại" chỉ hiển thị khi đơn hàng đã mua thành công (`DELIVERED`)
+- [x] Khắc phục lỗi tương thích React Query v5 bằng cách đổi `.isLoading` sang `.isPending` trên tất cả các mutations tại:
+  - [x] [OrderHistoryPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderHistoryPage.jsx)
+  - [x] [OrderDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderDetailPage.jsx)
+  - [x] [CheckoutPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/CheckoutPage.jsx)
+  - [x] [CartPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/CartPage.jsx)
+  - [x] [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+
+## 3. Verification & Build
+- [x] Chạy biên dịch dự án (`npm run build`) để kiểm tra cú pháp và loại bỏ cảnh báo build.

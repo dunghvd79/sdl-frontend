@@ -1,0 +1,43 @@
+# Kết quả triển khai: Cấu hình thứ tự ưu tiên hiển thị sách (Phương án B)
+
+Tôi đã hoàn thành việc triển khai tính năng cấu hình điểm ưu tiên `display_order` cho sách, cho phép Admin tùy chỉnh sắp xếp đẩy sách lên Trang 1 một cách dễ dàng và linh hoạt.
+
+---
+
+## Các thay đổi đã thực hiện
+
+### 1. Cơ sở dữ liệu (Database)
+* **Chạy migration thành công:** Tạo và thực thi script [migrate_display_order.js](file:///e:/it-project/smart_digital_library/sdl-project/src/utils/migrate_display_order.js) để bổ sung trường `display_order` (kiểu số nguyên `INT`, mặc định `0`) vào bảng `books`.
+* **Cập nhật Schema:** Sửa đổi [01_init_schema.sql](file:///e:/it-project/smart_digital_library/sdl-project/database/01_init_schema.sql) để đồng bộ cấu trúc bảng sách cho các lần triển khai mới.
+
+### 2. Backend (API)
+* **Model [Book.js](file:///e:/it-project/smart_digital_library/sdl-project/src/models/Book.js):**
+  * Hỗ trợ lưu trữ `display_order` khi thêm sách mới (`Book.create`).
+  * Thay đổi logic sắp xếp mặc định (`newest`) ở `Book.getAll` để sắp xếp ưu tiên theo `b.display_order DESC` trước, sau đó mới đến ngày tạo `b.created_at DESC`.
+* **Controller [bookController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/bookController.js):**
+  * Tiếp nhận `display_order` từ request body ở API tạo sách (`createBook`) và chỉnh sửa sách (`updateBook`).
+  * Thực hiện làm sạch và chuẩn hóa dữ liệu sang số nguyên trước khi lưu vào DB.
+
+### 3. Frontend (Giao diện Admin)
+* **Admin Dashboard [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx):**
+  * Tích hợp trường nhập số **"Thứ tự ưu tiên (Trang chủ)"** vào cột cấu hình hiển thị (bên dưới checkbox Nổi bật) trong modal Thêm/Sửa sách.
+  * Đồng bộ trường `display_order` này lên API của Backend mỗi khi lưu dữ liệu.
+
+---
+
+## Kết quả kiểm tra & biên dịch
+* **Kiểm tra cú pháp Backend:** Thành công 100%, không gặp bất kỳ lỗi cú pháp Node.js nào.
+* **Kiểm tra biên dịch Frontend:** Chạy lệnh `npm run build` thành công, tạo ra production bundle hoàn hảo trong 14.97 giây không có lỗi.
+
+---
+
+## Hướng dẫn Kiểm thử trực quan (Bấm thử)
+Bạn có thể tiến hành kiểm thử thực tế theo các bước sau:
+
+1. **Đăng nhập với quyền Admin**, đi tới trang quản trị **Admin Dashboard** -> **Quản lý Sách**.
+2. **Chọn 1 cuốn sách** đang nằm ở vị trí cuối trang 1 hoặc ở trang 2 (ví dụ: **Đắc Nhân Tâm**).
+3. Bấm **Sửa**, điền vào ô **"Thứ tự ưu tiên (Trang chủ)"** giá trị là **`10`** (mặc định là `0`), sau đó bấm **Lưu thay đổi**.
+4. **Vào Trang chủ** và làm mới trang (F5): Cuốn sách đó sẽ lập tức xuất hiện ở **vị trí đầu tiên của Trang 1**.
+5. **Chọn 1 cuốn sách khác** (ví dụ: **Số Đỏ**), bấm **Sửa** và điền Thứ tự ưu tiên là **`20`** rồi bấm **Lưu**.
+6. **Làm mới Trang chủ**: Cuốn **Số Đỏ** (điểm 20) sẽ đứng đầu, cuốn **Đắc Nhân Tâm** (điểm 10) đứng thứ 2, các cuốn sách khác (điểm 0) sẽ đứng tiếp sau đó theo thứ tự ngày tạo giảm dần.
+7. **Thử chọn bộ lọc Giá (Thấp - Cao)** trên trang chủ: Danh sách sẽ tự động chuyển sang sắp xếp hoàn toàn theo giá bán mà không bị điểm ưu tiên ghi đè, đảm bảo tính logic cho người mua.

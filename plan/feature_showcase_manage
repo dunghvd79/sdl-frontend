@@ -1,0 +1,71 @@
+# Kế hoạch triển khai: Tính năng Lựa chọn của Biên tập viên (Editor's Picks) do Admin quản lý
+
+Kế hoạch này giúp biến phần kệ sách "Lựa chọn của biên tập viên" trên trang chủ thành một khu vực dữ liệu được quản lý động bởi Admin, thay vì bị lệ thuộc vào bộ lọc tìm kiếm của người dùng như hiện tại.
+
+---
+
+## Ý tưởng cốt lõi
+1. Thêm cột `is_featured` kiểu `BOOLEAN` vào bảng `books`.
+2. Tạo script cập nhật database để thêm cột này vào bảng hiện tại mà không làm mất dữ liệu cũ.
+3. Cập nhật Model và Controller của Backend để hỗ trợ trường `is_featured` khi lấy danh sách, thêm và chỉnh sửa sách.
+4. Cập nhật trang chủ (Frontend) để fetch danh sách sách nổi bật (`is_featured = true`) riêng biệt.
+5. Cập nhật trang quản trị Admin để thêm checkbox cho phép Admin bật/tắt thuộc tính "Nổi bật" này.
+
+---
+
+## Thay đổi chi tiết đề xuất
+
+### 1. Cơ sở dữ liệu (Database)
+
+#### [MODIFY] [01_init_schema.sql](file:///e:/it-project/smart_digital_library/sdl-project/database/01_init_schema.sql)
+* Bổ sung cột `is_featured BOOLEAN DEFAULT FALSE` vào câu lệnh `CREATE TABLE books`.
+
+#### [NEW] [migrate_featured.js](file:///e:/it-project/smart_digital_library/sdl-project/src/utils/migrate_featured.js)
+* Tạo một script migration bằng Node.js kết nối tới Database hiện tại và chạy lệnh:
+  ```sql
+  ALTER TABLE books ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT FALSE;
+  ```
+* Chạy file script này một lần để cập nhật database mà không cần cài đặt thêm công cụ phức tạp.
+
+---
+
+### 2. Backend (API)
+
+#### [MODIFY] [Book.js](file:///e:/it-project/smart_digital_library/sdl-project/src/models/Book.js)
+* **Hàm `create`**: Thêm tham số `is_featured` (mặc định `false`) vào câu lệnh INSERT SQL.
+* **Hàm `getAll`**:
+  * Nhận thêm tham số `isFeatured` từ đối số filters.
+  * Nếu `isFeatured` được cung cấp, thêm điều kiện `AND b.is_featured = $X` vào mảng `whereConditions`.
+
+#### [MODIFY] [bookController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/bookController.js)
+* **Hàm `getAllBooks`**: Lấy `isFeatured` từ query params (`req.query.isFeatured`) và truyền vào `BookService.getBooks`.
+* **Hàm `updateBook`**: Nhận `is_featured` từ body gửi lên và cập nhật trường này trong câu lệnh UPDATE SQL.
+
+---
+
+### 3. Frontend (Giao diện)
+
+#### [MODIFY] [HomePage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/HomePage.jsx)
+* Thêm một query mới `featuredBooks` dùng React Query để gọi API `api.get('/books', { params: { isFeatured: true, limit: 4 } })`.
+* Tại phần **Editor's Picks Showcase Section** (Kệ sách gỗ):
+  * Cập nhật điều kiện hiển thị để dùng `featuredBooks` thay vì `books.slice(0, 4)`.
+  * Độc lập kệ sách này khỏi bộ lọc tìm kiếm/sắp xếp của trang chủ.
+
+#### [MODIFY] [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+* **BookManagerTab**:
+  * Thêm thuộc tính `is_featured` vào state khởi tạo của `form` (mặc định `false`).
+  * Khi mở modal sửa sách (`openEditModal`), gán `is_featured: book.is_featured || false`.
+  * Thêm một khu vực chọn checkbox dưới phần chọn Trạng thái (Status):
+    * Tiêu đề: **Tùy chọn hiển thị**
+    * Checkbox: **Nổi bật (Editor's Pick)** kèm mô tả: "Đưa sách lên giá tuyển chọn trang chủ".
+
+---
+
+## Kế hoạch kiểm thử & Xác minh
+
+### Kiểm thử tự động & Thủ công
+1. Chạy script migration để cập nhật database, kiểm tra xem có báo lỗi hay không.
+2. Vào trang Admin, chọn 1 cuốn sách bất kỳ và bật checkbox "Nổi bật", sau đó nhấn Lưu.
+3. Kiểm tra xem trên trang chủ (Frontend) cuốn sách đó có xuất hiện trên kệ "Lựa chọn của biên tập viên" hay không.
+4. Thử tìm kiếm/lọc danh mục trên trang chủ để đảm bảo kệ sách "Lựa chọn của biên tập viên" **không bị thay đổi** theo bộ lọc tìm kiếm.
+5. Tắt checkbox "Nổi bật" của cuốn sách đó trong Admin, kiểm tra xem cuốn sách đó đã biến mất khỏi kệ trang chủ hay chưa.
