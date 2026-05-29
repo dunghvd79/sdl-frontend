@@ -152,7 +152,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-8 px-4 flex-grow w-full flex flex-col h-[calc(100vh-80px)]">
+    <div className="max-w-6xl mx-auto py-4 px-4 flex-grow w-full flex flex-col h-screen">
       {/* Nút quay lại */}
       <div className="mb-4 flex-shrink-0">
         <button
