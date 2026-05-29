@@ -9,6 +9,7 @@ export default function ChatPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
   const { user } = useAuth();
   
   const [messages, setMessages] = useState([
@@ -50,7 +51,12 @@ export default function ChatPage() {
   ));
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   };
 
   useEffect(() => {
@@ -205,7 +211,7 @@ export default function ChatPage() {
           </div>
 
           {/* Vùng tin nhắn */}
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-surface-warm">
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-surface-warm">
             {messages.map((msg, index) => {
               const isUser = msg.role === 'USER';
               return (
