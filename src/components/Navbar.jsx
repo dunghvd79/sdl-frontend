@@ -116,7 +116,7 @@ export default function Navbar() {
       {/* Top Banner (Scrolls away) */}
       <div className="w-full bg-[#e8e4db] text-stone-700 border-b border-[#d4d2cb] text-[10px] md:text-xs font-medium tracking-wide flex flex-col md:flex-row items-center justify-center py-2 px-4 text-center gap-2 md:gap-4 font-sans relative z-50">
         <span>Chào mừng bạn đến với Pigeon Bookstore. Miễn phí giao hàng toàn quốc cho đơn từ 200.000đ.</span>
-        <Link to="/register" className="inline-flex items-center gap-1.5 bg-[#2C4A3B] hover:bg-[#1e3529] text-white px-3 py-1 rounded-none transition-colors font-bold tracking-wider uppercase text-[9px] md:text-[10px]">
+        <Link to={user ? "/promotions" : "/register"} className="inline-flex items-center gap-1.5 bg-[#2C4A3B] hover:bg-[#1e3529] text-white px-3 py-1 rounded-none transition-colors font-bold tracking-wider uppercase text-[9px] md:text-[10px]">
           <Gift size={12} strokeWidth={2.5} />
           Nhận ưu đãi ngay
         </Link>

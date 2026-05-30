@@ -26,6 +26,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import MyShelfPage from './pages/MyShelfPage';
 import WishlistPage from './pages/WishlistPage';
 import NotificationsPage from './pages/NotificationsPage';
+import PromotionsPage from './pages/PromotionsPage';
 import Footer from './components/Footer';
 
 // Khởi tạo React Query
@@ -57,6 +58,7 @@ function AppContent() {
         <Route path="/shelf" element={<MyShelfPage />} />
         <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/promotions" element={<PromotionsPage />} />
         <Route path="/blog/:id" element={<ArticleDetailPage />} />
         <Route
           path="/admin"
