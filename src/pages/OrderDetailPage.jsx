@@ -7,13 +7,24 @@ import { useCart } from '../context/CartContext';
 import { getImageUrl } from '../services/image';
 import ConfirmDialog from '../components/ConfirmDialog';
 
+const CANCEL_REASONS = [
+  'Tôi muốn thay đổi địa chỉ nhận hàng hoặc số điện thoại',
+  'Tôi muốn đổi phương thức thanh toán hoặc áp dụng mã giảm giá khác',
+  'Tôi đặt trùng đơn hoặc không còn nhu cầu mua nữa',
+  'Tìm thấy mức giá rẻ hơn ở nơi khác',
+  'Thời gian giao nhận dự kiến quá lâu',
+  'Lý do khác (Vui lòng ghi chi tiết bên dưới)'
+];
+
 export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
   const queryClient = useQueryClient();
   const { fetchCartCount } = useCart();
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [selectedReason, setSelectedReason] = useState('');
+  const [customReason, setCustomReason] = useState('');
 
   // 1. Fetch chi tiết đơn hàng
   const { data: orderResponse, isLoading, isError, refetch } = useQuery({
@@ -69,19 +80,38 @@ export default function OrderDetailPage() {
   };
 
   const cancelOrderMutation = useMutation({
-    mutationFn: async () => {
-      const response = await api.put(`/orders/${id}/cancel`);
+    mutationFn: async (cancelReason) => {
+      const response = await api.put(`/orders/${id}/cancel`, { cancelReason });
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['orderDetail', id]);
       queryClient.invalidateQueries(['myOrders']);
       toast.success('Hủy đơn hàng thành công!', { title: 'Đã hủy đơn hàng' });
+      setIsCancelModalOpen(false);
+      setSelectedReason('');
+      setCustomReason('');
     },
     onError: (err) => {
       toast.error(err.response?.data?.error || err.message, { title: 'Lỗi hủy đơn hàng' });
     }
   });
+
+  const handleConfirmCancel = () => {
+    let reason = selectedReason;
+    if (selectedReason === 'Lý do khác (Vui lòng ghi chi tiết bên dưới)') {
+      if (!customReason.trim()) {
+        toast.warning('Vui lòng nhập chi tiết lý do hủy đơn!', { title: 'Thông tin bổ sung' });
+        return;
+      }
+      reason = customReason.trim();
+    } else if (!selectedReason) {
+      toast.warning('Vui lòng chọn một lý do hủy đơn!', { title: 'Chưa chọn lý do' });
+      return;
+    }
+    
+    cancelOrderMutation.mutate(reason);
+  };
 
   // Xác định vị trí trạng thái trong Timeline
   const getStepIndex = (status) => {
@@ -224,7 +254,11 @@ export default function OrderDetailPage() {
             )}
             {['PENDING', 'CONFIRMED', 'PACKAGING'].includes(order.status) && (
               <button
-                onClick={() => setIsCancelDialogOpen(true)}
+                onClick={() => {
+                  setSelectedReason(CANCEL_REASONS[0]);
+                  setCustomReason('');
+                  setIsCancelModalOpen(true);
+                }}
                 disabled={cancelOrderMutation.isPending}
                 className="border border-red-200 hover:bg-red-50 text-red-600 font-bold py-2 px-5 rounded-none text-xs transition-all shadow-sm hover:shadow uppercase tracking-wider flex items-center gap-1.5 active:translate-y-px disabled:opacity-50"
               >
@@ -259,6 +293,12 @@ export default function OrderDetailPage() {
             <div>
               <h4 className="font-serif font-semibold text-red-800 text-sm">ĐƠN HÀNG ĐÃ BỊ HỦY</h4>
               <p className="text-red-700/80 text-xs mt-1">Đơn hàng này không được tiếp tục xử lý. Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ bộ phận hỗ trợ khách hàng của thư viện.</p>
+              {order.cancel_reason && (
+                <div className="mt-3 bg-white border border-red-200/60 p-3.5 text-xs text-stone-700 rounded-none max-w-xl">
+                  <span className="font-bold text-red-700 uppercase tracking-wider text-[10px] block mb-0.5">Lý do hủy đơn:</span>
+                  <span className="font-semibold italic text-stone-900">"{order.cancel_reason}"</span>
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -497,16 +537,101 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      <ConfirmDialog
-        isOpen={isCancelDialogOpen}
-        title="Xác nhận hủy đơn"
-        message={`Bạn có chắc chắn muốn hủy đơn hàng #${order.id}?`}
-        confirmText="Hủy đơn hàng"
-        cancelText="Quay lại"
-        variant="danger"
-        onConfirm={() => cancelOrderMutation.mutate()}
-        onCancel={() => setIsCancelDialogOpen(false)}
-      />
+      {/* Modal Chọn lý do hủy đơn hàng */}
+      {isCancelModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-divider max-w-lg w-full p-6 shadow-2xl flex flex-col gap-5 rounded-none font-sans relative">
+            
+            {/* Nút đóng góc phải */}
+            <button 
+              onClick={() => {
+                setIsCancelModalOpen(false);
+              }}
+              className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 transition-colors border-none bg-transparent cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div>
+              <h3 className="font-serif font-bold text-xl text-stone-950 uppercase tracking-wide">Hủy đơn hàng #{order.id}</h3>
+              <p className="text-stone-500 text-xs mt-1 leading-relaxed">
+                Vui lòng cho chúng tôi biết lý do bạn muốn hủy đơn hàng này. Ý kiến của bạn giúp chúng tôi cải thiện dịch vụ tốt hơn.
+              </p>
+            </div>
+
+            {/* Danh sách lý do hủy đơn */}
+            <div className="space-y-3 py-1 max-h-[250px] overflow-y-auto pr-1">
+              {CANCEL_REASONS.map((reason, idx) => (
+                <label 
+                  key={idx}
+                  className={`flex items-start gap-3 p-3 border transition-all cursor-pointer ${
+                    selectedReason === reason 
+                      ? 'border-[#2C4A3B] bg-[#faf8f5]'
+                      : 'border-stone-200 hover:border-stone-400 bg-white'
+                  }`}
+                >
+                  <input 
+                    type="radio"
+                    name="cancel_reason"
+                    checked={selectedReason === reason}
+                    onChange={() => setSelectedReason(reason)}
+                    className="mt-0.5 text-[#2C4A3B] focus:ring-[#2C4A3B] border-stone-300"
+                  />
+                  <span className="text-xs font-semibold text-stone-800">{reason}</span>
+                </label>
+              ))}
+            </div>
+
+            {/* Ô nhập lý do tùy chỉnh (nếu chọn lý do khác) */}
+            {selectedReason === 'Lý do khác (Vui lòng ghi chi tiết bên dưới)' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold tracking-wider text-stone-500 block">Chi tiết lý do khác:</label>
+                <textarea 
+                  value={customReason}
+                  onChange={(e) => setCustomReason(e.target.value)}
+                  placeholder="Nhập lý do chi tiết của bạn tại đây..."
+                  rows={3}
+                  className="w-full p-3 border border-stone-200 focus:border-[#2C4A3B] outline-none text-xs leading-relaxed resize-none bg-white text-stone-800"
+                  maxLength={250}
+                />
+                <span className="text-[10px] text-stone-400 block text-right">{customReason.length}/250 ký tự</span>
+              </div>
+            )}
+
+            {/* Khung nút điều khiển */}
+            <div className="flex gap-3 border-t border-divider pt-4">
+              <button
+                onClick={() => {
+                  setIsCancelModalOpen(false);
+                }}
+                className="flex-1 py-3 border border-divider hover:bg-stone-50 text-stone-700 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+              >
+                Quay lại
+              </button>
+              <button
+                onClick={handleConfirmCancel}
+                disabled={cancelOrderMutation.isPending}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 border-none cursor-pointer disabled:opacity-50"
+              >
+                {cancelOrderMutation.isPending ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  'Xác nhận hủy đơn'
+                )}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

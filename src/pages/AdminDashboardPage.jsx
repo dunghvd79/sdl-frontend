@@ -1028,7 +1028,7 @@ function OrderManagerTab() {
   const selectedOrder = allOrders?.find(o => o.id === selectedOrderId);
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ orderId, status }) => api.put(`/admin/orders/${orderId}/status`, { status }),
+    mutationFn: ({ orderId, status, cancelReason }) => api.put(`/admin/orders/${orderId}/status`, { status, cancelReason }),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries(['adminOrders']);
       // Also invalidate customer-facing queries so their UI updates too
@@ -1077,7 +1077,13 @@ function OrderManagerTab() {
   };
 
   const handleCancel = (order) => {
-    updateStatusMutation.mutate({ orderId: order.id, status: 'CANCELLED' });
+    const reason = window.prompt(`Nhập lý do hủy đơn hàng #${order.id} (Tùy chọn):`);
+    if (reason === null) return;
+    updateStatusMutation.mutate({ 
+      orderId: order.id, 
+      status: 'CANCELLED', 
+      cancelReason: reason.trim() || 'Hủy bởi Quản trị viên' 
+    });
   };
 
   // Summary counts
@@ -1249,10 +1255,15 @@ function OrderManagerTab() {
                     {/* Pipeline mini stepper */}
                     <td className="py-4 px-4">
                       {isCancelled ? (
-                        <div className="flex justify-center">
+                        <div className="flex flex-col items-center justify-center gap-0.5">
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold px-3 py-1 border rounded-none bg-red-50 text-red-700 border-red-300 uppercase tracking-wider">
                             ✕ Đã hủy
                           </span>
+                          {order.cancel_reason && (
+                            <span className="text-[10px] text-stone-500 italic max-w-[150px] truncate text-center" title={order.cancel_reason}>
+                              Lý do: "{order.cancel_reason}"
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <div className="flex items-center justify-center gap-0 min-w-[220px]">
@@ -1371,12 +1382,20 @@ function OrderManagerTab() {
               <div>
                 <h4 className="text-xs uppercase tracking-wider text-ink-light mb-4 font-semibold">Tiến độ xử lý đơn hàng</h4>
                 {selectedOrder.status === 'CANCELLED' ? (
-                  <div className="border border-red-200 bg-red-50/30 px-5 py-3 flex items-center gap-3">
-                    <span className="text-red-600 text-lg">✕</span>
-                    <div>
-                      <p className="font-semibold text-red-700 text-sm">Đơn hàng đã bị hủy</p>
-                      <p className="text-xs text-red-600/70 mt-0.5">Đơn này không thể tiếp tục xử lý.</p>
+                  <div className="border border-red-200 bg-red-50/30 px-5 py-3.5 flex flex-col gap-2 rounded-none">
+                    <div className="flex items-center gap-3">
+                      <span className="text-red-600 text-lg font-bold">✕</span>
+                      <div>
+                        <p className="font-semibold text-red-700 text-sm">Đơn hàng đã bị hủy</p>
+                        <p className="text-xs text-red-600/70 mt-0.5 font-medium">Đơn này không thể tiếp tục xử lý.</p>
+                      </div>
                     </div>
+                    {selectedOrder.cancel_reason && (
+                      <div className="mt-1 bg-white border border-red-200/60 p-3 text-xs text-stone-700 rounded-none w-full text-left">
+                        <span className="font-bold text-red-700 uppercase tracking-wider text-[10px] block mb-0.5">Lý do hủy đơn hàng:</span>
+                        <span className="font-semibold italic text-stone-900">"{selectedOrder.cancel_reason}"</span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -1433,9 +1452,17 @@ function OrderManagerTab() {
                           </button>
                         )}
                         <button
-                          onClick={() => updateStatusMutation.mutate({ orderId: selectedOrder.id, status: 'CANCELLED' })}
+                          onClick={() => {
+                            const reason = window.prompt(`Nhập lý do hủy đơn hàng #${selectedOrder.id} (Tùy chọn):`);
+                            if (reason === null) return;
+                            updateStatusMutation.mutate({ 
+                              orderId: selectedOrder.id, 
+                              status: 'CANCELLED', 
+                              cancelReason: reason.trim() || 'Hủy bởi Quản trị viên' 
+                            });
+                          }}
                           disabled={updateStatusMutation.isPending}
-                          className="flex items-center gap-1.5 border border-red-200 hover:bg-red-50 hover:border-red-400 text-red-500 hover:text-red-700 font-medium py-2.5 px-4 rounded-none text-[11px] transition-all uppercase tracking-widest disabled:opacity-50"
+                          className="flex items-center gap-1.5 border border-red-200 hover:bg-red-50 hover:border-red-400 text-red-500 hover:text-red-700 font-medium py-2.5 px-4 rounded-none text-[11px] transition-all uppercase tracking-widest disabled:opacity-50 animate-pulse-once"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
                           Hủy đơn
