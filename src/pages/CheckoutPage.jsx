@@ -86,6 +86,27 @@ export default function CheckoutPage() {
   const discountAmount = appliedCoupon ? appliedCoupon.discountAmount : 0;
   const finalTotalAmount = Math.max(0, totalAmount - discountAmount);
 
+  // Tự động áp dụng mã giảm giá đã kích hoạt từ Trạm Khuyến Mãi
+  useEffect(() => {
+    const savedCoupon = localStorage.getItem('active_coupon_code');
+    if (savedCoupon && totalAmount > 0 && !appliedCoupon) {
+      const autoValidate = async () => {
+        try {
+          const response = await api.get(`/coupons/validate?code=${savedCoupon.trim()}&orderAmount=${totalAmount}`);
+          setAppliedCoupon(response.data.data);
+          setCouponCode(savedCoupon);
+          toast.success(`Đã tự động áp dụng mã giảm giá "${savedCoupon}"!`);
+          localStorage.removeItem('active_coupon_code');
+        } catch (err) {
+          // Nếu đơn hàng chưa đủ giá trị tối thiểu, chỉ điền mã giảm giá vào input
+          setCouponCode(savedCoupon);
+          console.log('Tự động áp dụng mã giảm giá thất bại:', err.response?.data?.error);
+        }
+      };
+      autoValidate();
+    }
+  }, [totalAmount]);
+
   // 2. Mutation đặt hàng & lấy link thanh toán
   const orderMutation = useMutation({
     mutationFn: async (shippingInfo) => {

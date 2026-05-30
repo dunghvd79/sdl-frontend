@@ -53,7 +53,12 @@ export default function PromotionsPage() {
     }, 2000);
   };
 
-  const handleUseNow = () => {
+  const handleUseNow = (code) => {
+    if (code) {
+      localStorage.setItem('active_coupon_code', code);
+      navigator.clipboard.writeText(code);
+      toast.success(`Đã kích hoạt mã "${code}" thành công! Ưu đãi sẽ tự động áp dụng khi thanh toán.`, { title: 'Kích hoạt mã giảm giá' });
+    }
     navigate('/');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -303,7 +308,7 @@ export default function PromotionsPage() {
 
                               {user && (
                                 <button
-                                  onClick={handleUseNow}
+                                  onClick={() => handleUseNow(coupon.code)}
                                   className="py-1.5 px-3 bg-[#2C4A3B] hover:bg-[#1e3529] text-white text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1 border-0 cursor-pointer"
                                 >
                                   Dùng ngay
