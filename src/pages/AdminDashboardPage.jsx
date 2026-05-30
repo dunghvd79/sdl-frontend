@@ -171,8 +171,12 @@ function BookManagerTab() {
     onSuccess: () => {
       queryClient.invalidateQueries(['adminBooks']);
       toast.success('Đã xóa sách thành công!', { title: 'Đã xóa' });
+      setConfirmDialog({ isOpen: false });
     },
-    onError: (err) => toast.error(err.response?.data?.error || err.message, { title: 'Lỗi xóa sách' })
+    onError: (err) => {
+      toast.error(err.response?.data?.error || err.message, { title: 'Lỗi xóa sách' });
+      setConfirmDialog({ isOpen: false });
+    }
   });
 
   const handleDelete = (book) => {
@@ -3097,9 +3101,11 @@ function CouponManagerTab() {
     onSuccess: () => {
       queryClient.invalidateQueries(['adminCoupons']);
       toast.success('Đã xóa mã giảm giá thành công!', { title: 'Đã xóa' });
+      setConfirmDialog({ isOpen: false });
     },
     onError: (err) => {
       toast.error(err.response?.data?.error || err.message, { title: 'Lỗi xóa mã giảm giá' });
+      setConfirmDialog({ isOpen: false });
     }
   });
 
@@ -3518,9 +3524,11 @@ function ArticleManagerTab() {
     onSuccess: () => {
       queryClient.invalidateQueries(['adminArticles']);
       toast.success('Đã xóa bài viết thành công!', { title: 'Đã xóa' });
+      setConfirmDialog({ isOpen: false });
     },
     onError: (err) => {
       toast.error(err.response?.data?.error || err.message, { title: 'Lỗi xóa bài viết' });
+      setConfirmDialog({ isOpen: false });
     }
   });
 
