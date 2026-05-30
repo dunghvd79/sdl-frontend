@@ -12,7 +12,7 @@ function BookManagerTab() {
   const toast = useToast();
   const [showModal, setShowModal] = useState(false);
   const [editBook, setEditBook] = useState(null);
-  const [form, setForm] = useState({ title: '', author: '', isbn: '', description: '', price: '', cover_url: '', status: 'PUBLISHED', categoryIds: [], is_featured: false, display_order: 0 });
+  const [form, setForm] = useState({ title: '', author: '', isbn: '', description: '', price: '', cover_url: '', status: 'PUBLISHED', categoryIds: [], is_featured: false, is_bestseller: false, display_order: 0 });
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false });
   const [uploadingCover, setUploadingCover] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -64,7 +64,7 @@ function BookManagerTab() {
 
   const openAddModal = () => {
     setEditBook(null);
-    setForm({ title: '', author: '', isbn: '', description: '', price: '', cover_url: '', status: 'PUBLISHED', categoryIds: [], is_featured: false, display_order: 0 });
+    setForm({ title: '', author: '', isbn: '', description: '', price: '', cover_url: '', status: 'PUBLISHED', categoryIds: [], is_featured: false, is_bestseller: false, display_order: 0 });
     setShowUrlInput(false);
     setShowModal(true);
   };
@@ -81,6 +81,7 @@ function BookManagerTab() {
       status: book.status || 'PUBLISHED',
       categoryIds: book.categories?.map(c => c.id) || [],
       is_featured: book.is_featured || false,
+      is_bestseller: book.is_bestseller || false,
       display_order: book.display_order !== undefined ? book.display_order : 0
     });
     // Hiển thị input URL nếu ảnh hiện tại là url bên ngoài (bắt đầu bằng http)
@@ -411,6 +412,19 @@ function BookManagerTab() {
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-semibold text-ink">Nổi bật (Editor's Pick)</div>
                       <div className="text-[9px] text-ink-light leading-tight">Đưa lên kệ sách nổi bật trang chủ</div>
+                    </div>
+                  </label>
+
+                  <label className={`flex items-center gap-2.5 p-2.5 border cursor-pointer transition-all ${form.is_bestseller ? 'border-[#2C4A3B] bg-[#fdf9f5]' : 'border-divider bg-white hover:bg-[#faf8f5]'}`}>
+                    <input
+                      type="checkbox"
+                      checked={form.is_bestseller}
+                      onChange={e => setForm(f => ({ ...f, is_bestseller: e.target.checked }))}
+                      className="w-3.5 h-3.5 rounded-none accent-[#2C4A3B] border-divider cursor-pointer"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-ink">Bán chạy (Best Seller)</div>
+                      <div className="text-[9px] text-ink-light leading-tight">Đóng nhãn BESTSELLER nổi bật trên ảnh bìa sách</div>
                     </div>
                   </label>
 

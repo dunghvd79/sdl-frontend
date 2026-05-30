@@ -89,9 +89,11 @@ export default function BookCard({ book }) {
         </div>
         
         {/* Decorative Bestseller Badge */}
-        <div className="absolute top-3 left-3 bg-[#2C4A3B] text-white text-[8px] uppercase tracking-[0.2em] font-bold px-2 py-0.5 shadow-sm">
-          Bestseller
-        </div>
+        {book.is_bestseller && (
+          <div className="absolute top-3 left-3 bg-[#2C4A3B] text-white text-[8px] uppercase tracking-[0.2em] font-bold px-2 py-0.5 shadow-sm">
+            Bestseller
+          </div>
+        )}
 
         {/* Heart/Like Toggle Button */}
         <button 
