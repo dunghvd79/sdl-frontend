@@ -17,6 +17,11 @@ function BookManagerTab() {
   const [uploadingCover, setUploadingCover] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
 
+  // States cho tìm kiếm và bộ lọc
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+
   const handleCoverUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -54,6 +59,24 @@ function BookManagerTab() {
     queryFn: () => api.get('/books?limit=200&adminMode=true').then(r => r.data.data?.books || r.data.data || [])
   });
   const books = Array.isArray(data) ? data : [];
+
+  // Lọc danh sách sách
+  const filteredBooks = books.filter(book => {
+    const matchesSearch = 
+      book.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      book.author?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (book.isbn && book.isbn.includes(searchTerm));
+
+    const matchesStatus = 
+      statusFilter === 'ALL' || 
+      book.status === statusFilter;
+
+    const matchesCategory = 
+      categoryFilter === 'ALL' || 
+      book.categories?.some(c => c.id === Number(categoryFilter));
+
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
 
   // Fetch danh sách danh mục (thể loại)
   const { data: categoriesData } = useQuery({
@@ -193,13 +216,66 @@ function BookManagerTab() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-serif font-semibold text-ink">Danh sách sách ({books.length} cuốn)</h2>
+        <h2 className="text-lg font-serif font-semibold text-ink">Quản lý sách</h2>
         <button
           onClick={openAddModal}
-          className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-medium py-2 px-5 rounded-none transition-colors text-xs uppercase tracking-wider"
+          className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-medium py-2 px-5 rounded-none transition-colors text-xs uppercase tracking-wider cursor-pointer"
         >
           + Thêm Sách Mới
         </button>
+      </div>
+
+      {/* Bảng thống kê nhanh */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-[#faf8f5] border border-divider p-4 flex flex-col rounded-none shadow-none">
+          <span className="text-[9px] uppercase tracking-widest text-stone-500 font-semibold mb-1">Tổng đầu sách</span>
+          <span className="text-xl font-serif font-bold text-ink">{books.length} cuốn</span>
+        </div>
+        <div className="bg-[#faf8f5] border border-divider p-4 flex flex-col rounded-none shadow-none">
+          <span className="text-[9px] uppercase tracking-widest text-stone-500 font-semibold mb-1">Đang công khai</span>
+          <span className="text-xl font-serif font-bold text-green-700">{books.filter(b => b.status === 'PUBLISHED').length} cuốn</span>
+        </div>
+        <div className="bg-[#faf8f5] border border-divider p-4 flex flex-col rounded-none shadow-none">
+          <span className="text-[9px] uppercase tracking-widest text-stone-500 font-semibold mb-1">Bản nháp & Ẩn</span>
+          <span className="text-xl font-serif font-bold text-amber-700">{books.filter(b => b.status === 'DRAFT' || b.status === 'HIDDEN').length} cuốn</span>
+        </div>
+      </div>
+
+      {/* Thanh tìm kiếm & bộ lọc */}
+      <div className="flex flex-col md:flex-row gap-3 mb-6 bg-[#faf8f5]/50 border border-divider p-4 rounded-none">
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            placeholder="Tìm theo tên sách, tác giả, hoặc mã ISBN..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-3 pr-3 py-2 border border-divider rounded-none bg-white text-xs text-ink focus:outline-none focus:border-[#2C4A3B] transition-colors placeholder:text-stone-400"
+          />
+        </div>
+        <div className="w-full md:w-44">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-3 py-2 border border-divider rounded-none bg-white text-xs text-ink font-semibold focus:outline-none focus:border-[#2C4A3B] transition-colors cursor-pointer"
+          >
+            <option value="ALL">Tất cả trạng thái</option>
+            <option value="PUBLISHED">Công khai</option>
+            <option value="DRAFT">Bản nháp</option>
+            <option value="HIDDEN">Đã ẩn</option>
+          </select>
+        </div>
+        <div className="w-full md:w-52">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="w-full px-3 py-2 border border-divider rounded-none bg-white text-xs text-ink font-semibold focus:outline-none focus:border-[#2C4A3B] transition-colors cursor-pointer"
+          >
+            <option value="ALL">Tất cả thể loại</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {isLoading ? (
@@ -211,25 +287,32 @@ function BookManagerTab() {
           <table className="w-full text-sm">
             <thead className="bg-surface-warm text-ink-light border-b border-divider uppercase text-xs tracking-wider font-semibold">
               <tr>
-                <th className="text-left py-3 px-4">ID</th>
+                <th className="text-left py-3 px-4 w-16">ID</th>
+                <th className="text-left py-3 px-4 w-16">Bìa</th>
                 <th className="text-left py-3 px-4">Tên Sách</th>
                 <th className="text-left py-3 px-4">Tác Giả</th>
-                <th className="text-center py-3 px-4">Trạng thái</th>
-                <th className="text-right py-3 px-4">Giá</th>
-                <th className="text-center py-3 px-4">Thao tác</th>
+                <th className="text-center py-3 px-4 w-28">Trạng thái</th>
+                <th className="text-right py-3 px-4 w-32">Giá</th>
+                <th className="text-center py-3 px-4 w-36">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-divider-lt">
-              {books.map(book => {
+              {filteredBooks.map(book => {
                 const statusBadge = {
                   PUBLISHED: 'border-green-200 text-green-700 bg-green-50/50',
                   DRAFT:     'border-amber-200 text-amber-700 bg-amber-50/50',
                   HIDDEN:    'border-red-200 text-red-600 bg-red-50/50',
                 }[book.status] || 'border-divider text-ink-light bg-surface-subtle';
                 const statusLabel = { PUBLISHED: 'Công khai', DRAFT: 'Bản nháp', HIDDEN: 'Ẩn' }[book.status] || book.status;
+                const bookCover = book.cover_url ? getImageUrl(book.cover_url) : 'https://cdn-icons-png.flaticon.com/512/330/330732.png';
                 return (
                 <tr key={book.id} className="hover:bg-[#fcfbf9] transition-colors">
                   <td className="py-3 px-4 text-ink-light font-mono text-xs">#{book.id}</td>
+                  <td className="py-2 px-4">
+                    <div className="w-8 aspect-[3/4] border border-divider bg-white flex items-center justify-center overflow-hidden">
+                      <img src={bookCover} alt="Bìa" className="w-full h-full object-cover" />
+                    </div>
+                  </td>
                   <td className="py-3 px-4 font-serif font-medium text-ink">{book.title}</td>
                   <td className="py-3 px-4 text-ink-light">{book.author}</td>
                   <td className="py-3 px-4 text-center">
@@ -244,14 +327,14 @@ function BookManagerTab() {
                     <div className="flex justify-center gap-2">
                       <button
                         onClick={() => openEditModal(book)}
-                        className="border border-divider hover:bg-[#f0ece7] text-ink font-medium py-1 px-3 rounded-none text-xs transition-colors"
+                        className="border border-divider hover:bg-[#f0ece7] text-ink font-medium py-1 px-3 rounded-none text-xs transition-colors cursor-pointer"
                       >
                         Sửa
                       </button>
                       <button
                         onClick={() => handleDelete(book)}
                         disabled={deleteMutation.isPending}
-                        className="border border-red-200 hover:bg-red-50 text-red-700 font-medium py-1 px-3 rounded-none text-xs transition-colors"
+                        className="border border-red-200 hover:bg-red-50 text-red-700 font-medium py-1 px-3 rounded-none text-xs transition-colors cursor-pointer"
                       >
                         Xóa
                       </button>
@@ -262,8 +345,8 @@ function BookManagerTab() {
               })}
             </tbody>
           </table>
-          {books.length === 0 && (
-            <p className="text-center py-12 text-ink-light italic">Chưa có sách nào trong hệ thống.</p>
+          {filteredBooks.length === 0 && (
+            <p className="text-center py-12 text-ink-light italic">Không tìm thấy sách phù hợp.</p>
           )}
         </div>
       )}
