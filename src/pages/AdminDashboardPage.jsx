@@ -1718,6 +1718,7 @@ function OrderManagerTab() {
 function DashboardOverviewTab() {
   const toast = useToast();
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [timeframe, setTimeframe] = useState('ALL'); // ALL, TODAY, LAST_7_DAYS, LAST_30_DAYS
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['adminStats'],
@@ -1744,6 +1745,88 @@ function DashboardOverviewTab() {
   }
 
   const { revenue = 0, discount = 0, orderStats = {}, userStats = {}, ragStats = { total: 0, vectorized: 0 }, topBooks = [], recentOrders = [] } = stats || {};
+
+  // Lọc đơn hàng theo khoảng thời gian chọn
+  const filteredOrders = allOrders ? allOrders.filter(order => {
+    if (timeframe === 'ALL') return true;
+    const orderDate = new Date(order.created_at);
+    const now = new Date();
+    if (timeframe === 'TODAY') {
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return orderDate >= todayStart;
+    }
+    if (timeframe === 'LAST_7_DAYS') {
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return orderDate >= sevenDaysAgo;
+    }
+    if (timeframe === 'LAST_30_DAYS') {
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return orderDate >= thirtyDaysAgo;
+    }
+    return true;
+  }) : [];
+
+  // Tính toán số liệu động trên frontend dựa theo timeframe lọc
+  const hasOrdersLoaded = Array.isArray(allOrders);
+  
+  const activeOrders = hasOrdersLoaded ? filteredOrders.filter(o => o.status !== 'CANCELLED') : [];
+  const dynamicRevenue = hasOrdersLoaded ? activeOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0) : revenue;
+  const dynamicDiscount = hasOrdersLoaded ? activeOrders.reduce((sum, o) => sum + Number(o.discount_amount || 0), 0) : discount;
+
+  // Chi tiết trạng thái đơn hàng
+  const dynamicOrderStats = {
+    PENDING: 0,
+    CONFIRMED: 0,
+    PACKAGING: 0,
+    DELIVERING: 0,
+    DELIVERED: 0,
+    CANCELLED: 0
+  };
+  
+  if (hasOrdersLoaded) {
+    filteredOrders.forEach(o => {
+      if (dynamicOrderStats[o.status] !== undefined) {
+        dynamicOrderStats[o.status]++;
+      }
+    });
+  } else {
+    Object.keys(dynamicOrderStats).forEach(s => {
+      dynamicOrderStats[s] = orderStats[s] || 0;
+    });
+  }
+
+  // Top bán chạy
+  let dynamicTopBooks = [];
+  if (hasOrdersLoaded) {
+    const bookSales = {};
+    activeOrders.forEach(order => {
+      order.items?.forEach(item => {
+        const title = item.title || item.bookTitle || 'Sách không tên';
+        if (!bookSales[title]) {
+          bookSales[title] = { title, total_sold: 0 };
+        }
+        bookSales[title].total_sold += Number(item.quantity || 0);
+      });
+    });
+    dynamicTopBooks = Object.values(bookSales)
+      .sort((a, b) => b.total_sold - a.total_sold)
+      .slice(0, 5);
+  } else {
+    dynamicTopBooks = topBooks.map(b => ({ id: b.id, title: b.title, total_sold: b.total_sold }));
+  }
+
+  // Trung bình mỗi đơn (AOV)
+  const dynamicAOV = activeOrders.length > 0 ? Math.round(dynamicRevenue / activeOrders.length) : 0;
+
+  // Tỷ lệ hủy đơn
+  const cancelledCount = dynamicOrderStats.CANCELLED || 0;
+  const totalOrdersCount = hasOrdersLoaded ? filteredOrders.length : Object.values(orderStats).reduce((a, b) => a + b, 0);
+  const cancelRate = totalOrdersCount > 0 ? Math.round((cancelledCount / totalOrdersCount) * 100) : 0;
+
+  // Đơn hàng hiển thị gần đây
+  const dynamicRecentOrders = hasOrdersLoaded
+    ? [...filteredOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)
+    : recentOrders;
 
   // CSV Export
   const handleExportCSV = () => {
@@ -1810,39 +1893,59 @@ function DashboardOverviewTab() {
     CANCELLED:  { dot: 'bg-red-400',    badge: 'bg-red-50 text-red-700 border-red-300'         },
   };
 
-  const maxOrderStatusVal = Math.max(...Object.values(orderStats), 1);
-  const maxTopBookVal = Math.max(...topBooks.map(b => Number(b.total_sold)), 1);
+  const maxOrderStatusVal = Math.max(...Object.values(dynamicOrderStats), 1);
+  const maxTopBookVal = Math.max(...dynamicTopBooks.map(b => Number(b.total_sold)), 1);
 
   return (
     <div className="space-y-8">
+      {/* Bộ lọc khoảng thời gian */}
+      <div className="flex justify-between items-center bg-[#faf8f5]/60 border border-divider p-4 rounded-none">
+        <div>
+          <h2 className="text-sm font-serif font-semibold text-ink uppercase tracking-wider">Số liệu phân tích kinh doanh</h2>
+          <p className="text-[10px] text-ink-light tracking-wide mt-0.5">Các chỉ số được cập nhật theo khoảng thời gian lựa chọn</p>
+        </div>
+        <div className="w-48">
+          <select
+            value={timeframe}
+            onChange={(e) => setTimeframe(e.target.value)}
+            className="w-full px-3 py-2 border border-divider rounded-none bg-white text-xs text-ink font-semibold focus:outline-none focus:border-[#2C4A3B] transition-colors cursor-pointer"
+          >
+            <option value="ALL">Toàn thời gian</option>
+            <option value="TODAY">Hôm nay</option>
+            <option value="LAST_7_DAYS">7 ngày qua</option>
+            <option value="LAST_30_DAYS">30 ngày qua</option>
+          </select>
+        </div>
+      </div>
+
       {/* Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="border border-divider rounded-none p-5 bg-white shadow-none">
-          <div className="text-[10px] uppercase tracking-widest text-ink-light font-bold">Tổng doanh thu thực tế</div>
+          <div className="text-[10px] uppercase tracking-widest text-ink-light font-bold">Doanh thu thực tế</div>
           <div className="text-2xl font-serif font-bold text-[#2C4A3B] mt-2">
-            {revenue.toLocaleString('vi-VN')} đ
+            {dynamicRevenue.toLocaleString('vi-VN')} đ
           </div>
-          {discount > 0 && (
-            <div className="text-xs text-ink-light/80 mt-1">
-              Giảm giá qua Coupon: <span className="font-semibold">-{discount.toLocaleString('vi-VN')} đ</span>
-            </div>
-          )}
+          <div className="text-xs text-ink-light/80 mt-1 flex justify-between">
+            <span>Giảm giá: -{dynamicDiscount.toLocaleString('vi-VN')} đ</span>
+            <span>TB/Đơn: {dynamicAOV.toLocaleString('vi-VN')} đ</span>
+          </div>
         </div>
 
         <div className="border border-divider rounded-none p-5 bg-white shadow-none">
-          <div className="text-[10px] uppercase tracking-widest text-ink-light font-bold">Tổng số đơn đặt</div>
+          <div className="text-[10px] uppercase tracking-widest text-ink-light font-bold">Số lượng đơn đặt</div>
           <div className="text-2xl font-serif font-bold text-ink mt-2">
-            {Object.values(orderStats).reduce((a, b) => a + b, 0)} đơn
+            {totalOrdersCount} đơn
           </div>
-          <div className="text-xs text-ink-light/80 mt-1 flex gap-2">
-            <span className="text-green-600 font-semibold">Đã giao: {orderStats.DELIVERED || 0}</span>
-            <span>·</span>
-            <span className="text-red-600 font-semibold">Hủy: {orderStats.CANCELLED || 0}</span>
+          <div className="text-xs text-ink-light/80 mt-1 flex justify-between items-center">
+            <span className="text-green-600 font-semibold">Đã giao: {dynamicOrderStats.DELIVERED || 0}</span>
+            <span className={cancelRate > 20 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
+              Hủy: {dynamicOrderStats.CANCELLED || 0} ({cancelRate}%)
+            </span>
           </div>
         </div>
 
         <div className="border border-divider rounded-none p-5 bg-white shadow-none">
-          <div className="text-[10px] uppercase tracking-widest text-ink-light font-bold">Tổng thành viên</div>
+          <div className="text-[10px] uppercase tracking-widest text-ink-light font-bold">Thành viên</div>
           <div className="text-2xl font-serif font-bold text-ink mt-2">
             {Object.values(userStats).reduce((a, b) => a + b, 0)} người
           </div>
@@ -1872,14 +1975,14 @@ function DashboardOverviewTab() {
           <h3 className="text-sm font-serif font-bold text-ink uppercase tracking-wider mb-5 border-b border-divider pb-2">
             Top 5 Sách bán chạy nhất
           </h3>
-          {topBooks.length === 0 ? (
-            <p className="text-center py-12 text-ink-light italic text-xs">Chưa có dữ liệu bán sách.</p>
+          {dynamicTopBooks.length === 0 ? (
+            <p className="text-center py-12 text-ink-light italic text-xs">Chưa có dữ liệu bán sách trong khoảng thời gian này.</p>
           ) : (
             <div className="space-y-4">
-              {topBooks.map((book, idx) => {
+              {dynamicTopBooks.map((book, idx) => {
                 const pct = (Number(book.total_sold) / maxTopBookVal) * 100;
                 return (
-                  <div key={book.id} className="space-y-1">
+                  <div key={idx} className="space-y-1">
                     <div className="flex justify-between items-center text-xs">
                       <span className="font-serif font-semibold text-ink truncate max-w-[80%]">
                         {idx + 1}. {book.title}
@@ -1906,7 +2009,7 @@ function DashboardOverviewTab() {
             Cơ cấu đơn hàng theo trạng thái
           </h3>
           <div className="space-y-4">
-            {Object.entries(orderStats).map(([status, count]) => {
+            {Object.entries(dynamicOrderStats).map(([status, count]) => {
               const pct = (count / maxOrderStatusVal) * 100;
               const isZero = count === 0;
               return (
@@ -1941,18 +2044,18 @@ function DashboardOverviewTab() {
       <div className="border border-divider rounded-none p-6 bg-white shadow-none">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-5 border-b border-divider pb-3">
           <h3 className="text-sm font-serif font-bold text-ink uppercase tracking-wider">
-            Các đơn hàng mới nhất
+            Các đơn hàng gần đây nhất
           </h3>
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 border border-divider hover:bg-[#f0ece7] text-ink font-semibold py-1.5 px-4 rounded-none text-xs transition-colors uppercase tracking-wider"
+            className="flex items-center gap-1.5 border border-divider hover:bg-[#f0ece7] text-ink font-semibold py-1.5 px-4 rounded-none text-xs transition-colors uppercase tracking-wider cursor-pointer"
           >
             📊 Xuất Báo Cáo CSV
           </button>
         </div>
 
-        {recentOrders.length === 0 ? (
-          <p className="text-center py-8 text-ink-light italic text-xs">Chưa có đơn hàng nào.</p>
+        {dynamicRecentOrders.length === 0 ? (
+          <p className="text-center py-8 text-ink-light italic text-xs">Chưa có đơn hàng nào trong khoảng thời gian này.</p>
         ) : (
           <div className="overflow-x-auto rounded-none border border-divider">
             <table className="w-full text-xs text-left">
@@ -1967,7 +2070,7 @@ function DashboardOverviewTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-divider-lt">
-                {recentOrders.map(order => (
+                {dynamicRecentOrders.map(order => (
                   <tr key={order.id} className="hover:bg-[#fcfbf9] transition-colors">
                     <td className="py-2.5 px-3 font-mono font-semibold">#{order.id}</td>
                     <td className="py-2.5 px-3 font-medium text-ink">{order.full_name || 'N/A'}</td>
@@ -1985,7 +2088,7 @@ function DashboardOverviewTab() {
                     <td className="py-2.5 px-3 text-center">
                       <button
                         onClick={() => setSelectedOrderId(order.id)}
-                        className="border border-divider hover:bg-[#f0ece7] text-ink font-semibold py-1 px-2.5 rounded-none text-[10px] transition-colors uppercase tracking-wider"
+                        className="border border-divider hover:bg-[#f0ece7] text-ink font-semibold py-1 px-2.5 rounded-none text-[10px] transition-colors uppercase tracking-wider cursor-pointer"
                       >
                         Chi tiết
                       </button>
