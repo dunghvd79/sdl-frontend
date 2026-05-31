@@ -1920,51 +1920,129 @@ function DashboardOverviewTab() {
 
       {/* Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="border border-divider rounded-none p-5 bg-white shadow-none">
-          <div className="text-[10px] uppercase tracking-widest text-ink-light font-bold">Doanh thu thực tế</div>
-          <div className="text-2xl font-serif font-bold text-[#2C4A3B] mt-2">
-            {dynamicRevenue.toLocaleString('vi-VN')} đ
+        {/* Card 1: Doanh thu */}
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-[#2C4A3B] p-6 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex flex-col justify-between group">
+          <div>
+            <div className="flex justify-between items-start">
+              <span className="text-[10px] font-sans font-bold tracking-[0.2em] text-ink-light/80 uppercase">
+                Doanh thu thực tế
+              </span>
+              <div className="p-1.5 bg-[#faf8f5] border border-divider/40 rounded-none group-hover:bg-[#2C4A3B]/10 group-hover:border-[#2C4A3B]/20 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-[#2C4A3B]">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-3xl font-serif font-bold text-[#2C4A3B] mt-4 tracking-tight flex items-baseline">
+              {dynamicRevenue.toLocaleString('vi-VN')}
+              <span className="text-sm font-sans font-normal text-ink-light/70 ml-1">đ</span>
+            </div>
           </div>
-          <div className="text-xs text-ink-light/80 mt-1 flex justify-between">
-            <span>Giảm giá: -{dynamicDiscount.toLocaleString('vi-VN')} đ</span>
-            <span>TB/Đơn: {dynamicAOV.toLocaleString('vi-VN')} đ</span>
-          </div>
-        </div>
-
-        <div className="border border-divider rounded-none p-5 bg-white shadow-none">
-          <div className="text-[10px] uppercase tracking-widest text-ink-light font-bold">Số lượng đơn đặt</div>
-          <div className="text-2xl font-serif font-bold text-ink mt-2">
-            {totalOrdersCount} đơn
-          </div>
-          <div className="text-xs text-ink-light/80 mt-1 flex justify-between items-center">
-            <span className="text-green-600 font-semibold">Đã giao: {dynamicOrderStats.DELIVERED || 0}</span>
-            <span className={cancelRate > 20 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
-              Hủy: {dynamicOrderStats.CANCELLED || 0} ({cancelRate}%)
-            </span>
-          </div>
-        </div>
-
-        <div className="border border-divider rounded-none p-5 bg-white shadow-none">
-          <div className="text-[10px] uppercase tracking-widest text-ink-light font-bold">Thành viên</div>
-          <div className="text-2xl font-serif font-bold text-ink mt-2">
-            {Object.values(userStats).reduce((a, b) => a + b, 0)} người
-          </div>
-          <div className="text-xs text-ink-light/80 mt-1 flex gap-2">
-            <span>Admin: {userStats.ADMIN || 0}</span>
-            <span>·</span>
-            <span>Curator: {userStats.CURATOR || 0}</span>
-            <span>·</span>
-            <span>Khách: {userStats.CUSTOMER || 0}</span>
+          <div className="border-t border-divider/60 mt-5 pt-4 space-y-2">
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="text-ink-light font-sans font-medium">Khuyến mãi đã giảm</span>
+              <span className="font-mono text-red-600 font-semibold">-{dynamicDiscount.toLocaleString('vi-VN')} đ</span>
+            </div>
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="text-ink-light font-sans font-medium">Trung bình/Đơn (AOV)</span>
+              <span className="font-mono text-ink font-semibold">{dynamicAOV.toLocaleString('vi-VN')} đ</span>
+            </div>
           </div>
         </div>
 
-        <div className="border border-divider rounded-none p-5 bg-white shadow-none">
-          <div className="text-[10px] uppercase tracking-widest text-ink-light font-bold">Tiến độ RAG</div>
-          <div className="text-2xl font-serif font-bold text-green-700 mt-2">
-            {ragStats.total > 0 ? Math.round((ragStats.vectorized / ragStats.total) * 100) : 0}%
+        {/* Card 2: Đơn đặt */}
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-ink/80 p-6 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex flex-col justify-between group">
+          <div>
+            <div className="flex justify-between items-start">
+              <span className="text-[10px] font-sans font-bold tracking-[0.2em] text-ink-light/80 uppercase">
+                Số lượng đơn đặt
+              </span>
+              <div className="p-1.5 bg-[#faf8f5] border border-divider/40 rounded-none group-hover:bg-[#f0ece7] transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-ink-light">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-3xl font-serif font-bold text-ink mt-4 tracking-tight flex items-baseline">
+              {totalOrdersCount}
+              <span className="text-sm font-sans font-normal text-ink-light/70 ml-1">đơn</span>
+            </div>
           </div>
-          <div className="text-xs text-ink-light/80 mt-1">
-            Đã vector hóa: <span className="font-semibold text-green-700">{ragStats.vectorized}</span> / {ragStats.total} cuốn
+          <div className="border-t border-divider/60 mt-5 pt-4 space-y-2">
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="text-ink-light font-sans font-medium">Giao thành công</span>
+              <span className="font-mono text-green-700 font-semibold">{dynamicOrderStats.DELIVERED || 0} đơn</span>
+            </div>
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="text-ink-light font-sans font-medium">Hủy đơn (Tỷ lệ %)</span>
+              <span className={`font-mono font-semibold ${cancelRate > 20 ? 'text-red-600' : 'text-green-700'}`}>
+                {dynamicOrderStats.CANCELLED || 0} đơn ({cancelRate}%)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Thành viên */}
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-[#3D4E5B] p-6 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex flex-col justify-between group">
+          <div>
+            <div className="flex justify-between items-start">
+              <span className="text-[10px] font-sans font-bold tracking-[0.2em] text-ink-light/80 uppercase">
+                Thành viên
+              </span>
+              <div className="p-1.5 bg-[#faf8f5] border border-divider/40 rounded-none group-hover:bg-[#3D4E5B]/10 group-hover:border-[#3D4E5B]/20 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-[#3D4E5B]">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.97 5.97 0 0 0-.75-2.906m-.173-4.094a3 3 0 1 1-.803-5.997 3.011 3.011 0 0 1 .803 5.997ZM21 8.25c0-1.38-1.13-2.5-2.5-2.5a2.502 2.502 0 0 0-2.185 1.283m4.685 1.217a2.502 2.502 0 0 1-2.185 1.283m1.077 7.78A8.974 8.974 0 0 0 21 12a8.974 8.974 0 0 0-3.428-7.011M12 15c-1.898 0-3.71-.47-5.309-1.299A3.001 3.001 0 0 0 2 16.5V18c0 .332.053.655.15.96A9.052 9.052 0 0 0 12 21c3.676 0 7.001-1.378 9.53-3.649A9.015 9.015 0 0 0 12 15Zm0-4.5a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-3xl font-serif font-bold text-ink mt-4 tracking-tight flex items-baseline">
+              {Object.values(userStats).reduce((a, b) => a + b, 0)}
+              <span className="text-sm font-sans font-normal text-ink-light/70 ml-1">người</span>
+            </div>
+          </div>
+          <div className="border-t border-divider/60 mt-5 pt-4 space-y-1.5">
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="text-ink-light font-sans font-medium">Quản trị viên (Admin)</span>
+              <span className="font-mono text-ink font-semibold">{userStats.ADMIN || 0}</span>
+            </div>
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="text-ink-light font-sans font-medium">Biên tập viên (Curator)</span>
+              <span className="font-mono text-ink font-semibold">{userStats.CURATOR || 0}</span>
+            </div>
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="text-ink-light font-sans font-medium">Khách hàng thành viên</span>
+              <span className="font-mono text-ink font-semibold">{userStats.CUSTOMER || 0}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Tiến độ RAG */}
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-green-700 p-6 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex flex-col justify-between group">
+          <div>
+            <div className="flex justify-between items-start">
+              <span className="text-[10px] font-sans font-bold tracking-[0.2em] text-ink-light/80 uppercase">
+                Tiến độ RAG
+              </span>
+              <div className="p-1.5 bg-[#faf8f5] border border-divider/40 rounded-none group-hover:bg-green-700/10 group-hover:border-green-700/20 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 text-green-700">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 21l-.813-5.096L3 15l5.096-.813L9 9l.813 5.187L15 15l-5.187.904zM18 5.25L17 8l-1-2.75L13.25 5l2.75-1L17 1.25L18 4l2.75 1L18 5.25zM20 18.25L19 21l-1-2.75L15.25 18l2.75-1L19 14.25L20 17l2.75 1L20 18.25z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-3xl font-serif font-bold text-green-700 mt-4 tracking-tight flex items-baseline">
+              {ragStats.total > 0 ? Math.round((ragStats.vectorized / ragStats.total) * 100) : 0}
+              <span className="text-sm font-sans font-normal text-ink-light/70 ml-1">%</span>
+            </div>
+          </div>
+          <div className="border-t border-divider/60 mt-5 pt-4 space-y-2">
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="text-ink-light font-sans font-medium">Đã vector hóa (AI)</span>
+              <span className="font-mono text-green-700 font-semibold">{ragStats.vectorized} cuốn</span>
+            </div>
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="text-ink-light font-sans font-medium">Tổng số sách</span>
+              <span className="font-mono text-ink font-semibold">{ragStats.total} cuốn</span>
+            </div>
           </div>
         </div>
       </div>
