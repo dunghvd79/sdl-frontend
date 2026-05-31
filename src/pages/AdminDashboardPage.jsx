@@ -704,9 +704,21 @@ function BookManagerTab() {
 function InventoryManagerTab() {
   const queryClient = useQueryClient();
   const toast = useToast();
-  // Mỗi dòng có giá trị input và trạng thái (loading/success/error) riêng biệt
-  const [editingQty, setEditingQty] = useState({});   // { [bookId]: string }
-  const [rowStatus, setRowStatus] = useState({});      // { [bookId]: 'loading'|'success'|'error' }
+
+  // State bộ lọc và tìm kiếm tồn kho
+  const [searchTermStock, setSearchTermStock] = useState('');
+  const [stockFilter, setStockFilter] = useState('ALL'); // ALL, OUT_OF_STOCK, LOW_STOCK, SAFE
+  
+  // State bộ lọc lịch sử giao dịch
+  const [txTypeFilter, setTxTypeFilter] = useState('ALL'); // ALL, STOCK_IN, STOCK_OUT, ADJUSTMENT, RETURN
+
+  // State Modal Phiếu Nhập Kho
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [selectedBookForStock, setSelectedBookForStock] = useState(null);
+  const [stockChangeType, setStockChangeType] = useState('STOCK_IN'); // STOCK_IN, ADJUSTMENT
+  const [stockChangeQty, setStockChangeQty] = useState('');
+  const [stockChangeReason, setStockChangeReason] = useState('');
+  const [isSavingStock, setIsSavingStock] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['adminInventory'],
@@ -721,35 +733,74 @@ function InventoryManagerTab() {
   const inventory = data || [];
   const transactions = txData || [];
 
-  const handleQtyChange = (bookId, val) => {
-    setEditingQty(prev => ({ ...prev, [bookId]: val }));
-    // Xóa status cũ khi user bắt đầu nhập lại
-    setRowStatus(prev => { const n = { ...prev }; delete n[bookId]; return n; });
+  // Lọc sách tồn kho
+  const filteredInventory = inventory.filter(item => {
+    // 1. Tìm kiếm từ khóa
+    const matchSearch = 
+      item.title?.toLowerCase().includes(searchTermStock.toLowerCase()) ||
+      item.author?.toLowerCase().includes(searchTermStock.toLowerCase());
+      
+    // 2. Lọc tồn kho
+    let matchStock = true;
+    if (stockFilter === 'OUT_OF_STOCK') {
+      matchStock = item.available_qty <= 0;
+    } else if (stockFilter === 'LOW_STOCK') {
+      matchStock = item.available_qty > 0 && item.available_qty <= 5;
+    } else if (stockFilter === 'SAFE') {
+      matchStock = item.available_qty > 5;
+    }
+
+    return matchSearch && matchStock;
+  });
+
+  // Lọc lịch sử biến động kho
+  const filteredTransactions = transactions.filter(tx => {
+    if (txTypeFilter === 'ALL') return true;
+    return tx.type === txTypeFilter;
+  });
+
+  const handleOpenStockModal = (book) => {
+    setSelectedBookForStock(book);
+    setStockChangeType('STOCK_IN');
+    setStockChangeQty('');
+    setStockChangeReason('');
+    setIsStockModalOpen(true);
   };
 
-  const handleSave = async (bookId, currentAvailableQty) => {
-    const rawVal = editingQty[bookId];
-    const qty = rawVal !== undefined ? Number(rawVal) : currentAvailableQty;
+  const handleSaveStock = async () => {
+    if (!selectedBookForStock) return;
+    const changeQty = parseInt(stockChangeQty, 10);
 
-    if (isNaN(qty) || qty < 0) {
-      toast.warning('Số lượng phải là số không âm!', { title: 'Dữ liệu không hợp lệ' });
+    if (isNaN(changeQty) || changeQty <= 0) {
+      toast.warning('Số lượng thay đổi phải là số nguyên dương lớn hơn 0!', { title: 'Dữ liệu không hợp lệ' });
       return;
     }
 
-    setRowStatus(prev => ({ ...prev, [bookId]: 'loading' }));
+    setIsSavingStock(true);
     try {
-      await api.put(`/inventory/${bookId}`, { availableQty: qty });
-      setEditingQty(prev => { const n = { ...prev }; delete n[bookId]; return n; });
-      setRowStatus(prev => ({ ...prev, [bookId]: 'success' }));
+      const currentQty = selectedBookForStock.available_qty;
+      let newQty = currentQty;
+
+      if (stockChangeType === 'STOCK_IN') {
+        newQty = currentQty + changeQty;
+      } else {
+        newQty = Math.max(0, currentQty - changeQty);
+      }
+
+      await api.put(`/inventory/${selectedBookForStock.book_id}`, {
+        availableQty: newQty,
+        type: stockChangeType,
+        reason: stockChangeReason.trim() || undefined
+      });
+
       queryClient.invalidateQueries(['adminInventory']);
       queryClient.invalidateQueries(['adminInventoryTransactions']);
-      toast.success(`Đã cập nhật tồn kho thành công!`, { title: 'Tồn kho' });
-      setTimeout(() => {
-        setRowStatus(prev => { const n = { ...prev }; delete n[bookId]; return n; });
-      }, 2000);
+      toast.success('Đã cập nhật tồn kho và ghi nhật ký thành công!', { title: 'Cập nhật kho' });
+      setIsStockModalOpen(false);
     } catch (err) {
-      setRowStatus(prev => ({ ...prev, [bookId]: 'error' }));
       toast.error(err.response?.data?.error || err.message, { title: 'Lỗi cập nhật kho' });
+    } finally {
+      setIsSavingStock(false);
     }
   };
 
@@ -776,7 +827,31 @@ function InventoryManagerTab() {
 
   return (
     <div>
-      <h2 className="text-lg font-serif font-semibold text-ink mb-6">Quản lý tồn kho</h2>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <h2 className="text-lg font-serif font-semibold text-ink">Quản lý tồn kho</h2>
+        
+        {/* Bộ lọc Tìm kiếm & Trạng thái tồn kho */}
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            placeholder="Tìm kiếm sách hoặc tác giả..."
+            value={searchTermStock}
+            onChange={e => setSearchTermStock(e.target.value)}
+            className="border border-divider rounded-none px-3.5 py-1.5 w-64 text-xs focus:outline-none focus:border-ink bg-white text-ink font-sans tracking-wide"
+          />
+          <select
+            value={stockFilter}
+            onChange={e => setStockFilter(e.target.value)}
+            className="border border-divider rounded-none px-3 py-1.5 text-xs focus:outline-none focus:border-ink bg-white text-ink font-sans tracking-wide cursor-pointer"
+          >
+            <option value="ALL">Tất cả tồn kho</option>
+            <option value="OUT_OF_STOCK">Hết hàng (0)</option>
+            <option value="LOW_STOCK">Sắp hết hàng (1-5)</option>
+            <option value="SAFE">Tồn kho an toàn (&gt;5)</option>
+          </select>
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="space-y-3">
           {[1,2,3].map(i => <div key={i} className="h-14 bg-surface-subtle animate-pulse rounded-none" />)}
@@ -794,13 +869,7 @@ function InventoryManagerTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-divider-lt">
-              {inventory.map(item => {
-                const inputVal = editingQty[item.book_id] !== undefined
-                  ? editingQty[item.book_id]
-                  : item.available_qty;
-                const status = rowStatus[item.book_id];
-                const isRowLoading = status === 'loading';
-
+              {filteredInventory.map(item => {
                 return (
                   <tr key={item.book_id} className="hover:bg-[#fcfbf9] transition-colors">
                     <td className="py-3 px-4">
@@ -814,48 +883,43 @@ function InventoryManagerTab() {
                     </td>
                     <td className="py-3 px-4 text-center text-[#2C4A3B] font-semibold">{item.reserved_qty}</td>
                     <td className="py-3 px-4 text-center text-ink-light">{item.sold_qty}</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          value={inputVal}
-                          onChange={e => handleQtyChange(item.book_id, e.target.value)}
-                          disabled={isRowLoading}
-                          className="border border-divider rounded-none px-3 py-1.5 w-20 text-center text-sm focus:outline-none focus:border-ink transition-colors bg-white text-ink disabled:opacity-50"
-                        />
-                        <button
-                          onClick={() => handleSave(item.book_id, item.available_qty)}
-                          disabled={isRowLoading}
-                          className="min-w-[52px] bg-ink hover:bg-ink-light text-white font-medium py-1.5 px-3 rounded-none text-xs transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
-                        >
-                          {isRowLoading ? (
-                            <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          ) : status === 'success' ? (
-                            <span>✓</span>
-                          ) : (
-                            'Lưu'
-                          )}
-                        </button>
-                        {status === 'success' && (
-                          <span className="text-green-600 text-xs font-semibold animate-pulse">Đã lưu!</span>
-                        )}
-                      </div>
+                    <td className="py-3 px-4 text-center">
+                      <button
+                        onClick={() => handleOpenStockModal(item)}
+                        className="inline-flex items-center gap-1.5 border border-divider hover:border-ink hover:bg-surface-warm text-ink font-sans text-xs font-semibold py-1.5 px-3.5 transition-all rounded-none bg-white cursor-pointer"
+                      >
+                        <span>⚙️</span> Nhập / Điều chỉnh
+                      </button>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-          {inventory.length === 0 && (
-            <p className="text-center py-12 text-ink-light italic">Chưa có dữ liệu tồn kho.</p>
+          {filteredInventory.length === 0 && (
+            <p className="text-center py-12 text-ink-light italic">Không tìm thấy dữ liệu tồn kho phù hợp.</p>
           )}
         </div>
       )}
 
       {/* Nhật ký biến động kho */}
       <div className="mt-12">
-        <h3 className="text-md font-serif font-semibold text-ink mb-4">Nhật ký biến động kho</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <h3 className="text-md font-serif font-semibold text-ink">Nhật ký biến động kho</h3>
+          
+          <select
+            value={txTypeFilter}
+            onChange={e => setTxTypeFilter(e.target.value)}
+            className="border border-divider rounded-none px-3 py-1 text-xs focus:outline-none focus:border-ink bg-white text-ink font-sans tracking-wide cursor-pointer"
+          >
+            <option value="ALL">Tất cả biến động</option>
+            <option value="STOCK_IN">Nhập kho</option>
+            <option value="STOCK_OUT">Xuất kho</option>
+            <option value="ADJUSTMENT">Điều chỉnh</option>
+            <option value="RETURN">Hoàn hàng</option>
+          </select>
+        </div>
+
         {txLoading ? (
           <div className="space-y-3">
             {[1,2,3].map(i => <div key={i} className="h-10 bg-surface-subtle animate-pulse rounded-none" />)}
@@ -875,10 +939,10 @@ function InventoryManagerTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-divider-lt">
-                {transactions.map(tx => (
+                {filteredTransactions.map(tx => (
                   <tr key={tx.id} className="hover:bg-[#fcfbf9] transition-colors text-xs">
                     <td className="py-2.5 px-4 text-ink-light">
-                      {new Date(tx.created_at).toLocaleString('vi-VN')}
+                      {tx.created_at ? new Date(tx.created_at).toLocaleString('vi-VN') : '-'}
                     </td>
                     <td className="py-2.5 px-4">
                       <div className="font-serif font-medium text-ink line-clamp-1">{tx.book_title}</div>
@@ -903,12 +967,135 @@ function InventoryManagerTab() {
                 ))}
               </tbody>
             </table>
-            {transactions.length === 0 && (
+            {filteredTransactions.length === 0 && (
               <p className="text-center py-8 text-ink-light italic">Chưa có nhật ký biến động kho nào.</p>
             )}
           </div>
         )}
       </div>
+
+      {/* Modal Phiếu Nhập Kho nhanh */}
+      {isStockModalOpen && selectedBookForStock && (
+        <div className="fixed inset-0 bg-ink-80 bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
+          <div className="bg-[#fcfbf9] border border-[#c5a880]/30 w-full max-w-md shadow-2xl relative animate-scale-up rounded-none">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-divider-lt flex justify-between items-center bg-surface-warm">
+              <div>
+                <span className="text-[10px] text-ink-60 font-sans tracking-[0.2em] uppercase font-bold">Phiếu điều chuyển kho</span>
+                <h3 className="text-base font-serif font-bold text-ink mt-0.5">Nhập / Điều chỉnh kho</h3>
+              </div>
+              <button 
+                onClick={() => setIsStockModalOpen(false)}
+                className="text-ink-60 hover:text-ink transition-colors cursor-pointer text-xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <div className="bg-white border border-divider p-3 rounded-none">
+                <div className="text-xs text-ink-60 font-sans uppercase tracking-widest">Sách chọn</div>
+                <div className="font-serif font-bold text-sm text-ink mt-1">{selectedBookForStock.title}</div>
+                <div className="text-xs text-ink-60 mt-0.5">{selectedBookForStock.author}</div>
+                
+                <div className="flex gap-6 mt-3 pt-3 border-t border-divider-lt text-xs">
+                  <div>
+                    <span className="text-ink-60 font-sans tracking-wide">Sẵn có hiện tại:</span>
+                    <span className="ml-1.5 font-bold text-ink">{selectedBookForStock.available_qty}</span>
+                  </div>
+                  <div>
+                    <span className="text-ink-60 font-sans tracking-wide">Đang giữ:</span>
+                    <span className="ml-1.5 font-bold text-[#2C4A3B]">{selectedBookForStock.reserved_qty}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Loại biến động */}
+              <div>
+                <label className="block text-[11px] text-ink-60 font-sans uppercase tracking-wider mb-1.5 font-bold">Loại giao dịch</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setStockChangeType('STOCK_IN')}
+                    className={`py-2 px-3 text-xs font-bold uppercase tracking-widest text-center border transition-all rounded-none cursor-pointer ${
+                      stockChangeType === 'STOCK_IN'
+                        ? 'border-[#2C4A3B] bg-[#2C4A3B]/5 text-[#2C4A3B]'
+                        : 'border-divider bg-white text-ink-60 hover:border-ink hover:text-ink'
+                    }`}
+                  >
+                    📥 Nhập thêm hàng
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStockChangeType('ADJUSTMENT')}
+                    className={`py-2 px-3 text-xs font-bold uppercase tracking-widest text-center border transition-all rounded-none cursor-pointer ${
+                      stockChangeType === 'ADJUSTMENT'
+                        ? 'border-rose-700 bg-rose-50 text-rose-800'
+                        : 'border-divider bg-white text-ink-60 hover:border-ink hover:text-ink'
+                    }`}
+                  >
+                    🛠️ Điều chỉnh giảm
+                  </button>
+                </div>
+              </div>
+
+              {/* Số lượng thay đổi */}
+              <div>
+                <label className="block text-[11px] text-ink-60 font-sans uppercase tracking-wider mb-1.5 font-bold">Số lượng thay đổi</label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Ví dụ: 10"
+                  value={stockChangeQty}
+                  onChange={e => setStockChangeQty(e.target.value)}
+                  className="w-full border border-divider rounded-none px-3.5 py-2 text-sm focus:outline-none focus:border-ink bg-white text-ink font-mono font-semibold"
+                />
+              </div>
+
+              {/* Lý do / Mô tả */}
+              <div>
+                <label className="block text-[11px] text-ink-60 font-sans uppercase tracking-wider mb-1.5 font-bold">Lý do chi tiết</label>
+                <textarea
+                  rows="3"
+                  placeholder={stockChangeType === 'STOCK_IN' ? 'Nhập lý do (ví dụ: Nhập hàng đợt mới từ NXB...)' : 'Nhập lý do (ví dụ: Điều chỉnh hao hụt, sách lỗi hư hại...)'}
+                  value={stockChangeReason}
+                  onChange={e => setStockChangeReason(e.target.value)}
+                  className="w-full border border-divider rounded-none px-3.5 py-2 text-xs focus:outline-none focus:border-ink bg-white text-ink font-sans tracking-wide leading-relaxed"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-divider-lt flex justify-end gap-3 bg-[#faf8f5]">
+              <button
+                type="button"
+                onClick={() => setIsStockModalOpen(false)}
+                disabled={isSavingStock}
+                className="border border-divider hover:border-ink hover:bg-surface-warm text-ink font-sans text-xs font-bold py-2.5 px-6 uppercase tracking-wider transition-all rounded-none bg-white cursor-pointer disabled:opacity-50"
+              >
+                Hủy phiếu
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveStock}
+                disabled={isSavingStock}
+                className="bg-ink hover:bg-[#2C4A3B] text-white font-sans text-xs font-bold py-2.5 px-6 uppercase tracking-wider transition-all rounded-none cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isSavingStock ? (
+                  <>
+                    <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  'Xác nhận Lưu'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
