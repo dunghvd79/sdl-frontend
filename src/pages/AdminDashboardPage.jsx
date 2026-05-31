@@ -3023,11 +3023,24 @@ function CategoryManagerTab() {
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, ACTIVE, EMPTY
   const [sortBy, setSortBy] = useState('NAME_ASC'); // NAME_ASC, BOOKS_DESC
 
+  // State và query phục vụ tính năng xem nhanh danh sách sách của thể loại
+  const [selectedCategoryForBooks, setSelectedCategoryForBooks] = useState(null);
+
   // Fetch danh mục
   const { data: categories, isLoading } = useQuery({
     queryKey: ['adminCategories'],
     queryFn: () => api.get('/categories').then(r => r.data.data || [])
   });
+
+  // Fetch sách của danh mục được chọn để xem nhanh (adminMode=true)
+  const { data: categoryBooksData, isLoading: loadingBooks } = useQuery({
+    queryKey: ['categoryBooks', selectedCategoryForBooks?.id],
+    queryFn: () => api.get('/books', {
+      params: { categoryId: selectedCategoryForBooks?.id, limit: 100, adminMode: true }
+    }).then(r => r.data.data?.books || r.data.data || []),
+    enabled: !!selectedCategoryForBooks
+  });
+  const categoryBooks = Array.isArray(categoryBooksData) ? categoryBooksData : [];
 
   // Tính toán số liệu thống kê nhanh
   const stats = React.useMemo(() => {
@@ -3258,9 +3271,13 @@ function CategoryManagerTab() {
                   <td className="py-3 px-4 font-serif font-medium text-ink">{cat.name}</td>
                   <td className="py-3 px-4 text-center">
                     {(cat.book_count || 0) > 0 ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold bg-[#2C4A3B]/10 text-[#2C4A3B] border border-[#2C4A3B]/20">
+                      <button
+                        onClick={() => setSelectedCategoryForBooks(cat)}
+                        className="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold bg-[#2C4A3B]/10 text-[#2C4A3B] border border-[#2C4A3B]/20 hover:bg-[#2C4A3B]/20 hover:border-[#2C4A3B]/30 transition-all rounded-none cursor-pointer"
+                        title="Click để xem danh sách sách thuộc thể loại này"
+                      >
                         {cat.book_count} cuốn
-                      </span>
+                      </button>
                     ) : (
                       <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200/50">
                         0 cuốn (Trống)
@@ -3363,6 +3380,94 @@ function CategoryManagerTab() {
         onConfirm={confirmDialog.onConfirm}
         onClose={() => setConfirmDialog({ isOpen: false })}
       />
+
+      {/* Modal xem danh sách sách thuộc thể loại */}
+      {selectedCategoryForBooks && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-sm animate-fadeIn">
+          <div className="bg-white rounded-none border border-divider shadow-none w-full max-w-2xl text-ink">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-divider">
+              <div>
+                <h3 className="font-serif font-semibold text-base text-ink uppercase tracking-wider">
+                  Sách thuộc thể loại: {selectedCategoryForBooks.name}
+                </h3>
+                <p className="text-[10px] text-ink-light tracking-wide mt-0.5">
+                  Đang hiển thị {selectedCategoryForBooks.book_count || 0} cuốn sách liên kết
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedCategoryForBooks(null)} 
+                className="text-ink-light hover:text-ink text-lg leading-none cursor-pointer p-1"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6">
+              {loadingBooks ? (
+                <div className="py-12 flex flex-col items-center justify-center space-y-3">
+                  <div className="w-8 h-8 border-2 border-[#2C4A3B] border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-xs text-ink-light italic">Đang tải danh sách sách...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {categoryBooks.length === 0 ? (
+                    <p className="text-center py-8 text-ink-light italic text-xs">Thể loại này chưa có cuốn sách nào.</p>
+                  ) : (
+                    <div className="max-h-96 overflow-y-auto divide-y divide-divider border border-divider">
+                      {categoryBooks.map(book => {
+                        const bookCover = book.cover_url ? getImageUrl(book.cover_url) : 'https://cdn-icons-png.flaticon.com/512/330/330732.png';
+                        const statusBadge = {
+                          PUBLISHED: 'border-green-200 text-green-700 bg-green-50/50',
+                          DRAFT:     'border-amber-200 text-amber-700 bg-amber-50/50',
+                          HIDDEN:    'border-red-200 text-red-600 bg-red-50/50',
+                        }[book.status] || 'border-divider text-ink-light bg-surface-subtle';
+                        const statusLabel = { PUBLISHED: 'Công khai', DRAFT: 'Bản nháp', HIDDEN: 'Ẩn' }[book.status] || book.status;
+
+                        return (
+                          <div key={book.id} className="flex items-center gap-4 p-3 hover:bg-[#fcfbf9] transition-colors">
+                            {/* Bìa sách */}
+                            <div className="w-10 aspect-[3/4] border border-divider bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
+                              <img src={bookCover} alt="Bìa" className="w-full h-full object-cover" />
+                            </div>
+                            
+                            {/* Chi tiết sách */}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-serif font-semibold text-xs text-ink truncate">{book.title}</h4>
+                              <p className="text-[10px] text-ink-light mt-0.5 truncate">Tác giả: {book.author}</p>
+                            </div>
+
+                            {/* Trạng thái */}
+                            <div className="flex-shrink-0">
+                              <span className={`inline-flex items-center text-[9px] font-bold px-2 py-0.5 border rounded-none uppercase tracking-wider ${statusBadge}`}>
+                                {statusLabel}
+                              </span>
+                            </div>
+
+                            {/* Giá bán */}
+                            <div className="text-right flex-shrink-0 min-w-[70px]">
+                              <span className="font-mono text-xs font-semibold text-ink">
+                                {Number(book.price).toLocaleString('vi-VN')} đ
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex justify-end gap-2 pt-4 mt-6 border-t border-divider/50">
+                <button
+                  onClick={() => setSelectedCategoryForBooks(null)}
+                  className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-semibold py-2 px-6 rounded-none text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Đóng Hộp Thoại
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
