@@ -172,6 +172,16 @@ export default function Navbar() {
             >
               <Search size={20} strokeWidth={1.5} />
             </button>
+
+            <Link 
+              to="/promotions" 
+              className="relative hover:text-ink transition-colors hidden sm:block cursor-pointer p-1" 
+              title="Trạm khuyến mãi"
+            >
+              <Gift size={20} strokeWidth={1.5} />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-[#2C4A3B] rounded-full border border-white animate-pulse" />
+            </Link>
+
             <Link to="/wishlist" className="relative hover:text-ink transition-colors hidden sm:block cursor-pointer" title="Danh sách yêu thích">
               <Heart size={20} strokeWidth={1.5} />
               {wishlistCount > 0 && (
