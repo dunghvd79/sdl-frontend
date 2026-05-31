@@ -3018,11 +3018,49 @@ function CategoryManagerTab() {
   const [form, setForm] = useState({ name: '', description: '' });
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false });
 
+  // States cho tìm kiếm, bộ lọc và sắp xếp
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, ACTIVE, EMPTY
+  const [sortBy, setSortBy] = useState('NAME_ASC'); // NAME_ASC, BOOKS_DESC
+
   // Fetch danh mục
   const { data: categories, isLoading } = useQuery({
     queryKey: ['adminCategories'],
     queryFn: () => api.get('/categories').then(r => r.data.data || [])
   });
+
+  // Tính toán số liệu thống kê nhanh
+  const stats = React.useMemo(() => {
+    if (!categories) return { total: 0, active: 0, empty: 0 };
+    const total = categories.length;
+    const active = categories.filter(c => (c.book_count || 0) > 0).length;
+    const empty = categories.filter(c => (c.book_count || 0) === 0).length;
+    return { total, active, empty };
+  }, [categories]);
+
+  // Bộ lọc tìm kiếm và sắp xếp danh mục
+  const filteredCategories = React.useMemo(() => {
+    if (!categories) return [];
+    return categories
+      .filter(cat => {
+        const matchesSearch = cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (cat.description && cat.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+        const matchesStatus = statusFilter === 'ALL' ||
+          (statusFilter === 'ACTIVE' && (cat.book_count || 0) > 0) ||
+          (statusFilter === 'EMPTY' && (cat.book_count || 0) === 0);
+
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'NAME_ASC') {
+          return a.name.localeCompare(b.name, 'vi');
+        } else if (sortBy === 'BOOKS_DESC') {
+          return (b.book_count || 0) - (a.book_count || 0);
+        }
+        return 0;
+      });
+  }, [categories, searchQuery, statusFilter, sortBy]);
 
   const openAddModal = () => {
     setEditCategory(null);
@@ -3073,9 +3111,11 @@ function CategoryManagerTab() {
     mutationFn: (id) => api.delete(`/categories/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries(['adminCategories']);
+      setConfirmDialog({ isOpen: false });
       toast.success('Đã xóa thể loại thành công!', { title: 'Đã xóa' });
     },
     onError: (err) => {
+      setConfirmDialog({ isOpen: false });
       toast.error(err.response?.data?.error || err.message, { title: 'Lỗi xóa thể loại' });
     }
   });
@@ -3084,7 +3124,7 @@ function CategoryManagerTab() {
     setConfirmDialog({
       isOpen: true,
       title: 'Xóa thể loại',
-      message: `Bạn có chắc chắn muốn xóa thể loại "${cat.name}"? Các sách thuộc thể loại này sẽ bị gỡ liên kết.`,
+      message: `Bạn có chắc chắn muốn xóa thể loại "${cat.name}"? Thể loại này hiện tại đang liên kết với ${cat.book_count || 0} cuốn sách. Các sách thuộc thể loại này sẽ bị gỡ liên kết.`,
       confirmText: 'Xóa thể loại',
       variant: 'danger',
       onConfirm: () => deleteMutation.mutate(cat.id),
@@ -3093,14 +3133,106 @@ function CategoryManagerTab() {
 
   return (
     <div>
+      {/* Title & Add button */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-serif font-semibold text-ink">Quản lý thể loại sách ({categories?.length || 0})</h2>
+        <div>
+          <h2 className="text-lg font-serif font-semibold text-ink uppercase tracking-wide">Quản lý thể loại sách</h2>
+          <p className="text-[10px] text-ink-light tracking-wide mt-0.5">Quản lý phân loại và cấu trúc hiển thị danh mục sách</p>
+        </div>
         <button
           onClick={openAddModal}
-          className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-medium py-2 px-5 rounded-none transition-colors text-xs uppercase tracking-wider"
+          className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-medium py-2 px-5 rounded-none transition-colors text-xs uppercase tracking-wider cursor-pointer"
         >
           + Thêm Thể Loại
         </button>
+      </div>
+
+      {/* Quick Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-[#2C4A3B] p-5 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex items-center justify-between group">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-ink-light/80 font-bold font-sans">Tổng số thể loại</div>
+            <div className="text-2xl font-serif font-bold text-ink mt-2">
+              {stats.total}
+              <span className="text-xs font-sans font-normal text-ink-light ml-1">thể loại</span>
+            </div>
+          </div>
+          <div className="p-2 bg-[#faf8f5] border border-divider/40 rounded-none group-hover:bg-[#2C4A3B]/10 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 text-[#2C4A3B]">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581a2.25 2.25 0 0 0 3.182 0l5.178-5.178a2.25 2.25 0 0 0 0-3.182L12.018 3.659A2.25 2.25 0 0 0 10.427 3h-.86ZM18.75 8.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+            </svg>
+          </div>
+        </div>
+
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-green-700 p-5 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex items-center justify-between group">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-ink-light/80 font-bold font-sans">Thể loại đang có sách</div>
+            <div className="text-2xl font-serif font-bold text-green-700 mt-2">
+              {stats.active}
+              <span className="text-xs font-sans font-normal text-ink-light ml-1">hoạt động</span>
+            </div>
+          </div>
+          <div className="p-2 bg-[#faf8f5] border border-divider/40 rounded-none group-hover:bg-green-700/10 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 text-green-700">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.125 2.25h3.75a9 9 0 0 1 9 9v3.75a9 9 0 0 1-9 9h-3.75a9 9 0 0 1-9-9v-3.75a9 9 0 0 1 9-9Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75" />
+            </svg>
+          </div>
+        </div>
+
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-amber-600 p-5 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex items-center justify-between group">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-ink-light/80 font-bold font-sans">Thể loại rỗng (0 sách)</div>
+            <div className="text-2xl font-serif font-bold text-amber-600 mt-2">
+              {stats.empty}
+              <span className="text-xs font-sans font-normal text-ink-light ml-1">chưa có sách</span>
+            </div>
+          </div>
+          <div className="p-2 bg-[#faf8f5] border border-divider/40 rounded-none group-hover:bg-amber-600/10 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 text-amber-600">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filters Toolbar */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6 bg-[#faf8f5]/60 border border-divider p-4 rounded-none">
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            placeholder="Tìm kiếm thể loại theo tên hoặc mô tả..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-divider rounded-none bg-white text-xs text-ink placeholder-ink-light/60 focus:outline-none focus:border-[#2C4A3B] transition-colors"
+          />
+          <div className="absolute left-3 top-2.5 text-ink-light/60">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.604 10.604Z" />
+            </svg>
+          </div>
+        </div>
+        <div className="w-full md:w-44">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-3 py-2 border border-divider rounded-none bg-white text-xs text-ink font-semibold focus:outline-none focus:border-[#2C4A3B] transition-colors cursor-pointer"
+          >
+            <option value="ALL">Tất cả trạng thái</option>
+            <option value="ACTIVE">Đang có sách ({stats.active})</option>
+            <option value="EMPTY">Chưa có sách ({stats.empty})</option>
+          </select>
+        </div>
+        <div className="w-full md:w-44">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="w-full px-3 py-2 border border-divider rounded-none bg-white text-xs text-ink font-semibold focus:outline-none focus:border-[#2C4A3B] transition-colors cursor-pointer"
+          >
+            <option value="NAME_ASC">Tên thể loại (A-Z)</option>
+            <option value="BOOKS_DESC">Số lượng sách (Nhiều nhất)</option>
+          </select>
+        </div>
       </div>
 
       {isLoading ? (
@@ -3113,22 +3245,36 @@ function CategoryManagerTab() {
             <thead className="bg-surface-warm text-ink-light border-b border-divider uppercase text-xs tracking-wider font-semibold">
               <tr>
                 <th className="text-left py-3 px-4 w-20">ID</th>
-                <th className="text-left py-3 px-4 w-1/3">Tên Thể Loại</th>
+                <th className="text-left py-3 px-4 w-1/4">Tên Thể Loại</th>
+                <th className="text-center py-3 px-4 w-36">Số lượng sách</th>
                 <th className="text-left py-3 px-4">Mô Tả</th>
                 <th className="text-center py-3 px-4 w-40">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-divider-lt">
-              {categories?.map(cat => (
+              {filteredCategories?.map(cat => (
                 <tr key={cat.id} className="hover:bg-[#fcfbf9] transition-colors">
                   <td className="py-3 px-4 text-ink-light font-mono text-xs">#{cat.id}</td>
                   <td className="py-3 px-4 font-serif font-medium text-ink">{cat.name}</td>
-                  <td className="py-3 px-4 text-ink-light text-xs max-w-md truncate">{cat.description || 'Chưa có mô tả'}</td>
+                  <td className="py-3 px-4 text-center">
+                    {(cat.book_count || 0) > 0 ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold bg-[#2C4A3B]/10 text-[#2C4A3B] border border-[#2C4A3B]/20">
+                        {cat.book_count} cuốn
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200/50">
+                        0 cuốn (Trống)
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-ink-light text-xs max-w-md truncate">
+                    {cat.description ? cat.description : <span className="text-ink-light/50 italic">(Không có mô tả)</span>}
+                  </td>
                   <td className="py-3 px-4 text-center">
                     <div className="flex justify-center gap-2">
                       <button
                         onClick={() => openEditModal(cat)}
-                        className="border border-divider hover:bg-[#f0ece7] text-ink font-medium py-1 px-3 rounded-none text-xs transition-colors"
+                        className="border border-divider hover:bg-[#f0ece7] text-ink font-medium py-1 px-3 rounded-none text-xs transition-colors cursor-pointer"
                       >
                         Sửa
                       </button>
@@ -3136,7 +3282,7 @@ function CategoryManagerTab() {
                         <button
                           onClick={() => handleDelete(cat)}
                           disabled={deleteMutation.isPending}
-                          className="border border-red-200 hover:bg-red-50 text-red-700 font-medium py-1 px-3 rounded-none text-xs transition-colors"
+                          className="border border-red-200 hover:bg-red-50 text-red-700 font-medium py-1 px-3 rounded-none text-xs transition-colors cursor-pointer"
                         >
                           Xóa
                         </button>
@@ -3147,9 +3293,9 @@ function CategoryManagerTab() {
                   </td>
                 </tr>
               ))}
-              {categories?.length === 0 && (
+              {filteredCategories?.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="text-center py-10 text-ink-light italic">Chưa có thể loại nào.</td>
+                  <td colSpan="5" className="text-center py-10 text-ink-light italic">Không tìm thấy thể loại nào phù hợp.</td>
                 </tr>
               )}
             </tbody>
@@ -3165,7 +3311,7 @@ function CategoryManagerTab() {
               <h3 className="font-serif font-semibold text-lg text-ink uppercase tracking-wider">
                 {editCategory ? 'Cập Nhật Thể Loại' : 'Thêm Thể Loại Mới'}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-ink-light hover:text-ink text-lg leading-none">✕</button>
+              <button onClick={() => setShowModal(false)} className="text-ink-light hover:text-ink text-lg leading-none cursor-pointer">✕</button>
             </div>
             <div className="p-6 space-y-4">
               <div>
@@ -3191,14 +3337,14 @@ function CategoryManagerTab() {
               <div className="flex justify-end gap-2 pt-2 border-t border-divider/50">
                 <button
                   onClick={() => setShowModal(false)}
-                  className="border border-divider hover:bg-[#f0ece7] text-ink font-semibold py-2 px-4 rounded-none text-xs uppercase tracking-wider transition-colors"
+                  className="border border-divider hover:bg-[#f0ece7] text-ink font-semibold py-2 px-4 rounded-none text-xs uppercase tracking-wider transition-colors cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saveMutation.isPending}
-                  className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-semibold py-2 px-6 rounded-none text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+                  className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-semibold py-2 px-6 rounded-none text-xs uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {saveMutation.isPending ? 'Đang lưu...' : 'Lưu Lại'}
                 </button>
