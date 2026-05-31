@@ -3862,15 +3862,15 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex gap-2 mb-8 border-b border-divider pb-0 overflow-x-auto hide-scrollbar">
+      <div className="flex mb-8 border-b border-divider pb-0 overflow-x-auto hide-scrollbar relative z-0">
         {visibleTabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`py-3 px-5 font-semibold text-xs tracking-wider transition-all border-b-2 -mb-px rounded-none ${
+            className={`py-3.5 px-5 font-semibold text-[10px] uppercase tracking-widest transition-all rounded-none -mb-[1px] relative cursor-pointer border-t border-l border-r ${
               activeTab === tab.id
-                ? 'border-[#2C4A3B] text-[#2C4A3B]'
-                : 'border-transparent text-ink-light hover:text-ink'
+                ? 'bg-white text-[#2C4A3B] border-t-2 border-t-[#2C4A3B] border-x-divider border-b-transparent z-10 shadow-[0_-2px_4px_rgba(0,0,0,0.02)] font-bold'
+                : 'bg-[#faf8f5] text-stone-500 hover:text-stone-900 border-transparent border-b-divider hover:bg-stone-50'
             }`}
           >
             {tab.label}
