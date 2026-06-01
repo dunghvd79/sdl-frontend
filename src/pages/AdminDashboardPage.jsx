@@ -711,6 +711,7 @@ function InventoryManagerTab() {
   
   // State bộ lọc lịch sử giao dịch
   const [txTypeFilter, setTxTypeFilter] = useState('ALL'); // ALL, STOCK_IN, STOCK_OUT, ADJUSTMENT, RETURN
+  const [txTimeframe, setTxTimeframe] = useState('ALL'); // ALL, TODAY, 7DAYS, 30DAYS
 
   // State Modal Phiếu Nhập Kho
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
@@ -755,8 +756,28 @@ function InventoryManagerTab() {
 
   // Lọc lịch sử biến động kho
   const filteredTransactions = transactions.filter(tx => {
-    if (txTypeFilter === 'ALL') return true;
-    return tx.type === txTypeFilter;
+    // 1. Lọc theo loại biến động
+    const matchType = txTypeFilter === 'ALL' || tx.type === txTypeFilter;
+    if (!matchType) return false;
+
+    // 2. Lọc theo khoảng thời gian
+    if (txTimeframe === 'ALL') return true;
+    if (!tx.created_at) return false;
+
+    const txDate = new Date(tx.created_at);
+    const now = new Date();
+    
+    if (txTimeframe === 'TODAY') {
+      return txDate.toDateString() === now.toDateString();
+    }
+    
+    const diffTime = Math.abs(now - txDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (txTimeframe === '7DAYS') return diffDays <= 7;
+    if (txTimeframe === '30DAYS') return diffDays <= 30;
+    
+    return true;
   });
 
   const handleOpenStockModal = (book) => {
@@ -907,17 +928,32 @@ function InventoryManagerTab() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <h3 className="text-md font-serif font-semibold text-ink">Nhật ký biến động kho</h3>
           
-          <select
-            value={txTypeFilter}
-            onChange={e => setTxTypeFilter(e.target.value)}
-            className="border border-divider rounded-none px-3 py-1 text-xs focus:outline-none focus:border-ink bg-white text-ink font-sans tracking-wide cursor-pointer"
-          >
-            <option value="ALL">Tất cả biến động</option>
-            <option value="STOCK_IN">Nhập kho</option>
-            <option value="STOCK_OUT">Xuất kho</option>
-            <option value="ADJUSTMENT">Điều chỉnh</option>
-            <option value="RETURN">Hoàn hàng</option>
-          </select>
+          <div className="flex items-center gap-3">
+            {/* Lọc khoảng thời gian */}
+            <select
+              value={txTimeframe}
+              onChange={e => setTxTimeframe(e.target.value)}
+              className="border border-divider rounded-none px-3 py-1 text-xs focus:outline-none focus:border-ink bg-white text-ink font-sans tracking-wide cursor-pointer"
+            >
+              <option value="ALL">Toàn thời gian</option>
+              <option value="TODAY">Hôm nay</option>
+              <option value="7DAYS">7 ngày qua</option>
+              <option value="30DAYS">30 ngày qua</option>
+            </select>
+
+            {/* Lọc loại biến động */}
+            <select
+              value={txTypeFilter}
+              onChange={e => setTxTypeFilter(e.target.value)}
+              className="border border-divider rounded-none px-3 py-1 text-xs focus:outline-none focus:border-ink bg-white text-ink font-sans tracking-wide cursor-pointer"
+            >
+              <option value="ALL">Tất cả biến động</option>
+              <option value="STOCK_IN">Nhập kho</option>
+              <option value="STOCK_OUT">Xuất kho</option>
+              <option value="ADJUSTMENT">Điều chỉnh</option>
+              <option value="RETURN">Hoàn hàng</option>
+            </select>
+          </div>
         </div>
 
         {txLoading ? (
