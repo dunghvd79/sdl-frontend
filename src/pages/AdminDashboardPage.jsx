@@ -1760,30 +1760,43 @@ function OrderManagerTab() {
 
         {/* Pipeline Stats Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-          {['ALL', ...PIPELINE, 'CANCELLED'].map(s => (
-            <button
-              key={s}
-              onClick={() => {
-                if (s === 'ALL') {
-                  setStatusFilter('');
-                } else {
-                  setStatusFilter(statusFilter === s ? '' : s);
-                }
-              }}
-              className={`border rounded-none px-3 py-2.5 text-center transition-all ${
-                (s === 'ALL' && !statusFilter) || (statusFilter === s)
-                  ? `${STEP_COLORS[s].badge} border-current font-bold shadow-sm`
-                  : 'bg-white border-divider hover:bg-surface-warm text-ink-light'
-              }`}
-            >
-              <div className={`text-xl font-serif font-bold ${(s === 'ALL' && !statusFilter) || (statusFilter === s) ? '' : 'text-ink'}`}>
-                {allOrders ? (counts[s] ?? 0) : '—'}
-              </div>
-              <div className="text-[10px] uppercase tracking-wider font-semibold mt-0.5">
-                {STEP_LABELS[s]}
-              </div>
-            </button>
-          ))}
+          {['ALL', ...PIPELINE, 'CANCELLED'].map(s => {
+            const statusColor = s === 'ALL' ? '#1c1c1c' :
+                                s === 'PENDING' ? '#d97706' :
+                                s === 'CONFIRMED' ? '#2563eb' :
+                                s === 'PACKAGING' ? '#4f46e5' :
+                                s === 'DELIVERING' ? '#ea580c' :
+                                s === 'DELIVERED' ? '#2c4a3b' :
+                                '#dc2626'; // CANCELLED
+
+            return (
+              <button
+                key={s}
+                onClick={() => {
+                  if (s === 'ALL') {
+                    setStatusFilter('');
+                  } else {
+                    setStatusFilter(statusFilter === s ? '' : s);
+                  }
+                }}
+                className={`border-t-2 border-l border-r border-b rounded-none px-3 py-2.5 text-center transition-all cursor-pointer ${
+                  (s === 'ALL' && !statusFilter) || (statusFilter === s)
+                    ? `${STEP_COLORS[s].badge} border-t-current border-b-current border-l-current border-r-current font-bold shadow-sm`
+                    : 'bg-white border-divider hover:bg-surface-warm text-ink-light'
+                }`}
+                style={{
+                  borderTopColor: statusColor
+                }}
+              >
+                <div className="text-xl font-serif font-bold" style={{ color: statusColor }}>
+                  {allOrders ? (counts[s] ?? 0) : '—'}
+                </div>
+                <div className="text-[10px] uppercase tracking-wider font-semibold mt-0.5 text-ink-light">
+                  {STEP_LABELS[s]}
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* Unified Search & Filters */}
