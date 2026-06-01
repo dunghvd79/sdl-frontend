@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // 1. Tạo một "bản sao" của axios với cấu hình mặc định
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // Tự động lấy "http://localhost:3000/api" từ file .env
+  baseURL: import.meta.env.VITE_API_URL || 'https://sdl-backend.onrender.com/api', // Tự động lấy "http://localhost:3000/api" từ file .env, fallback về Render khi deploy
   headers: {
     'Content-Type': 'application/json',
   },

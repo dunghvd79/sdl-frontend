@@ -6,6 +6,6 @@ export const getImageUrl = (url) => {
     return url;
   }
   // Extract domain/host from API URL (e.g., http://localhost:3000/api -> http://localhost:3000)
-  const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') : 'http://localhost:3000';
+  const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') : 'https://sdl-backend.onrender.com';
   return `${baseUrl}${url}`;
 };
