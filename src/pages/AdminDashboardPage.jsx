@@ -1343,12 +1343,41 @@ function OrderManagerTab() {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [dateFilter, setDateFilter] = useState('');
 
+  // States nâng cấp quản lý đơn hàng
+  const [searchTerm, setSearchTerm] = useState('');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('ALL');
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+
+  // Tự động bỏ chọn checkbox khi bộ lọc thay đổi
+  React.useEffect(() => {
+    setSelectedOrderIds([]);
+  }, [statusFilter, paymentMethodFilter, searchTerm, dateFilter]);
+
   const { data: allOrders, isLoading } = useQuery({
     queryKey: ['adminOrders', dateFilter],
     queryFn: () => api.get(`/admin/orders`, { params: { date: dateFilter } }).then(r => r.data.data)
   });
 
-  const filteredOrders = allOrders?.filter(o => !statusFilter || o.status === statusFilter) || [];
+  const filteredOrders = allOrders?.filter(o => {
+    // 1. Lọc theo trạng thái
+    if (statusFilter && o.status !== statusFilter) return false;
+
+    // 2. Lọc theo phương thức thanh toán
+    if (paymentMethodFilter !== 'ALL' && o.payment_method !== paymentMethodFilter) return false;
+
+    // 3. Lọc theo từ khóa tìm kiếm
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase().trim();
+      const matchId = String(o.id).includes(term);
+      const matchName = o.shipping_name?.toLowerCase().includes(term) || o.full_name?.toLowerCase().includes(term);
+      const matchPhone = o.shipping_phone?.includes(term);
+      const matchEmail = o.email?.toLowerCase().includes(term);
+      return matchId || matchName || matchPhone || matchEmail;
+    }
+
+    return true;
+  }) || [];
+
   const selectedOrder = allOrders?.find(o => o.id === selectedOrderId);
 
   const updateStatusMutation = useMutation({
@@ -1410,6 +1439,305 @@ function OrderManagerTab() {
     });
   };
 
+  // Checkbox handlers
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedOrderIds(filteredOrders.map(o => o.id));
+    } else {
+      setSelectedOrderIds([]);
+    }
+  };
+
+  const handleSelectOne = (id, checked) => {
+    if (checked) {
+      setSelectedOrderIds(prev => [...prev, id]);
+    } else {
+      setSelectedOrderIds(prev => prev.filter(item => item !== id));
+    }
+  };
+
+  // Bulk operation handlers
+  const handleBulkConfirm = async () => {
+    const pendingOrders = filteredOrders.filter(o => selectedOrderIds.includes(o.id) && o.status === 'PENDING');
+    if (pendingOrders.length === 0) {
+      toast.warning('Không có đơn hàng nào ở trạng thái "Chờ xác nhận" trong danh sách đã chọn.', { title: 'Thông báo' });
+      return;
+    }
+    
+    if (!window.confirm(`Xác nhận duyệt hàng loạt ${pendingOrders.length} đơn hàng đang chọn?`)) return;
+
+    try {
+      for (const order of pendingOrders) {
+        await updateStatusMutation.mutateAsync({ orderId: order.id, status: 'CONFIRMED' });
+      }
+      toast.success(`Đã duyệt thành công ${pendingOrders.length} đơn hàng!`, { title: 'Thành công' });
+      setSelectedOrderIds([]);
+    } catch (err) {
+      // Handled by onError of mutation
+    }
+  };
+
+  const handleBulkCancel = async () => {
+    const cancellableOrders = filteredOrders.filter(o => selectedOrderIds.includes(o.id) && o.status !== 'DELIVERED' && o.status !== 'CANCELLED');
+    if (cancellableOrders.length === 0) {
+      toast.warning('Không có đơn hàng nào đủ điều kiện hủy trong danh sách đã chọn.', { title: 'Thông báo' });
+      return;
+    }
+
+    const reason = window.prompt(`Nhập lý do hủy hàng loạt cho ${cancellableOrders.length} đơn hàng đang chọn:`);
+    if (reason === null) return;
+
+    const cancelReason = reason.trim() || 'Hủy hàng loạt bởi Quản trị viên';
+
+    try {
+      for (const order of cancellableOrders) {
+        await updateStatusMutation.mutateAsync({ orderId: order.id, status: 'CANCELLED', cancelReason });
+      }
+      toast.success(`Đã hủy thành công ${cancellableOrders.length} đơn hàng!`, { title: 'Thành công' });
+      setSelectedOrderIds([]);
+    } catch (err) {
+      // Handled by onError of mutation
+    }
+  };
+
+  // Print invoice handler
+  const handlePrintInvoice = (selectedOrder) => {
+    if (!selectedOrder) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Không thể mở cửa sổ in. Vui lòng tắt trình chặn pop-up.', { title: 'Lỗi' });
+      return;
+    }
+    
+    const itemsHtml = selectedOrder.items.map((item, idx) => {
+      const title = item.title || item.bookTitle || 'Sách không tên';
+      const price = Number(item.price || 0);
+      const qty = Number(item.quantity || 0);
+      return `
+        <tr>
+          <td style="padding: 10px 8px; border-bottom: 1px solid #e0ece7; text-align: center; font-family: monospace;">${idx + 1}</td>
+          <td style="padding: 10px 8px; border-bottom: 1px solid #e0ece7; font-family: Georgia, serif; font-size: 13px; color: #1c1c1c;">${title}</td>
+          <td style="padding: 10px 8px; border-bottom: 1px solid #e0ece7; text-align: right; font-family: monospace; font-size: 12px;">${price.toLocaleString('vi-VN')} đ</td>
+          <td style="padding: 10px 8px; border-bottom: 1px solid #e0ece7; text-align: center; font-family: monospace; font-size: 12px; color: #666;">${qty}</td>
+          <td style="padding: 10px 8px; border-bottom: 1px solid #e0ece7; text-align: right; font-family: monospace; font-size: 12px; font-weight: bold; color: #2C4A3B;">${(price * qty).toLocaleString('vi-VN')} đ</td>
+        </tr>
+      `;
+    }).join('');
+
+    const totalOrigin = Number(selectedOrder.total_amount) + Number(selectedOrder.discount_amount || 0);
+    const discountHtml = Number(selectedOrder.discount_amount || 0) > 0 
+      ? `
+        <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: #666;">
+          <span style="text-transform: uppercase; letter-spacing: 0.5px;">Tổng tiền gốc:</span>
+          <span style="font-family: monospace;">${totalOrigin.toLocaleString('vi-VN')} đ</span>
+        </div>
+        ${selectedOrder.coupon_code ? `
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: #2C4A3B;">
+            <span style="text-transform: uppercase; letter-spacing: 0.5px;">Mã giảm giá (${selectedOrder.coupon_code}):</span>
+            <span style="font-family: monospace; font-weight: bold;">-${Number(selectedOrder.discount_amount).toLocaleString('vi-VN')} đ</span>
+          </div>
+        ` : `
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: #2C4A3B;">
+            <span style="text-transform: uppercase; letter-spacing: 0.5px;">Giảm giá:</span>
+            <span style="font-family: monospace; font-weight: bold;">-${Number(selectedOrder.discount_amount).toLocaleString('vi-VN')} đ</span>
+          </div>
+        `}
+      ` : '';
+
+    const printContent = `
+      <html>
+        <head>
+          <title>Hóa đơn Pigeon Bookstore #${selectedOrder.id}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap');
+            body { 
+              font-family: 'Inter', sans-serif; 
+              color: #1c1c1c; 
+              padding: 40px; 
+              margin: 0; 
+              background-color: #ffffff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .header { 
+              text-align: center; 
+              margin-bottom: 35px; 
+              border-bottom: 2px solid #2C4A3B; 
+              padding-bottom: 20px; 
+            }
+            .logo { 
+              font-family: 'Playfair Display', serif; 
+              font-size: 26px; 
+              font-weight: bold; 
+              letter-spacing: 3px; 
+              color: #2C4A3B; 
+              margin: 0; 
+            }
+            .slogan { 
+              font-family: 'Playfair Display', serif;
+              font-style: italic; 
+              font-size: 11px; 
+              color: #555; 
+              margin-top: 6px; 
+              letter-spacing: 1px;
+            }
+            .title { 
+              font-size: 18px; 
+              font-weight: bold; 
+              margin-top: 20px; 
+              margin-bottom: 5px; 
+              text-transform: uppercase; 
+              letter-spacing: 2px; 
+              color: #1c1c1c;
+            }
+            .meta-grid { 
+              display: grid; 
+              grid-template-columns: 1fr 1fr; 
+              gap: 24px; 
+              margin-bottom: 35px; 
+            }
+            .section-title { 
+              font-size: 10px; 
+              text-transform: uppercase; 
+              letter-spacing: 1.5px; 
+              color: #666; 
+              font-weight: bold; 
+              border-bottom: 1px solid #e0ece7; 
+              padding-bottom: 6px; 
+              margin-bottom: 10px; 
+            }
+            .info-box { 
+              background: #faf8f5; 
+              border: 1px solid #e0ece7; 
+              padding: 16px; 
+            }
+            .info-row { 
+              display: flex; 
+              margin-bottom: 6px; 
+              align-items: flex-start;
+            }
+            .info-label { 
+              width: 90px; 
+              color: #666; 
+              font-weight: 600; 
+              font-size: 11px; 
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .info-value { 
+              font-weight: 500; 
+              font-size: 12px; 
+              color: #1c1c1c;
+              flex: 1;
+            }
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin-bottom: 35px; 
+            }
+            th { 
+              background: #faf8f5; 
+              padding: 12px 8px; 
+              text-align: left; 
+              font-weight: bold; 
+              border-bottom: 2px solid #2C4A3B; 
+              text-transform: uppercase; 
+              font-size: 10px; 
+              color: #666; 
+              letter-spacing: 1px;
+            }
+            .summary-container {
+              display: flex;
+              justify-content: flex-end;
+              margin-top: 20px;
+            }
+            .summary { 
+              width: 320px; 
+              background: #faf8f5; 
+              border: 1px solid #e0ece7; 
+              padding: 16px; 
+            }
+            .footer { 
+              text-align: center; 
+              margin-top: 70px; 
+              font-size: 11px; 
+              color: #777; 
+              border-top: 1px dashed #c5a880; 
+              padding-top: 20px; 
+              font-style: italic; 
+              font-family: 'Playfair Display', serif;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">PIGEON BOOKSTORE</div>
+            <div class="slogan">"Khơi nguồn tri thức, chắp cánh tương lai"</div>
+            <div class="title">Hóa đơn bán lẻ #${selectedOrder.id}</div>
+            <div style="font-size: 11px; color: #666; margin-top: 5px; font-family: monospace;">NGÀY ĐẶT: ${new Date(selectedOrder.created_at).toLocaleString('vi-VN')}</div>
+          </div>
+
+          <div class="meta-grid">
+            <div class="info-box">
+              <div class="section-title">Thông tin người nhận</div>
+              <div class="info-row"><span class="info-label">Người nhận:</span><span class="info-value" style="font-family: Georgia, serif; font-size: 14px; font-weight: bold; color: #2C4A3B;">${selectedOrder.shipping_name || selectedOrder.full_name || 'N/A'}</span></div>
+              <div class="info-row"><span class="info-label">Điện thoại:</span><span class="info-value" style="font-family: monospace; font-weight: bold;">${selectedOrder.shipping_phone || 'N/A'}</span></div>
+              <div class="info-row"><span class="info-label">Địa chỉ:</span><span class="info-value">${selectedOrder.shipping_address || 'N/A'}</span></div>
+            </div>
+            <div class="info-box">
+              <div class="section-title">Thông tin giao dịch</div>
+              <div class="info-row"><span class="info-label">Trạng thái:</span><span class="info-value" style="font-weight: bold; color: #2C4A3B;">${STEP_LABELS[selectedOrder.status]}</span></div>
+              <div class="info-row"><span class="info-label">Thanh toán:</span><span class="info-value" style="font-weight: bold;">${selectedOrder.payment_method === 'ONLINE' ? 'ONLINE (PAYOS)' : 'COD (TIỀN MẶT)'}</span></div>
+              <div class="info-row"><span class="info-label">Ghi chú:</span><span class="info-value" style="font-style: italic; color: #555;">${selectedOrder.shipping_notes || 'Không có ghi chú'}</span></div>
+            </div>
+          </div>
+
+          <div class="section-title">Danh sách sách đã mua</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 50px; text-align: center;">STT</th>
+                <th>Tên Sách</th>
+                <th style="width: 120px; text-align: right;">Đơn Giá</th>
+                <th style="width: 70px; text-align: center;">SL</th>
+                <th style="width: 140px; text-align: right;">Thành Tiền</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <div class="summary-container">
+            <div class="summary">
+              ${discountHtml}
+              <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: #2C4A3B; margin-top: 6px; border-top: 1px solid #e0ece7; padding-top: 10px;">
+                <span style="text-transform: uppercase; letter-spacing: 0.5px;">Tổng thực thu:</span>
+                <span style="font-family: monospace; font-size: 16px;">${Number(selectedOrder.total_amount).toLocaleString('vi-VN')} đ</span>
+              </div>
+            </div>
+          </div>
+          
+          <div style="clear: both;"></div>
+
+          <div class="footer">
+            Cảm ơn quý khách đã mua sắm tại Pigeon Bookstore!<br>
+            Chúc quý khách luôn tìm thấy những trang sách đầy cảm hứng.
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  };
+
   // Summary counts
   const counts = {
     ALL: allOrders?.length || 0,
@@ -1419,7 +1747,7 @@ function OrderManagerTab() {
   allOrders?.forEach(o => { if (counts[o.status] !== undefined) counts[o.status]++; });
 
   return (
-    <div>
+    <div className="relative">
       {/* Header + Stats + Filter */}
       <div className="flex flex-col gap-6 mb-7">
         <div className="text-center py-4 border-b border-divider/40 mb-2">
@@ -1457,63 +1785,166 @@ function OrderManagerTab() {
           ))}
         </div>
 
-        {/* Date Filter & Options */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-3.5 px-4 border border-divider bg-surface-warm/40">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <span className="text-xs font-bold uppercase tracking-wider text-ink-light">Lọc ngày đặt:</span>
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="border border-divider rounded-none py-1.5 px-3 text-xs font-medium focus:outline-none focus:border-ink bg-white text-ink"
-            />
-            {dateFilter && (
-              <button
-                onClick={() => setDateFilter('')}
-                className="text-xs font-semibold text-red-600 hover:text-red-700 underline cursor-pointer"
-              >
-                Xóa lọc
-              </button>
-            )}
+        {/* Unified Search & Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 px-4 border border-divider bg-surface-warm/40">
+          {/* Keyword Search */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-light">Tìm kiếm từ khóa:</span>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Nhập mã ĐH, tên, SĐT, email..."
+                className="w-full border border-divider rounded-none py-1.5 pl-3 pr-8 text-xs font-medium focus:outline-none focus:border-ink bg-white text-ink placeholder-stone-400"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-light hover:text-ink text-xs font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                const today = new Date().toLocaleDateString('en-CA');
-                setDateFilter(today);
-              }}
-              className={`text-xs font-bold uppercase tracking-wider px-4 py-2 border transition-all cursor-pointer ${
-                dateFilter === new Date().toLocaleDateString('en-CA')
-                  ? 'bg-ink text-white border-ink font-bold'
-                  : 'bg-white text-ink border-divider hover:bg-surface-warm'
-              }`}
+
+          {/* Payment Method Filter */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-light">Phương thức thanh toán:</span>
+            <select
+              value={paymentMethodFilter}
+              onChange={(e) => setPaymentMethodFilter(e.target.value)}
+              className="w-full border border-divider rounded-none py-1.5 px-3 text-xs font-medium focus:outline-none focus:border-ink bg-white text-ink cursor-pointer"
             >
-              Hôm nay
-            </button>
-            <button
-              onClick={() => setDateFilter('')}
-              className={`text-xs font-bold uppercase tracking-wider px-4 py-2 border transition-all cursor-pointer ${
-                !dateFilter
-                  ? 'bg-ink text-white border-ink font-bold'
-                  : 'bg-white text-ink border-divider hover:bg-surface-warm'
-              }`}
-            >
-              Tất cả ngày
-            </button>
+              <option value="ALL">Tất cả hình thức</option>
+              <option value="COD">COD (Tiền mặt)</option>
+              <option value="ONLINE">ONLINE (Chuyển khoản)</option>
+            </select>
+          </div>
+
+          {/* Date Filter */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-light">Lọc ngày đặt:</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="flex-1 border border-divider rounded-none py-1.5 px-3 text-xs font-medium focus:outline-none focus:border-ink bg-white text-ink"
+              />
+              {dateFilter && (
+                <button
+                  onClick={() => setDateFilter('')}
+                  className="text-xs font-semibold text-red-600 hover:text-red-700 underline cursor-pointer"
+                >
+                  Xóa
+                </button>
+              )}
+            </div>
+            <div className="flex gap-1.5 mt-1">
+              <button
+                type="button"
+                onClick={() => setDateFilter(new Date().toLocaleDateString('en-CA'))}
+                className={`flex-1 text-[10px] font-bold uppercase tracking-wider py-1 border transition-all cursor-pointer ${
+                  dateFilter === new Date().toLocaleDateString('en-CA')
+                    ? 'bg-ink text-white border-ink'
+                    : 'bg-white text-ink border-divider hover:bg-surface-warm'
+                }`}
+              >
+                Hôm nay
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateFilter('')}
+                className={`flex-1 text-[10px] font-bold uppercase tracking-wider py-1 border transition-all cursor-pointer ${
+                  !dateFilter
+                    ? 'bg-ink text-white border-ink'
+                    : 'bg-white text-ink border-divider hover:bg-surface-warm'
+                }`}
+              >
+                Tất cả ngày
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Active filter chip */}
-        {statusFilter && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-ink-light">Đang lọc:</span>
-            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 border rounded-none ${STEP_COLORS[statusFilter]?.badge}`}>
-              {STEP_LABELS[statusFilter]}
-              <button onClick={() => setStatusFilter('')} className="hover:opacity-70 leading-none text-sm">✕</button>
-            </span>
+        {/* Active filter chips */}
+        {(statusFilter || paymentMethodFilter !== 'ALL' || searchTerm || dateFilter) && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-ink-light">Bộ lọc đang áp dụng:</span>
+            {statusFilter && (
+              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 border rounded-none ${STEP_COLORS[statusFilter]?.badge}`}>
+                Trạng thái: {STEP_LABELS[statusFilter]}
+                <button onClick={() => setStatusFilter('')} className="hover:opacity-70 leading-none text-[10px]">✕</button>
+              </span>
+            )}
+            {paymentMethodFilter !== 'ALL' && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 border border-divider bg-surface-subtle text-ink rounded-none">
+                Thanh toán: {paymentMethodFilter}
+                <button onClick={() => setPaymentMethodFilter('ALL')} className="hover:opacity-70 leading-none text-[10px]">✕</button>
+              </span>
+            )}
+            {searchTerm && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 border border-divider bg-surface-subtle text-ink rounded-none">
+                Từ khóa: "{searchTerm}"
+                <button onClick={() => setSearchTerm('')} className="hover:opacity-70 leading-none text-[10px]">✕</button>
+              </span>
+            )}
+            {dateFilter && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 border border-divider bg-surface-subtle text-ink rounded-none">
+                Ngày: {new Date(dateFilter).toLocaleDateString('vi-VN')}
+                <button onClick={() => setDateFilter('')} className="hover:opacity-70 leading-none text-[10px]">✕</button>
+              </span>
+            )}
+            <button
+              onClick={() => {
+                setStatusFilter('');
+                setPaymentMethodFilter('ALL');
+                setSearchTerm('');
+                setDateFilter('');
+              }}
+              className="text-xs font-bold text-red-600 hover:text-red-700 underline ml-1 cursor-pointer"
+            >
+              Xóa tất cả bộ lọc
+            </button>
           </div>
         )}
       </div>
+
+      {/* Bulk Action Bar (Floating at bottom center) */}
+      {selectedOrderIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#FAF8F5] border-2 border-[#2C4A3B] px-6 py-4 shadow-xl flex flex-col sm:flex-row items-center gap-4 transition-all duration-300 rounded-none w-[90%] max-w-2xl">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 bg-[#2C4A3B] animate-pulse rounded-none" />
+            <span className="text-xs font-bold uppercase tracking-wider text-ink">
+              Đang chọn <strong className="text-sm font-serif font-bold text-[#2C4A3B]">{selectedOrderIds.length}</strong> đơn hàng
+            </span>
+          </div>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto sm:ml-auto">
+            <button
+              onClick={handleBulkConfirm}
+              className="flex-1 sm:flex-none bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-bold py-2 px-4 rounded-none text-xs transition-colors uppercase tracking-widest flex items-center justify-center gap-1.5 border border-transparent shadow-sm cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"/></svg>
+              Duyệt Hàng Loạt
+            </button>
+            <button
+              onClick={handleBulkCancel}
+              className="flex-1 sm:flex-none border border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700 font-bold py-2 px-4 rounded-none text-xs transition-colors uppercase tracking-widest flex items-center justify-center gap-1.5 bg-white cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              Hủy Hàng Loạt
+            </button>
+            <button
+              onClick={() => setSelectedOrderIds([])}
+              className="text-xs font-semibold text-ink-light hover:text-ink underline px-2 py-1 cursor-pointer"
+            >
+              Bỏ chọn
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       {isLoading ? (
@@ -1525,6 +1956,14 @@ function OrderManagerTab() {
           <table className="w-full text-sm">
             <thead className="bg-surface-warm text-ink-light border-b border-divider uppercase text-xs tracking-wider font-semibold">
               <tr>
+                <th className="py-3 px-4 text-center w-10">
+                  <input
+                    type="checkbox"
+                    checked={filteredOrders.length > 0 && selectedOrderIds.length === filteredOrders.length}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded-none accent-[#2C4A3B] border-divider cursor-pointer"
+                  />
+                </th>
                 <th className="text-left py-3 px-4">Mã ĐH</th>
                 <th className="text-left py-3 px-4">Khách hàng</th>
                 <th className="text-left py-3 px-4 hidden md:table-cell">Tổng tiền</th>
@@ -1544,6 +1983,16 @@ function OrderManagerTab() {
 
                 return (
                   <tr key={order.id} className="hover:bg-[#fcfbf9] transition-colors">
+                    {/* Checkbox */}
+                    <td className="py-4 px-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedOrderIds.includes(order.id)}
+                        onChange={(e) => handleSelectOne(order.id, e.target.checked)}
+                        className="w-4 h-4 rounded-none accent-[#2C4A3B] border-divider cursor-pointer"
+                      />
+                    </td>
+
                     {/* ID */}
                     <td className="py-4 px-4">
                       <span className="font-mono text-xs text-ink-light font-semibold">#{order.id}</span>
@@ -1551,8 +2000,19 @@ function OrderManagerTab() {
 
                     {/* Khách hàng */}
                     <td className="py-4 px-4">
-                      <div className="font-serif font-semibold text-ink text-sm">{order.full_name}</div>
-                      <div className="text-[11px] text-ink-light">{order.email}</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-serif font-semibold text-ink text-sm">{order.full_name}</span>
+                        {order.payment_method === 'ONLINE' ? (
+                          <span className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 border border-green-200 bg-green-50 text-green-700 rounded-none uppercase tracking-wider">
+                            ONLINE
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 border border-amber-200 bg-amber-50 text-amber-700 rounded-none uppercase tracking-wider">
+                            COD
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-ink-light mt-0.5">{order.email}</div>
                     </td>
 
                     {/* Tổng tiền */}
@@ -1630,9 +2090,17 @@ function OrderManagerTab() {
                         {/* View Details */}
                         <button
                           onClick={() => setSelectedOrderId(order.id)}
-                          className="w-full border border-divider hover:bg-[#f0ece7] text-ink font-medium py-1 px-3 rounded-none text-[11px] transition-colors uppercase tracking-wider"
+                          className="w-full border border-divider hover:bg-[#f0ece7] text-ink font-medium py-1 px-3 rounded-none text-[11px] transition-colors uppercase tracking-wider cursor-pointer text-center"
                         >
                           Chi tiết
+                        </button>
+
+                        {/* Print Invoice */}
+                        <button
+                          onClick={() => handlePrintInvoice(order)}
+                          className="w-full border border-[#2C4A3B]/30 hover:bg-[#2C4A3B]/5 text-[#2C4A3B] font-medium py-1 px-3 rounded-none text-[11px] transition-colors uppercase tracking-wider cursor-pointer text-center"
+                        >
+                          In hóa đơn
                         </button>
 
                         {/* Advance to next step */}
@@ -1640,7 +2108,7 @@ function OrderManagerTab() {
                           <button
                             onClick={() => handleAdvance(order)}
                             disabled={isUpdating}
-                            className={`w-full text-white font-bold py-1 px-3 rounded-none text-[11px] transition-colors uppercase tracking-wider disabled:opacity-50 ${STEP_COLORS[nextStatus]?.dot.replace('bg-', 'bg-').replace('-400', '-500').replace('-500', '-600') ? '' : ''} bg-[#2C4A3B] hover:bg-[#1e3529]`}
+                            className="w-full text-white font-bold py-1 px-3 rounded-none text-[11px] transition-colors uppercase tracking-wider disabled:opacity-50 bg-[#2C4A3B] hover:bg-[#1e3529] cursor-pointer text-center"
                           >
                             → {STEP_LABELS[nextStatus]}
                           </button>
@@ -1651,14 +2119,14 @@ function OrderManagerTab() {
                           <button
                             onClick={() => handleCancel(order)}
                             disabled={isUpdating}
-                            className="w-full border border-red-200 hover:bg-red-50 text-red-600 font-medium py-1 px-3 rounded-none text-[10px] transition-colors uppercase tracking-wider disabled:opacity-50"
+                            className="w-full border border-red-200 hover:bg-red-50 text-red-600 font-medium py-1 px-3 rounded-none text-[10px] transition-colors uppercase tracking-wider disabled:opacity-50 cursor-pointer text-center"
                           >
                             Hủy đơn
                           </button>
                         )}
 
                         {isDelivered && (
-                          <span className="text-[10px] text-green-700 font-bold uppercase tracking-wider">✓ Hoàn thành</span>
+                          <span className="text-[10px] text-green-700 font-bold uppercase tracking-wider py-1">✓ Hoàn thành</span>
                         )}
                       </div>
                     </td>
@@ -1667,15 +2135,24 @@ function OrderManagerTab() {
               })}
               {filteredOrders.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center py-12 text-ink-light italic">
-                    {dateFilter ? (
-                      statusFilter 
-                        ? `Không có đơn hàng nào ở trạng thái "${STEP_LABELS[statusFilter] || statusFilter}" trong ngày ${new Date(dateFilter).toLocaleDateString('vi-VN')}.`
-                        : `Không có đơn hàng nào trong ngày ${new Date(dateFilter).toLocaleDateString('vi-VN')}.`
+                  <td colSpan="7" className="text-center py-12 text-ink-light italic">
+                    {dateFilter || statusFilter || paymentMethodFilter !== 'ALL' || searchTerm ? (
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <span>Không tìm thấy đơn hàng nào phù hợp với bộ lọc hiện tại.</span>
+                        <button
+                          onClick={() => {
+                            setStatusFilter('');
+                            setPaymentMethodFilter('ALL');
+                            setSearchTerm('');
+                            setDateFilter('');
+                          }}
+                          className="text-xs font-bold text-[#2C4A3B] hover:underline mt-1 cursor-pointer"
+                        >
+                          Xóa tất cả bộ lọc để tìm lại
+                        </button>
+                      </div>
                     ) : (
-                      statusFilter 
-                        ? `Không có đơn hàng nào ở trạng thái "${STEP_LABELS[statusFilter] || statusFilter}".`
-                        : 'Chưa có đơn hàng nào.'
+                      'Chưa có đơn hàng nào.'
                     )}
                   </td>
                 </tr>
@@ -1687,17 +2164,28 @@ function OrderManagerTab() {
 
       {/* ── Modal Chi tiết đơn hàng ── */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white rounded-none border border-divider shadow-none w-full max-w-2xl overflow-y-auto max-h-[92vh] text-ink">
             {/* Modal Header */}
             <div className="flex justify-between items-start px-8 pt-7 pb-4 border-b border-divider">
               <div>
-                <h3 className="text-xl font-serif font-medium text-ink">CHI TIẾT ĐƠN HÀNG #{selectedOrder.id}</h3>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-xl font-serif font-medium text-ink uppercase tracking-wider">CHI TIẾT ĐƠN HÀNG #{selectedOrder.id}</h3>
+                  {selectedOrder.payment_method === 'ONLINE' ? (
+                    <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 border border-green-200 bg-green-50 text-green-700 rounded-none uppercase tracking-wider">
+                      ONLINE (PAYOS)
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 border border-amber-200 bg-amber-50 text-amber-700 rounded-none uppercase tracking-wider">
+                      COD (TIỀN MẶT)
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-ink-light mt-1">{new Date(selectedOrder.created_at).toLocaleString('vi-VN')}</p>
               </div>
               <button
                 onClick={() => setSelectedOrderId(null)}
-                className="text-ink-light hover:text-ink text-lg leading-none mt-1"
+                className="text-ink-light hover:text-ink text-lg leading-none mt-1 cursor-pointer"
               >✕</button>
             </div>
 
@@ -1724,7 +2212,7 @@ function OrderManagerTab() {
                 ) : (
                   <div>
                     {/* Full visual stepper */}
-                    <div className="flex items-start gap-0 mb-5">
+                    <div className="flex items-start gap-0 mb-5 overflow-x-auto pb-2">
                       {PIPELINE.map((step, i) => {
                         const curIdx = getStepIndex(selectedOrder.status);
                         const isDone = i < curIdx;
@@ -1743,11 +2231,11 @@ function OrderManagerTab() {
                                 {isDone ? '✓' : i + 1}
                               </div>
                               <span className={`text-[10px] mt-1.5 font-semibold uppercase tracking-wide text-center max-w-[60px] leading-tight ${
-                                isActive ? 'text-ink' : isDone ? 'text-ink-light' : 'text-divider'
+                                isActive ? 'text-ink font-bold' : isDone ? 'text-ink-light' : 'text-divider'
                               }`}>{STEP_LABELS[step]}</span>
                             </div>
                             {i < PIPELINE.length - 1 && (
-                              <div className={`flex-1 h-px mt-4 mx-1 ${i < curIdx ? c.bar : 'bg-divider'}`} />
+                              <div className={`flex-1 h-px mt-4 mx-1 min-w-[30px] ${i < curIdx ? c.bar : 'bg-divider'}`} />
                             )}
                           </React.Fragment>
                         );
@@ -1763,7 +2251,7 @@ function OrderManagerTab() {
                               updateStatusMutation.mutate({ orderId: selectedOrder.id, status: getNextStatus(selectedOrder.status) });
                             }}
                             disabled={updateStatusMutation.isPending}
-                            className="flex-1 max-w-xs bg-[#2C4A3B] hover:bg-[#1e3529] disabled:opacity-50 text-white font-bold py-2.5 px-6 rounded-none text-xs transition-colors uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
+                            className="flex-1 max-w-xs bg-[#2C4A3B] hover:bg-[#1e3529] disabled:opacity-50 text-white font-bold py-2.5 px-6 rounded-none text-xs transition-colors uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                           >
                             {updateStatusMutation.isPending ? (
                               <><span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />Đang cập nhật...</>
@@ -1786,7 +2274,7 @@ function OrderManagerTab() {
                             });
                           }}
                           disabled={updateStatusMutation.isPending}
-                          className="flex items-center gap-1.5 border border-red-200 hover:bg-red-50 hover:border-red-400 text-red-500 hover:text-red-700 font-medium py-2.5 px-4 rounded-none text-[11px] transition-all uppercase tracking-widest disabled:opacity-50 animate-pulse-once"
+                          className="flex items-center gap-1.5 border border-red-200 hover:bg-red-50 hover:border-red-400 text-red-500 hover:text-red-700 font-medium py-2.5 px-4 rounded-none text-[11px] transition-all uppercase tracking-widest disabled:opacity-50 cursor-pointer"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
                           Hủy đơn
@@ -1842,6 +2330,10 @@ function OrderManagerTab() {
                         <span className={`w-1.5 h-1.5 rounded-full ${STEP_COLORS[selectedOrder.status]?.dot}`} />
                         {STEP_LABELS[selectedOrder.status]}
                       </span>
+                    </div>
+                    <div className="flex items-center px-4 py-2.5 gap-3">
+                      <span className="text-[10px] uppercase tracking-wider text-ink-light font-semibold w-20 flex-shrink-0">Thanh toán</span>
+                      <span className="text-xs font-medium text-ink uppercase">{selectedOrder.payment_method === 'ONLINE' ? 'ONLINE (PAYOS)' : 'COD'}</span>
                     </div>
                     <div className="flex px-4 py-2.5 gap-3">
                       <span className="text-[10px] uppercase tracking-wider text-ink-light font-semibold w-20 flex-shrink-0">Ghi chú</span>
@@ -1922,10 +2414,17 @@ function OrderManagerTab() {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center gap-4">
+                <button
+                  onClick={() => handlePrintInvoice(selectedOrder)}
+                  className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-bold py-2 px-6 rounded-none transition-colors text-xs uppercase tracking-wider border border-transparent shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4"/></svg>
+                  In Hóa Đơn
+                </button>
                 <button
                   onClick={() => setSelectedOrderId(null)}
-                  className="bg-surface-subtle hover:bg-divider-lt text-ink font-medium py-2 px-6 rounded-none transition-colors text-xs uppercase tracking-wider border border-divider"
+                  className="bg-surface-subtle hover:bg-divider-lt text-ink font-medium py-2 px-6 rounded-none transition-colors text-xs uppercase tracking-wider border border-divider cursor-pointer"
                 >
                   Đóng
                 </button>
