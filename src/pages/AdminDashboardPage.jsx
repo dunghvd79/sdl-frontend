@@ -1368,7 +1368,8 @@ function OrderManagerTab() {
     // 3. Lọc theo từ khóa tìm kiếm
     if (searchTerm) {
       const term = searchTerm.toLowerCase().trim();
-      const matchId = String(o.id).includes(term);
+      const cleanIdTerm = term.startsWith('#') ? term.substring(1) : term;
+      const matchId = String(o.id).includes(cleanIdTerm);
       const matchName = o.shipping_name?.toLowerCase().includes(term) || o.full_name?.toLowerCase().includes(term);
       const matchPhone = o.shipping_phone?.includes(term);
       const matchEmail = o.email?.toLowerCase().includes(term);
