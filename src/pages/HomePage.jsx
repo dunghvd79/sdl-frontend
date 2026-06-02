@@ -678,8 +678,7 @@ export default function HomePage() {
           </div>
 
           <Link
-            to="/"
-            onClick={(e) => e.preventDefault()}
+            to="/blog"
             className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-[#2C4A3B] hover:text-[#1e3529] transition-colors flex items-center gap-1 group cursor-pointer whitespace-nowrap self-start md:self-auto"
           >
             Xem tất cả

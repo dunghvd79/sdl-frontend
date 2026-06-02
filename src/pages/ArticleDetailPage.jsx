@@ -19,8 +19,7 @@ export default function ArticleDetailPage() {
   });
 
   const handleBack = () => {
-    // Scroll down to the blog section on HomePage
-    navigate('/', { state: { scrollTo: 'blog' } });
+    navigate('/blog');
   };
 
   if (isLoading) {

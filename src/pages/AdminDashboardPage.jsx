@@ -937,27 +937,46 @@ function InventoryManagerTab() {
   const filteredTransactions = transactions.filter(tx => {
     // 1. Lọc theo loại biến động
     const matchType = txTypeFilter === 'ALL' || tx.type === txTypeFilter;
-    if (!matchType) return false;
 
     // 2. Lọc theo khoảng thời gian
-    if (txTimeframe === 'ALL') return true;
-    if (!tx.created_at) return false;
+    let matchTimeframe = true;
+    if (txTimeframe !== 'ALL') {
+      if (!tx.created_at) {
+        matchTimeframe = false;
+      } else {
+        const txDate = new Date(tx.created_at);
+        const now = new Date();
 
-    const txDate = new Date(tx.created_at);
-    const now = new Date();
-    
-    if (txTimeframe === 'TODAY') {
-      return txDate.toDateString() === now.toDateString();
+        // Đồng bộ hóa ngày theo múi giờ địa phương bằng cách trích xuất ngày/tháng/năm
+        const txYear = txDate.getFullYear();
+        const txMonth = txDate.getMonth();
+        const txDay = txDate.getDate();
+
+        const nowYear = now.getFullYear();
+        const nowMonth = now.getMonth();
+        const nowDay = now.getDate();
+
+        if (txTimeframe === 'TODAY') {
+          matchTimeframe = (txYear === nowYear && txMonth === nowMonth && txDay === nowDay);
+        } else {
+          // Tính toán chính xác số ngày chênh lệch theo ngày lịch (không phụ thuộc giờ lẻ trong ngày)
+          const txLocalDate = new Date(txYear, txMonth, txDay);
+          const nowLocalDate = new Date(nowYear, nowMonth, nowDay);
+          const diffTime = nowLocalDate - txLocalDate;
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+          if (txTimeframe === '7DAYS') {
+            matchTimeframe = diffDays >= 0 && diffDays <= 7;
+          } else if (txTimeframe === '30DAYS') {
+            matchTimeframe = diffDays >= 0 && diffDays <= 30;
+          }
+        }
+      }
     }
-    
-    const diffTime = Math.abs(now - txDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (txTimeframe === '7DAYS') return diffDays <= 7;
-    if (txTimeframe === '30DAYS') return diffDays <= 30;
-    
-    return true;
+
+    return matchType && matchTimeframe;
   });
+
 
   const handleOpenStockModal = (book) => {
     setSelectedBookForStock(book);
@@ -993,8 +1012,8 @@ function InventoryManagerTab() {
         reason: stockChangeReason.trim() || undefined
       });
 
-      queryClient.invalidateQueries(['adminInventory']);
-      queryClient.invalidateQueries(['adminInventoryTransactions']);
+      await queryClient.invalidateQueries({ queryKey: ['adminInventory'] });
+      await queryClient.invalidateQueries({ queryKey: ['adminInventoryTransactions'] });
       toast.success('Đã cập nhật tồn kho và ghi nhật ký thành công!', { title: 'Cập nhật kho' });
       setIsStockModalOpen(false);
     } catch (err) {
@@ -4990,7 +5009,7 @@ function ArticleManagerTab() {
   });
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false });
   const [uploadingCover, setUploadingCover] = useState(false);
-  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(true);
 
   // Fetch danh sách bài viết (adminMode=true)
   const { data: responseData, isLoading } = useQuery({
@@ -5041,7 +5060,7 @@ function ArticleManagerTab() {
       reading_time: '5 phút đọc',
       status: 'PUBLISHED'
     });
-    setShowUrlInput(false);
+    setShowUrlInput(true);
     setShowModal(true);
   };
 
@@ -5056,7 +5075,7 @@ function ArticleManagerTab() {
       reading_time: article.reading_time || '5 phút đọc',
       status: article.status || 'PUBLISHED'
     });
-    setShowUrlInput(!!article.cover_url && (article.cover_url.startsWith('http://') || article.cover_url.startsWith('https://')));
+    setShowUrlInput(!article.cover_url || article.cover_url.startsWith('http://') || article.cover_url.startsWith('https://'));
     setShowModal(true);
   };
 

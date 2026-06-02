@@ -1,0 +1,102 @@
+# Kế hoạch triển khai Bộ sưu tập ảnh chi tiết (Book Image Gallery) cho Sách
+
+Hệ thống hiện tại hiển thị ảnh chi tiết ở trang thông tin chi tiết sách thông qua các ảnh mẫu (mock images) cố định từ Unsplash. Chúng ta sẽ phát triển tính năng quản lý động cho phép tải lên các ảnh chi tiết phụ, thiết lập thứ tự hiển thị và hiển thị chúng trên trang chi tiết sách.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> - Chúng ta sẽ lưu trữ ảnh bìa chính trong trường `cover_url` của bảng `books` với thứ tự mặc định là 0 (Thumbnail đầu tiên bên trái).
+> - Các ảnh chi tiết bổ sung sẽ được lưu trong bảng mới `book_images` liên kết với bảng `books` qua khóa ngoại `book_id`.
+> - Để tải ảnh lên, giao diện quản trị frontend sẽ tái sử dụng API `/api/upload/cover` hiện có của hệ thống giúp tiết kiệm tài nguyên và đồng bộ cơ sở hạ tầng lưu trữ.
+
+---
+
+## Open Questions
+
+> [!NOTE]
+> Không có câu hỏi nào cần làm rõ thêm vì yêu cầu nghiệp vụ đã đầy đủ và rõ ràng.
+
+---
+
+## Proposed Changes
+
+### 1. Database Schema & Migration
+
+#### [MODIFY] [database.js](file:///e:/it-project/smart_digital_library/sdl-project/src/config/database.js)
+- Thêm đoạn lệnh SQL tạo bảng `book_images` tự động khi ứng dụng khởi chạy:
+  ```sql
+  CREATE TABLE IF NOT EXISTS book_images (
+      id SERIAL PRIMARY KEY,
+      book_id INT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+      image_url TEXT NOT NULL,
+      display_order INT NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
+
+---
+
+### 2. Backend Logic (Model, Service & Controller)
+
+#### [MODIFY] [Book.js](file:///e:/it-project/smart_digital_library/sdl-project/src/models/Book.js)
+- Cập nhật hàm `findById(id)` để gộp các bản ghi ảnh chi tiết của sách từ bảng `book_images` thành mảng JSON `images` được sắp xếp theo `display_order ASC` thông qua câu truy vấn subquery PostgreSQL `json_agg`.
+- Cập nhật hàm `getAll(filters)` để trả về cả trường `images` của từng sách trong danh sách, giúp Admin Dashboard lấy được toàn bộ ảnh khi chỉnh sửa.
+
+#### [MODIFY] [bookService.js](file:///e:/it-project/smart_digital_library/sdl-project/src/services/bookService.js)
+- Cập nhật hàm `createBook(bookData, categoryIds, images)` để thêm các ảnh chi tiết phụ vào bảng `book_images` sau khi lưu thông tin sách chính.
+
+#### [MODIFY] [bookController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/bookController.js)
+- Cập nhật hàm `createBook`: Tiếp nhận mảng `images` từ `req.body` và truyền vào `BookService.createBook`.
+- Cập nhật hàm `updateBook`: Thực hiện xóa toàn bộ ảnh cũ của sách trong `book_images` và chèn lại loạt ảnh mới được gửi lên từ Frontend qua `req.body.images`.
+
+---
+
+### 3. Frontend Administration (Admin Dashboard)
+
+#### [MODIFY] [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+- Cập nhật cấu trúc trạng thái của form nhập liệu (`form` state) để thêm trường `images: []`.
+- Trong hàm `openAddModal`, reset trường `images` về mảng rỗng.
+- Trong hàm `openEditModal(book)`, gán trường `images` từ danh sách ảnh `book.images` hiện có.
+- Cập nhật hàm gửi yêu cầu `saveMutation` để đính kèm mảng `images` vào payload.
+- Bổ sung khu vực **Nhóm 4: Bộ sưu tập ảnh chi tiết** ở Cột Phải của Modal Thêm/Sửa Sách:
+  - Hiển thị danh sách ảnh chi tiết hiện tại bằng lưới hình ảnh (grid) thu nhỏ.
+  - Cho phép người dùng nhập trực tiếp số thứ tự hiển thị (`display_order`) cho mỗi ảnh.
+  - Bổ sung nút xóa ảnh (`🗑️ Xóa`).
+  - Cung cấp nút tải ảnh lên từ máy tính (sử dụng API upload ảnh bìa sẵn có và tự động append vào danh sách với số thứ tự mặc định).
+  - Cung cấp ô nhập URL thủ công dành cho trường hợp dán link trực tiếp.
+
+---
+
+### 4. Storefront Display (Book Detail Page)
+
+#### [MODIFY] [BookDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/BookDetailPage.jsx)
+- Thay thế mảng ảnh tĩnh (mocked images) bằng danh sách ảnh động được tạo từ ảnh bìa chính và các ảnh chi tiết từ backend:
+  ```javascript
+  const defaultCover = book.cover_url 
+    ? getImageUrl(book.cover_url) 
+    : `https://picsum.photos/seed/${book.id + 10}/400/600`;
+
+  const thumbnails = book ? [
+    defaultCover,
+    ...(book.images || []).map(img => getImageUrl(img.image_url))
+  ] : [];
+  ```
+- Cập nhật chức năng cho nút chuyển tiếp ảnh (Right arrow button) trong Carousel ảnh: Khi nhấn vào, hệ thống tự động chọn hiển thị ảnh tiếp theo trong mảng `thumbnails`.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Chạy thử nghiệm build frontend bằng lệnh `npm run build` để kiểm tra tính toàn vẹn cú pháp của các tệp React.
+
+### Manual Verification
+1. Đăng nhập tài khoản Admin/Curator và mở bảng quản trị.
+2. Thêm mới một cuốn sách, tải lên ảnh bìa và thêm 3 ảnh chi tiết phụ với các số thứ tự `3`, `1`, `2`. Lưu lại.
+3. Chỉnh sửa cuốn sách vừa tạo, kiểm tra danh sách ảnh và thứ tự đã tải lên hiển thị chính xác chưa. Thay đổi thứ tự hiển thị hoặc xóa bớt 1 ảnh và lưu lại.
+4. Mở trang chi tiết cuốn sách đó trên Storefront, kiểm tra Carousel ảnh:
+   - Ảnh bìa chính phải xuất hiện ở vị trí đầu tiên (số 0).
+   - Các ảnh phụ xuất hiện theo thứ tự hiển thị đã thiết lập (`1` rồi đến `2`).
+   - Nhấn nút mũi tên bên phải của Carousel ảnh xem ảnh có tự động chuyển đổi sang ảnh tiếp theo hay không.

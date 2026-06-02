@@ -22,6 +22,7 @@ import OrderHistoryPage from './pages/OrderHistoryPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import ArticleDetailPage from './pages/ArticleDetailPage';
+import BlogPage from './pages/BlogPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import MyShelfPage from './pages/MyShelfPage';
 import WishlistPage from './pages/WishlistPage';
@@ -59,6 +60,7 @@ function AppContent() {
         <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/promotions" element={<PromotionsPage />} />
+        <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:id" element={<ArticleDetailPage />} />
         <Route
           path="/admin"

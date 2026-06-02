@@ -142,12 +142,12 @@ export default function Navbar() {
             >
               Danh mục
             </button>
-            <button
-              onClick={() => handleScrollToSection('blog')}
-              className="hover:text-ink transition-colors bg-transparent border-none p-0 cursor-pointer text-[11px] font-bold uppercase tracking-[0.2em] text-stone-500 hover:text-stone-900"
+            <Link
+              to="/blog"
+              className="hover:text-ink transition-colors text-[11px] font-bold uppercase tracking-[0.2em] text-stone-500 hover:text-stone-900"
             >
               Bài viết
-            </button>
+            </Link>
             <button
               onClick={() => handleScrollToSection('about')}
               className="hover:text-ink transition-colors bg-transparent border-none p-0 cursor-pointer text-[11px] font-bold uppercase tracking-[0.2em] text-stone-500 hover:text-stone-900"
