@@ -137,11 +137,21 @@ export default function BookDetailPage() {
     }
   }, [book]);
 
+  const defaultCover = book?.cover_url
+    ? getImageUrl(book.cover_url)
+    : `https://picsum.photos/seed/${book?.id + 10}/400/600`;
+
   const thumbnails = book ? [
-    book.cover_url ? getImageUrl(book.cover_url) : `https://picsum.photos/seed/${book.id + 10}/400/600`,
-    `https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=300`,
-    `https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&q=80&w=300`
+    defaultCover,
+    ...(book.images || []).map(img => getImageUrl(img.image_url))
   ] : [];
+
+  const handleNextImage = () => {
+    if (thumbnails.length === 0) return;
+    const currentIndex = thumbnails.indexOf(selectedImage);
+    const nextIndex = (currentIndex + 1) % thumbnails.length;
+    setSelectedImage(thumbnails[nextIndex]);
+  };
 
   if (isLoading) {
     return (
@@ -226,9 +236,13 @@ export default function BookDetailPage() {
             })}
             
             {/* Carousel Right arrow helper */}
-            <div className="w-6 h-6 rounded-full border border-stone-250 bg-white shadow-sm flex items-center justify-center text-stone-500 hover:text-stone-850 cursor-pointer hover:scale-105 active:scale-95 transition-all ml-1" title="Xem tiếp ảnh">
+            <button
+              onClick={handleNextImage}
+              className="w-6 h-6 rounded-full border border-stone-200 bg-white shadow-sm flex items-center justify-center text-stone-500 hover:text-stone-800 hover:border-stone-400 cursor-pointer hover:scale-105 active:scale-95 transition-all ml-1"
+              title="Xem tiếp ảnh"
+            >
               <span className="text-[10px] leading-none mt-px font-bold">›</span>
-            </div>
+            </button>
           </div>
         </div>
 

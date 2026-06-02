@@ -12,10 +12,12 @@ function BookManagerTab() {
   const toast = useToast();
   const [showModal, setShowModal] = useState(false);
   const [editBook, setEditBook] = useState(null);
-  const [form, setForm] = useState({ title: '', author: '', isbn: '', description: '', price: '', cover_url: '', status: 'PUBLISHED', categoryIds: [], is_featured: false, is_bestseller: false, display_order: 0 });
+  const [form, setForm] = useState({ title: '', author: '', isbn: '', description: '', price: '', cover_url: '', status: 'PUBLISHED', categoryIds: [], is_featured: false, is_bestseller: false, display_order: 0, images: [] });
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false });
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingDetail, setUploadingDetail] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
+  const [detailUrlInput, setDetailUrlInput] = useState('');
 
   // States cho tìm kiếm và bộ lọc
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,6 +55,64 @@ function BookManagerTab() {
     }
   };
 
+  const handleDetailImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File ảnh quá lớn! Tối đa 5MB.', { title: 'Lỗi tải ảnh' });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('cover', file);
+
+    setUploadingDetail(true);
+    try {
+      const response = await api.post('/upload/cover', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      const { url } = response.data.data;
+      setForm(f => {
+        const nextOrder = f.images.length > 0 
+          ? Math.max(...f.images.map(img => img.display_order)) + 1 
+          : 1;
+        return {
+          ...f,
+          images: [...f.images, { image_url: url, display_order: nextOrder }]
+        };
+      });
+      toast.success('Tải ảnh chi tiết lên thành công!', { title: 'Thành công' });
+    } catch (err) {
+      console.error(err);
+      const errMsg = err.response?.data?.error || 'Có lỗi xảy ra khi tải ảnh lên';
+      toast.error(errMsg, { title: 'Lỗi tải ảnh' });
+    } finally {
+      setUploadingDetail(false);
+      if (e.target) e.target.value = ''; // Reset file input
+    }
+  };
+
+  const handleAddDetailImageByUrl = () => {
+    if (!detailUrlInput || !detailUrlInput.trim()) {
+      toast.error('Vui lòng nhập đường dẫn URL ảnh chi tiết!', { title: 'Lỗi nhập liệu' });
+      return;
+    }
+    setForm(f => {
+      const nextOrder = f.images.length > 0 
+        ? Math.max(...f.images.map(img => img.display_order)) + 1 
+        : 1;
+      return {
+        ...f,
+        images: [...f.images, { image_url: detailUrlInput.trim(), display_order: nextOrder }]
+      };
+    });
+    setDetailUrlInput('');
+    toast.success('Đã thêm ảnh chi tiết bằng URL!', { title: 'Thành công' });
+  };
+
   // Fetch danh sách sách (adminMode=true → lấy cả DRAFT và HIDDEN)
   const { data, isLoading } = useQuery({
     queryKey: ['adminBooks'],
@@ -87,7 +147,8 @@ function BookManagerTab() {
 
   const openAddModal = () => {
     setEditBook(null);
-    setForm({ title: '', author: '', isbn: '', description: '', price: '', cover_url: '', status: 'PUBLISHED', categoryIds: [], is_featured: false, is_bestseller: false, display_order: 0 });
+    setForm({ title: '', author: '', isbn: '', description: '', price: '', cover_url: '', status: 'PUBLISHED', categoryIds: [], is_featured: false, is_bestseller: false, display_order: 0, images: [] });
+    setDetailUrlInput('');
     setShowUrlInput(false);
     setShowModal(true);
   };
@@ -105,8 +166,10 @@ function BookManagerTab() {
       categoryIds: book.categories?.map(c => c.id) || [],
       is_featured: book.is_featured || false,
       is_bestseller: book.is_bestseller || false,
-      display_order: book.display_order !== undefined ? book.display_order : 0
+      display_order: book.display_order !== undefined ? book.display_order : 0,
+      images: book.images ? book.images.map(img => ({ id: img.id, image_url: img.image_url, display_order: img.display_order })) : []
     });
+    setDetailUrlInput('');
     // Hiển thị input URL nếu ảnh hiện tại là url bên ngoài (bắt đầu bằng http)
     setShowUrlInput(!!book.cover_url && (book.cover_url.startsWith('http://') || book.cover_url.startsWith('https://')));
     setShowModal(true);
@@ -114,7 +177,7 @@ function BookManagerTab() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const payload = { ...form, price: Number(form.price), categories: form.categoryIds };
+      const payload = { ...form, price: Number(form.price), categories: form.categoryIds, images: form.images };
       if (editBook) return api.put(`/books/${editBook.id}`, payload);
       return api.post('/books', payload);
     },
@@ -654,6 +717,120 @@ function BookManagerTab() {
                     <div className="flex justify-end mt-1">
                       <span className="text-[10px] text-ink-light">{(form.description || '').length} ký tự</span>
                     </div>
+                  </div>
+
+                  {/* Nhóm 4: Bộ sưu tập ảnh chi tiết */}
+                  <div>
+                    <div className="flex items-center gap-3 mb-5">
+                      <span className="w-5 h-5 rounded-full bg-[#2C4A3B] text-white text-[10px] flex items-center justify-center font-bold flex-shrink-0">4</span>
+                      <span className="text-[10px] uppercase tracking-widest text-ink-light font-semibold">Bộ sưu tập ảnh chi tiết</span>
+                      <div className="flex-1 h-px bg-divider" />
+                    </div>
+
+                    {/* Upload section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      {/* Local machine upload */}
+                      <label className="border border-dashed border-divider hover:border-[#2C4A3B] transition-colors bg-white p-4 text-center cursor-pointer block">
+                        <span className="text-xs text-ink-light font-medium block">📁 Tải ảnh phụ từ máy tính</span>
+                        <span className="text-[9px] text-ink-light/40 block mt-0.5">JPG, PNG, WEBP tối đa 5MB</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleDetailImageUpload}
+                          disabled={uploadingDetail}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {/* Direct URL input */}
+                      <div className="border border-divider bg-[#faf8f5] p-3 flex flex-col justify-between">
+                        <div className="text-[9px] uppercase tracking-wider text-ink-light font-semibold mb-1">Thêm bằng URL ảnh phụ</div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Dán URL ảnh..."
+                            value={detailUrlInput}
+                            onChange={e => setDetailUrlInput(e.target.value)}
+                            className="flex-1 border border-divider rounded-none px-2.5 py-1.5 text-xs focus:outline-none focus:border-[#2C4A3B] bg-white text-ink placeholder:text-ink-light/35"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddDetailImageByUrl}
+                            className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white text-xs font-semibold px-3 py-1.5 transition-colors uppercase tracking-wider"
+                          >
+                            Thêm
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Upload spinner */}
+                    {uploadingDetail && (
+                      <div className="flex items-center justify-center gap-2 py-3 text-[#2C4A3B]">
+                        <svg className="animate-spin" width="16" height="16" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span className="text-[10px] uppercase tracking-wider font-bold">Đang xử lý tải ảnh lên...</span>
+                      </div>
+                    )}
+
+                    {/* Image gallery listing */}
+                    {form.images && form.images.length > 0 ? (
+                      <div className="border border-divider bg-[#faf8f5] p-4 space-y-3 max-h-[250px] overflow-y-auto">
+                        <div className="text-[9px] uppercase tracking-[0.1em] text-ink-light font-bold">
+                          Danh sách ảnh chi tiết ({form.images.length})
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {form.images.map((img, idx) => (
+                            <div key={idx} className="flex gap-3 bg-white p-2 border border-divider shadow-xs relative items-center">
+                              {/* Thumbnail */}
+                              <div className="w-12 h-16 bg-stone-50 border border-divider overflow-hidden flex-shrink-0">
+                                <img src={getImageUrl(img.image_url)} alt="Thumbnail" className="w-full h-full object-cover" />
+                              </div>
+
+                              {/* Details */}
+                              <div className="flex-grow space-y-1">
+                                <div className="text-[9px] text-ink-light font-mono truncate max-w-[130px]">
+                                  {img.image_url.substring(img.image_url.lastIndexOf('/') + 1)}
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] text-ink-light uppercase">Thứ tự:</span>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={img.display_order}
+                                    onChange={e => {
+                                      const nextOrder = parseInt(e.target.value) || 0;
+                                      setForm(f => {
+                                        const updated = [...f.images];
+                                        updated[idx] = { ...updated[idx], display_order: nextOrder };
+                                        return { ...f, images: updated };
+                                      });
+                                    }}
+                                    className="w-12 border border-divider px-1 py-0.5 text-center text-xs text-ink font-semibold"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Delete button */}
+                              <button
+                                type="button"
+                                onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, i) => i !== idx) }))}
+                                className="text-red-600 hover:text-red-800 text-[10px] uppercase font-bold p-1 absolute right-2 top-2"
+                                title="Xóa ảnh khỏi danh sách"
+                              >
+                                🗑️ Xóa
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="border border-divider border-dashed p-6 text-center text-xs text-ink-light/50 bg-stone-50/50">
+                        Chưa có ảnh chi tiết phụ nào. Bạn có thể tải lên từ 1 đến 3 ảnh để hiển thị trong Carousel chi tiết sách.
+                      </div>
+                    )}
                   </div>
 
                 </div>
