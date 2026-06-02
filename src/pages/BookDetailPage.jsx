@@ -298,7 +298,6 @@ export default function BookDetailPage() {
               </h3>
               <div 
                 className="text-stone-750 leading-relaxed text-xs md:text-sm text-justify font-sans font-normal"
-                style={{ columnCount: 2, columnGap: '2rem' }}
               >
                 {book.description || 
                   `Cuốn sách "${book.title}" là một trong những tác phẩm xuất sắc của tác giả ${book.author}. Tác phẩm mang đến cho độc giả góc nhìn sâu sắc và những thông điệp giá trị. Phù hợp cho những ai muốn nghiên cứu sâu, học tập hoặc đơn giản là tìm kiếm nguồn tri thức mới mẻ.`
