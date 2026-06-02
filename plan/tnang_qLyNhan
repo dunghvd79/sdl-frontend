@@ -1,0 +1,111 @@
+# Kế hoạch triển khai Tính năng Quản lý Nhãn "Best Seller" do Admin Điều khiển
+
+Kế hoạch này giải quyết vấn đề nhãn **BESTSELLER** đang bị hiển thị cố định (hardcode) cho tất cả các sách trên giao diện. Chúng ta sẽ thiết kế một giải pháp chuyên nghiệp, cho phép Admin/Curator tự do bật/tắt nhãn này cho từng cuốn sách một cách linh hoạt, đồng bộ từ Cơ sở dữ liệu cho tới giao diện khách hàng.
+
+---
+
+## Nghiên cứu thị trường: Các website lớn xử lý nhãn "Best Seller" như thế nào?
+
+Các sàn thương mại điện tử và nền tảng lớn trên thế giới áp dụng hai phương án chính để gán nhãn "Best Seller" (Bán chạy):
+
+1. **Gán nhãn tự động bằng thuật toán (Automatic Rank)**:
+   - **Amazon**: Sử dụng chỉ số *Amazon Best Sellers Rank (BSR)*, được tính toán và cập nhật hàng giờ dựa trên dữ liệu doanh số thực tế của sản phẩm trong từng danh mục.
+   - **Shopee / Lazada**: Gán nhãn "Bán chạy" tự động cho những sản phẩm đạt lượng bán thực tế cao vượt ngưỡng trong 30 ngày gần nhất (ví dụ: bán > 100 sản phẩm/tháng).
+   - *Ưu điểm*: Khách quan, tăng độ tin cậy đối với người tiêu dùng.
+   - *Nhược điểm*: Không thể chủ động điều hướng thị trường hoặc quảng bá các sản phẩm mới/chiến lược chưa có lượng bán tích lũy lớn.
+
+2. **Gán nhãn thủ công bởi Quản trị viên (Manual Curation / Sponsored)**:
+   - **Tiki / Fahasa**: Cho phép Admin/Curator gán các nhãn quảng bá như "Khuyên dùng", "Nổi bật", hoặc thủ công gắn "Bán chạy" trong các chiến dịch marketing để thúc đẩy doanh số của các tựa sách hot.
+   - *Ưu điểm*: Linh hoạt tối đa, cho phép Admin chủ động phân loại sách chiến lược hoặc sách mới xuất bản có tiềm năng lớn.
+   - *Nhược điểm*: Phụ thuộc hoàn toàn vào thao tác thủ công của ban quản trị.
+
+### Đề xuất giải pháp cho Smart Digital Library
+Để hệ thống hoạt động chuyên nghiệp, linh hoạt và dễ quản lý nhất ở giai đoạn hiện tại, chúng ta sẽ áp dụng **Phương án Gán nhãn thủ công chuyên nghiệp từ Admin**:
+* Thêm một thuộc tính `is_bestseller` (boolean) vào cấu trúc dữ liệu của sách.
+* Admin/Curator có toàn quyền kiểm soát thuộc tính này thông qua một ô Checkbox trong Form thêm/sửa sách tại bảng quản trị.
+* Chỉ các sách được Admin tích chọn `is_bestseller === true` mới hiển thị huy hiệu **BESTSELLER** tinh tế ở góc ảnh bìa phía Client.
+
+---
+
+## Proposed Changes
+
+### 1. Database Component
+
+#### [MODIFY] [database.js](file:///e:/it-project/smart_digital_library/sdl-project/src/config/database.js)
+Bổ sung một lệnh tự động chạy migration khi khởi động máy chủ để chèn thêm cột `is_bestseller` vào bảng `books` (nếu chưa tồn tại):
+```sql
+ALTER TABLE books ADD COLUMN IF NOT EXISTS is_bestseller BOOLEAN DEFAULT FALSE;
+```
+
+---
+
+### 2. Backend Component
+
+#### [MODIFY] [Book.js (Model)](file:///e:/it-project/smart_digital_library/sdl-project/src/models/Book.js)
+* Cập nhật hàm `create` để nhận trường `is_bestseller` (mặc định là `false`) và lưu vào câu lệnh INSERT.
+```javascript
+const { title, author, isbn, description, price, cover_url, status = 'PUBLISHED', is_featured = false, is_bestseller = false, display_order = 0 } = bookData;
+// Thêm is_bestseller vào câu INSERT SQL
+```
+
+#### [MODIFY] [bookController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/bookController.js)
+* **Hàm `createBook` (POST /api/books)**: Đọc trường `is_bestseller` từ `req.body` để truyền vào `BookService`.
+* **Hàm `updateBook` (PUT /api/books/:id)**: Đọc trường `is_bestseller` từ `req.body` và cập nhật vào câu lệnh `UPDATE books SET ...` trong database.
+```sql
+UPDATE books
+SET title = $1, author = $2, isbn = $3, description = $4, price = $5, cover_url = $6, status = $7, is_featured = $8, is_bestseller = $9, display_order = $10
+WHERE id = $11
+```
+
+---
+
+### 3. Frontend Component
+
+#### [MODIFY] [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+* **Form State**: Thêm trường `is_bestseller: false` vào trạng thái form khởi tạo và reset form.
+* **Giao diện Modal Sách (Thêm/Sửa)**: Bổ sung một Checkbox được thiết kế tinh tế dạng Card nhỏ ngay dưới checkbox "Nổi bật (Editor's Pick)" trong tab "Tùy chọn hiển thị":
+  ```jsx
+  <label className={`flex items-center gap-2.5 p-2.5 border cursor-pointer transition-all ${form.is_bestseller ? 'border-[#2C4A3B] bg-[#fdf9f5]' : 'border-divider bg-white hover:bg-[#faf8f5]'}`}>
+    <input
+      type="checkbox"
+      checked={form.is_bestseller}
+      onChange={e => setForm(f => ({ ...f, is_bestseller: e.target.checked }))}
+      className="w-3.5 h-3.5 rounded-none accent-[#2C4A3B] border-divider cursor-pointer"
+    />
+    <div className="flex-1 min-w-0">
+      <div className="text-xs font-semibold text-ink">Bán chạy (Best Seller)</div>
+      <div className="text-[9px] text-ink-light leading-tight">Đóng nhãn BESTSELLER nổi bật trên ảnh bìa sách</div>
+    </div>
+  </label>
+  ```
+* **Payload API**: Đảm bảo payload gửi lên khi thêm/sửa sách truyền đúng trường `is_bestseller` (kiểu dữ liệu boolean).
+
+#### [MODIFY] [BookCard.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/components/BookCard.jsx)
+* Sửa đổi phần hiển thị huy hiệu ở góc trên bên trái của ảnh bìa sách. Thay vì luôn luôn hiển thị như hiện tại, chúng ta sẽ bọc nó bằng điều kiện kiểm tra thuộc tính `is_bestseller` của đối tượng sách:
+  ```jsx
+  {/* Decorative Bestseller Badge */}
+  {book.is_bestseller && (
+    <div className="absolute top-3 left-3 bg-[#2C4A3B] text-white text-[8px] uppercase tracking-[0.2em] font-bold px-2 py-0.5 shadow-sm">
+      Bestseller
+    </div>
+  )}
+  ```
+
+---
+
+## Verification Plan
+
+### Automated Tests
+* Chạy thử nghiệm biên dịch Frontend (`npm run build`) để kiểm tra toàn bộ tính tương thích và cấu trúc mã nguồn React.
+
+### Manual Verification
+1. **Đồng bộ hóa Database**: Khởi động lại server backend, xác nhận logs in ra thông báo migration thành công: `✅ Migration: Đã kiểm tra/thêm cột is_bestseller vào bảng books.`
+2. **Quy trình Admin**:
+   - Đăng nhập bằng tài khoản Admin/Curator, mở bảng quản trị.
+   - Thử thêm sách mới hoặc chỉnh sửa một cuốn sách sẵn có (ví dụ: cuốn "Doraemon").
+   - Tích chọn hoặc bỏ chọn ô "Bán chạy (Best Seller)" -> Nhấn Lưu sách.
+   - Kiểm tra xem dữ liệu cập nhật thành công mà không gặp lỗi.
+3. **Quy trình Client**:
+   - Truy cập trang chủ phía người dùng.
+   - Xác nhận rằng các cuốn sách **không được đánh dấu** là Best Seller sẽ không còn nhãn này nữa.
+   - Xác nhận rằng các cuốn sách **được đánh dấu** là Best Seller vẫn hiển thị nhãn `BESTSELLER` sang trọng, đúng vị trí và màu sắc như thiết kế ban đầu.

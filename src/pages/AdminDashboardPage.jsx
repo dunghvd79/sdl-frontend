@@ -4229,6 +4229,7 @@ function CouponManagerTab() {
     is_active: true
   });
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false });
+  const isSubmittingRef = useRef(false);
 
   // Fetch danh sách mã giảm giá
   const { data: coupons, isLoading } = useQuery({
@@ -4237,6 +4238,7 @@ function CouponManagerTab() {
   });
 
   const openAddModal = () => {
+    isSubmittingRef.current = false;
     setEditCoupon(null);
     setForm({
       code: '',
@@ -4253,6 +4255,7 @@ function CouponManagerTab() {
   };
 
   const openEditModal = (cpn) => {
+    isSubmittingRef.current = false;
     setEditCoupon(cpn);
     setForm({
       code: cpn.code,
@@ -4283,11 +4286,13 @@ function CouponManagerTab() {
       return api.post('/coupons', payload);
     },
     onSuccess: () => {
+      isSubmittingRef.current = false;
       queryClient.invalidateQueries(['adminCoupons']);
       setShowModal(false);
       toast.success(editCoupon ? 'Cập nhật mã giảm giá thành công!' : 'Tạo mã giảm giá mới thành công!', { title: 'Thành công' });
     },
     onError: (err) => {
+      isSubmittingRef.current = false;
       toast.error(err.response?.data?.error || err.message, { title: 'Lỗi lưu mã giảm giá' });
     }
   });
@@ -4304,6 +4309,8 @@ function CouponManagerTab() {
   });
 
   const handleSave = () => {
+    if (isSubmittingRef.current || saveMutation.isPending) return;
+
     if (!form.code || !form.code.trim()) {
       toast.error('Mã giảm giá không được để trống!', { title: 'Lỗi nhập liệu' });
       return;
@@ -4344,6 +4351,7 @@ function CouponManagerTab() {
 
     // Gán mã code viết hoa
     form.code = cleanCode;
+    isSubmittingRef.current = true;
     saveMutation.mutate();
   };
 
@@ -5099,6 +5107,7 @@ export default function AdminDashboardPage() {
   // Lọc tab dựa trên quyền
   const visibleTabs = TABS.filter(tab => {
     if (tab.id === 'users' && user?.role !== 'ADMIN') return false;
+    if (tab.id === 'coupons' && user?.role !== 'ADMIN') return false;
     return true;
   });
 

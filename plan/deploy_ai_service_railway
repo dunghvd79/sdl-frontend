@@ -1,0 +1,147 @@
+# Kế hoạch Deploy AI Service lên Railway
+
+Kế hoạch từng bước để đưa dịch vụ AI (Python FastAPI + ChromaDB + Google Gemini) lên Railway.app và kết nối với Backend Node.js đang chạy trên Render.
+
+---
+
+## Tổng quan kiến trúc sau khi hoàn thành
+
+```
+[Netlify Frontend]
+       ↓
+[Render — Node.js Backend (sdl-backend)]
+       ↓
+[Railway — Python FastAPI AI Service (sdl-ai-service)]
+       ↓
+[ChromaDB — Lưu trên Railway Volume (persistent disk)]
+       ↓
+[Google Gemini API — Sinh câu trả lời]
+```
+
+---
+
+## Phân tích hiện trạng
+
+- **sdl-ai-service** chưa có Git repository, chưa được đẩy lên GitHub.
+- **ChromaDB 1.5.9** đang dùng `PersistentClient(path="./chroma_data")` — lưu trên ổ đĩa. Cần Railway Volume để dữ liệu vector không bị mất khi server restart.
+- **aiService.js** trong backend đang hardcode `http://127.0.0.1:8000` — cần cập nhật thành URL Railway sau khi deploy.
+- **GEMINI_API_KEY** hiện đang trong file `.env` cục bộ — cần khai báo trong Railway Environment Variables (không được commit lên GitHub).
+
+---
+
+## Giai đoạn 1: Chuẩn bị mã nguồn AI Service
+
+### Các file cần tạo mới
+
+#### [NEW] `.gitignore`
+Loại trừ các thư mục không cần thiết khi push lên GitHub.
+
+#### [NEW] `railway.json`
+File cấu hình để Railway nhận diện cách chạy service.
+
+#### [MODIFY] `requirements.txt`
+Cập nhật version chính xác của các thư viện (chromadb 1.5.9, fastapi 0.136.3...) để đảm bảo môi trường production giống local.
+
+#### [MODIFY] `rag.py`
+Thay đổi đường dẫn ChromaDB từ `"./chroma_data"` thành đọc từ biến môi trường `CHROMA_DATA_PATH` (mặc định `"./chroma_data"` nếu không có biến môi trường). Điều này giúp Railway Volume mount đúng vào thư mục chứa dữ liệu vector.
+
+#### [MODIFY] `main.py`
+Thêm cấu hình CORS để Backend Render có thể gọi sang AI Service Railway mà không bị chặn.
+
+---
+
+## Giai đoạn 2: Tạo GitHub Repository và Push code
+
+1. Tạo repository mới `sdl-ai-service` trên GitHub tại tài khoản `dunghvd79`.
+2. Khởi tạo Git trong thư mục `sdl-ai-service` cục bộ.
+3. Commit tất cả file (ngoại trừ `.env`, `venv/`, `__pycache__/`, `chroma_data/`).
+4. Push lên GitHub qua SSH alias `github.com-tk2`.
+
+---
+
+## Giai đoạn 3: Tạo dịch vụ trên Railway
+
+> **Yêu cầu**: Đăng ký tài khoản tại [railway.app](https://railway.app) bằng GitHub. Railway sẽ cấp **$5 credit miễn phí** cho tháng đầu.
+
+### Bước 3.1: Tạo Project mới
+1. Đăng nhập Railway → Nhấn **New Project**.
+2. Chọn **Deploy from GitHub repo** → Chọn repo `sdl-ai-service`.
+
+### Bước 3.2: Cấu hình biến môi trường
+Trong Railway Dashboard → Tab **Variables**, thêm:
+| Key | Value |
+|-----|-------|
+| `GEMINI_API_KEY` | *(lấy từ file .env cục bộ)* |
+| `CHROMA_DATA_PATH` | `/data/chroma_data` |
+| `PORT` | `8000` |
+
+### Bước 3.3: Gắn Railway Volume (Persistent Storage)
+1. Trong Project → Nhấn **+ Add Volume**.
+2. Đặt tên Volume: `chroma-storage`.
+3. **Mount Path**: `/data` — đây là nơi ChromaDB sẽ lưu dữ liệu vector vĩnh viễn.
+
+### Bước 3.4: Kiểm tra Deploy
+Railway tự động chạy `pip install -r requirements.txt` và `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+Sau khi deploy xong, Railway cấp URL dạng `https://sdl-ai-service-xxxx.railway.app`.
+
+---
+
+## Giai đoạn 4: Cập nhật Backend Render để kết nối Railway
+
+### [MODIFY] `aiService.js`
+Thay đổi URL AI service:
+```js
+// TRƯỚC: Hardcode localhost (chỉ chạy được local)
+const AI_SERVICE_URL = 'http://127.0.0.1:8000';
+
+// SAU: Đọc từ biến môi trường (linh hoạt cho cả local lẫn production)
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+```
+
+### Cập nhật Render Environment Variables
+Thêm biến `AI_SERVICE_URL` với giá trị là URL Railway vừa nhận được:
+`https://sdl-ai-service-xxxx.railway.app`
+
+### Push lên GitHub sdl-backend
+Commit `aiService.js` đã sửa và push → Render tự động redeploy.
+
+---
+
+## Giai đoạn 5: Kiểm tra kết nối End-to-End
+
+1. Gọi health check của AI Service: `GET https://sdl-ai-service-xxxx.railway.app/api/health` — nhận `200 OK`.
+2. Gọi health check của Backend Render: `GET https://sdl-backend.onrender.com/api/health` — nhận `200 OK`.
+3. Đăng nhập Admin tại `https://pigeon-bookstore.netlify.app`, vào tab **Vector hóa RAG**, upload thử file PDF nhỏ cho một cuốn sách.
+4. Đăng nhập Customer, duyệt đơn hàng lên DELIVERED, vào Tủ sách, thử gửi câu hỏi AI cho cuốn sách vừa upload PDF.
+
+---
+
+## Danh sách file thay đổi theo thứ tự thực hiện
+
+| Thứ tự | File | Loại thay đổi | Mục đích |
+|--------|------|--------------|---------|
+| 1 | `sdl-ai-service/.gitignore` | NEW | Loại trừ venv, __pycache__, chroma_data, .env khỏi git |
+| 2 | `sdl-ai-service/railway.json` | NEW | Cấu hình cách Railway build và start service |
+| 3 | `sdl-ai-service/requirements.txt` | MODIFY | Pin version chính xác để production ổn định |
+| 4 | `sdl-ai-service/rag.py` | MODIFY | Đọc CHROMA_DATA_PATH từ env var thay vì hardcode |
+| 5 | `sdl-ai-service/main.py` | MODIFY | Thêm CORS middleware cho phép request từ Render backend |
+| 6 | `sdl-project/src/services/aiService.js` | MODIFY | Đọc AI_SERVICE_URL từ env var thay vì hardcode localhost |
+
+---
+
+## Lưu ý quan trọng
+
+> [!WARNING]
+> File `.env` chứa `GEMINI_API_KEY` **tuyệt đối không được commit lên GitHub**. Phải khai báo key này trực tiếp trong Railway Dashboard → Variables.
+
+> [!NOTE]
+> Railway Free Tier có **$5 credit/tháng**. AI Service ít được gọi (chỉ khi user chat) nên $5 có thể đủ chạy nhiều tháng. Nếu hết credit, service tạm ngừng cho đến tháng tiếp theo hoặc bạn nạp thêm.
+
+> [!IMPORTANT]
+> Sau khi Railway Volume được mount, **dữ liệu ChromaDB sẽ được giữ nguyên** kể cả khi service ngủ (auto-sleep) và khởi động lại. Bạn chỉ cần upload PDF một lần duy nhất.
+
+---
+
+## Kế hoạch dự phòng (nếu Railway không đủ RAM)
+
+Nếu ChromaDB 1.5.9 yêu cầu quá nhiều RAM và Railway Free Tier bị OOM (Out of Memory), có thể chuyển sang giải pháp **Google Gemini Direct** — xóa ChromaDB, thay thế bằng cách truyền toàn bộ nội dung sách vào Gemini context window (phù hợp cho sách nhỏ). Đây là phương án đơn giản hơn nhưng chi phí API có thể cao hơn.

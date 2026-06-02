@@ -1,0 +1,87 @@
+# Kế hoạch phát triển Trang Khuyến mãi & Đồng bộ điều hướng Banner
+
+Kế hoạch này giải quyết yêu cầu sửa đổi nút "Nhận ưu đãi ngay" trên banner. Thay vì luôn chuyển hướng về trang Đăng ký (`/register`), hệ thống sẽ:
+1. **Nếu chưa đăng nhập**: Chuyển hướng người dùng về trang Đăng ký (`/register`) hoặc Đăng nhập (`/login`) để thu hút khách hàng mới.
+2. **Nếu đã đăng nhập**: Điều hướng đến một **Trang Khuyến Mãi (`/promotions`)** được thiết kế hiện đại, tinh tế. Trang này sẽ hiển thị toàn bộ mã giảm giá đang hoạt động trong hệ thống kèm tính năng Sao chép mã cực kỳ tiện lợi và mượt mà.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Phương án hiển thị mã giảm giá**: 
+> - Chúng tôi đề xuất thiết kế trang `/promotions` hiển thị công khai cho cả **Khách vãng lai (Guest)** và **Khách đã đăng nhập (Customer)**.
+> - **Khách chưa đăng nhập**: Vẫn xem được danh sách voucher để kích thích mua sắm, nhưng khi click "Sao chép mã" sẽ được thông báo/gợi ý đăng nhập, hoặc cho phép sao chép mã trực tiếp nhưng bắt buộc đăng nhập để sử dụng.
+> - **Khách đã đăng nhập**: Hiển thị rõ trạng thái mã giảm giá (ví dụ: đã dùng hay chưa) nhờ cơ chế kiểm tra lịch sử sử dụng `user_coupons` của backend.
+
+---
+
+## Open Questions
+
+> [!NOTE]
+> 1. **Cách hiển thị các Voucher đã sử dụng**: Bạn muốn ẩn hoàn toàn các voucher mà tài khoản hiện tại đã dùng, hay giữ lại và làm mờ đi kèm nhãn "Đã sử dụng"? 
+>    *(Khuyến nghị: Giữ lại và làm mờ kèm nhãn "Đã sử dụng" để giao diện chuyên nghiệp như Shopee/Tiki).*
+> 2. **Phân loại Voucher**: Hiện tại cơ sở dữ liệu hỗ trợ giảm giá theo phần trăm (`PERCENT`) và số tiền cố định (`FIXED`). Chúng ta sẽ tự động hiển thị nhãn tương ứng (VD: "Giảm 10%" hoặc "Giảm 50.000đ").
+
+---
+
+## Proposed Changes
+
+### Backend Component
+
+#### [MODIFY] [auth.js](file:///e:/it-project/smart_digital_library/sdl-project/src/middleware/auth.js)
+Thêm middleware `optionalVerifyToken` để giải mã token nếu có (phục vụ lấy trạng thái sử dụng voucher của từng user cụ thể) nhưng không báo lỗi 401 nếu người dùng là khách vãng lai.
+
+#### [MODIFY] [Coupon.js](file:///e:/it-project/smart_digital_library/sdl-project/src/models/Coupon.js)
+Thêm phương thức tĩnh `getActive(userId)` lấy tất cả các voucher đang hoạt động:
+- `is_active = true`
+- `end_date >= NOW()`
+- `used_count < usage_limit`
+Nếu truyền `userId`, kết hợp kiểm tra xem user đó đã sử dụng mã đó chưa (`is_used`).
+
+#### [MODIFY] [couponController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/couponController.js)
+Thêm phương thức `getActiveCoupons(req, res)` để xử lý request lấy mã giảm giá công khai.
+
+#### [MODIFY] [coupons.js](file:///e:/it-project/smart_digital_library/sdl-project/src/routes/coupons.js)
+Đăng ký route `GET /active` trước dòng `router.use(verifyToken)` để cho phép truy cập công khai với middleware `optionalVerifyToken`.
+
+---
+
+### Frontend Component
+
+#### [MODIFY] [Navbar.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/components/Navbar.jsx)
+Cập nhật liên kết của banner:
+- Nếu `user` đã đăng nhập: Chuyển hướng đến `/promotions`.
+- Nếu chưa đăng nhập: Chuyển hướng đến `/register`.
+
+#### [NEW] [PromotionsPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/PromotionsPage.jsx)
+Tạo trang Khuyến mãi mới:
+- Thiết kế giao diện cực kỳ premium theo ngôn ngữ thiết kế "Warm-surface" của Pigeon Bookstore (sử dụng tông màu be thanh lịch, bo góc tối giản, phông chữ Serif sang trọng).
+- Thiết kế voucher dạng **Vé xé (Ticket Stub Style)** độc đáo với đường răng cưa phân chia.
+- Hiển thị đầy đủ thông tin: Giá trị giảm giá lớn nổi bật, điều kiện áp dụng (giá trị đơn tối thiểu), ngày hết hạn, thanh tiến độ sử dụng trực quan.
+- Tích hợp nút **"Sao chép mã"** đi kèm hiệu ứng micro-animation chuyển sang biểu tượng tích xanh lá cây `Check` và hiển thị Toast thông báo khi sao chép thành công.
+- Tích hợp trạng thái **"Đã sử dụng"** (làm mờ voucher và vô hiệu hóa nút sao chép) đối với những mã khách hàng đã dùng.
+
+#### [MODIFY] [App.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/App.jsx)
+Đăng ký route `/promotions` trỏ đến trang `PromotionsPage`.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Khởi động server backend và frontend để kiểm tra hoạt động đồng bộ.
+- Dùng công cụ gọi API trực tiếp để kiểm tra định dạng dữ liệu trả về từ `/api/coupons/active`.
+
+### Manual Verification
+1. **Khách vãng lai**: 
+   - Truy cập trang chủ khi chưa đăng nhập.
+   - Click "Nhận ưu đãi ngay" trên banner -> Kiểm tra xem có chuyển hướng về `/register` (hoặc `/login`) không.
+   - Truy cập trực tiếp đường dẫn `/promotions` -> Kiểm tra xem danh sách voucher có tải bình thường không. Click "Sao chép mã" -> Kiểm tra thông báo yêu cầu đăng nhập.
+2. **Khách hàng đã đăng nhập**:
+   - Đăng nhập tài khoản Customer.
+   - Click "Nhận ưu đãi ngay" trên banner -> Kiểm tra xem có chuyển hướng đến trang `/promotions` không.
+   - Kiểm tra giao diện voucher: các mã giảm giá hiển thị đúng thông số, điều kiện.
+   - Click "Sao chép mã" -> Kiểm tra xem có hiện tích xanh và sao chép mã vào Clipboard không.
+   - Thử thanh toán một đơn hàng bằng mã giảm giá vừa sao chép để đảm bảo coupon hoạt động hoàn hảo.
+   - Quay lại `/promotions` -> Kiểm tra xem mã đó đã chuyển sang trạng thái "Đã sử dụng" và bị làm mờ chưa.

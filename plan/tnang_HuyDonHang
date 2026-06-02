@@ -1,0 +1,90 @@
+# Kế hoạch triển khai Tính năng Lý do Hủy đơn hàng Chuyên nghiệp
+
+Kế hoạch này tích hợp tính năng khảo sát lý do hủy đơn hàng tương tự các sàn thương mại điện tử lớn (Shopee, Lazada, Tiki...). 
+- **Với Khách hàng**: Khi click "Hủy đơn", một cửa sổ Modal hiện đại sẽ mở ra, hiển thị các lý do phổ biến để chọn lựa và một ô văn bản để khách hàng tự nhập lý do chi tiết.
+- **Với Quản trị viên (Admin)**: Trang quản lý đơn hàng của Admin sẽ hiển thị chi tiết lý do hủy đơn của khách. Nếu Admin là người chủ động hủy đơn, Admin cũng có thể nhập lý do hủy tương ứng (VD: "Hết hàng trong kho").
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Tự động cập nhật Database (Migration)**:
+> - Chúng ta sẽ bổ sung cột `cancel_reason TEXT` vào bảng `orders` thông qua lệnh SQL tự động chạy khi khởi chạy Backend (`src/config/database.js`). Phương án này giúp hệ thống tự động di cư dữ liệu trên môi trường live (Render) mà không làm gián đoạn hay cần chạy script thủ công.
+
+---
+
+## Open Questions
+
+> [!NOTE]
+> **Danh sách các Lý do hủy đơn đề xuất**:
+> Chúng ta sẽ thiết lập sẵn 5 lý do phổ biến để người dùng lựa chọn bằng nút Radio:
+> 1. *"Tôi muốn thay đổi địa chỉ nhận hàng hoặc số điện thoại"*
+> 2. *"Tôi muốn đổi phương thức thanh toán hoặc áp dụng mã giảm giá khác"*
+> 3. *"Tôi đặt trùng đơn hoặc không còn nhu cầu mua nữa"*
+> 4. *"Tìm thấy mức giá rẻ hơn ở nơi khác"*
+> 5. *"Lý do khác (Vui lòng điền chi tiết bên dưới)"*
+
+---
+
+## Proposed Changes
+
+### Database Component
+
+#### [MODIFY] [database.js](file:///e:/it-project/smart_digital_library/sdl-project/src/config/database.js)
+Thêm lệnh SQL tự động chạy khi khởi động server:
+```sql
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancel_reason TEXT;
+```
+Điều này đảm bảo cột lưu trữ lý do hủy đơn luôn tồn tại.
+
+---
+
+### Backend Component
+
+#### [MODIFY] [orderService.js](file:///e:/it-project/smart_digital_library/sdl-project/src/services/orderService.js)
+* Cập nhật hàm `cancelOrder(orderId, userId, cancelReason)` nhận thêm tham số `cancelReason`.
+* Cập nhật câu lệnh UPDATE orders để lưu `cancel_reason` vào database.
+
+#### [MODIFY] [orderController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/orderController.js)
+* Đọc `cancelReason` từ `req.body` trong hàm `cancelOrder`.
+* Truyền giá trị này vào hàm dịch vụ `OrderService.cancelOrder`.
+
+#### [MODIFY] [adminController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/adminController.js)
+* Cập nhật hàm `updateOrderStatus` của Admin: nếu trạng thái cập nhật thành `CANCELLED`, hỗ trợ nhận `cancelReason` từ body để lưu trữ lý do Admin chủ động hủy đơn.
+
+---
+
+### Frontend Component
+
+#### [MODIFY] [OrderHistoryPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderHistoryPage.jsx)
+* **Giao diện Hủy đơn**: Thay thế Confirm Dialog mặc định bằng một **Cửa sổ Modal lý do hủy đơn (Elegant Cancel Reason Modal)**.
+* **Cơ chế**: Người dùng chọn các lựa chọn có sẵn hoặc chọn "Lý do khác" và viết mô tả riêng.
+* **Giao diện Danh sách**: Với các đơn có trạng thái `CANCELLED`, hiển thị một hộp thông tin tinh tế màu hồng nhạt: `Lý do hủy: "<Nội dung lý do>"`.
+
+#### [MODIFY] [OrderDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/OrderDetailPage.jsx)
+* Hiển thị hộp thông tin lý do hủy đơn chi tiết nếu đơn hàng đang ở trạng thái `CANCELLED`.
+
+#### [MODIFY] [AdminDashboardPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/AdminDashboardPage.jsx)
+* **Giao diện bảng**: Tại danh sách đơn hàng Admin, nếu đơn hàng đã bị hủy, hiển thị lý do hủy bên dưới thông tin đơn để Admin dễ kiểm soát.
+* **Hủy đơn từ Admin**: Khi Admin chọn đổi trạng thái đơn sang "Đã hủy", hiển thị một Prompt/Modal nhỏ yêu cầu Admin nhập lý do hủy đơn để lưu lại lịch sử.
+* **Chi tiết đơn hàng Admin**: Hiển thị lý do hủy trong Modal xem chi tiết đơn hàng của Admin.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+* Chạy thử nghiệm biên dịch Frontend (`npm run build`) để đảm bảo không lỗi cú pháp.
+
+### Manual Verification
+1. **Quy trình Khách hàng**:
+   - Đăng nhập khách hàng, vào lịch sử đơn hàng.
+   - Click "Hủy đơn" tại một đơn hàng đang chờ duyệt.
+   - Kiểm tra xem Modal Lý do hủy đơn có hiện lên không.
+   - Thử chọn các lý do và viết thêm ghi chú, sau đó ấn xác nhận hủy đơn.
+   - Kiểm tra xem đơn hàng có đổi trạng thái thành "Đã hủy" và hiển thị hộp lý do hủy đơn vừa nhập không.
+2. **Quy trình Admin**:
+   - Đăng nhập Admin, vào danh sách quản lý đơn hàng.
+   - Kiểm tra xem đơn hàng vừa hủy phía trên có hiển thị đúng lý do hủy trong bảng quản trị của Admin không.
+   - Thử hủy một đơn hàng khác với tư cách Admin, nhập lý do hủy (VD: "Hết sách trong kho") -> Xác nhận và kiểm tra xem lý do hủy này có hiển thị đồng bộ ở cả tài khoản khách hàng lẫn bảng quản trị Admin không.
