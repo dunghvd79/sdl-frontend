@@ -20,6 +20,50 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
+    const trimmedEmail = email.trim();
+    const trimmedName = fullName.trim();
+
+    // 1. Kiểm tra rỗng
+    if (!trimmedName || !trimmedEmail || !password || !confirmPassword) {
+      setError('❌ Vui lòng điền đầy đủ các thông tin.');
+      return;
+    }
+
+    // 2. Kiểm tra Họ và tên
+    if (trimmedName.length < 2 || trimmedName.length > 100) {
+      setError('❌ Họ và tên phải dài từ 2 đến 100 ký tự.');
+      return;
+    }
+    const nameSpecialCharRegex = /[0-9`~!@#$%^&*()_+={}\[\]|\\:;"'<>,.?\/]/;
+    if (nameSpecialCharRegex.test(trimmedName)) {
+      setError('❌ Họ và tên không được chứa số hoặc ký tự đặc biệt.');
+      return;
+    }
+
+    // 3. Kiểm tra Email
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('❌ Địa chỉ email không hợp lệ (ví dụ: vi-du@email.com).');
+      return;
+    }
+    if (trimmedEmail.length > 255) {
+      setError('❌ Email không được dài quá 255 ký tự.');
+      return;
+    }
+
+    // 4. Kiểm tra Mật khẩu
+    if (password.length < 6) {
+      setError('❌ Mật khẩu phải chứa ít nhất 6 ký tự.');
+      return;
+    }
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    if (!hasLetter || !hasNumber) {
+      setError('❌ Mật khẩu phải bao gồm cả chữ cái và chữ số.');
+      return;
+    }
+
+    // 5. Kiểm tra Mật khẩu xác nhận
     if (password !== confirmPassword) {
       setError('❌ Mật khẩu xác nhận không khớp.');
       return;
@@ -29,12 +73,12 @@ export default function RegisterPage() {
 
     try {
       await api.post('/auth/register', {
-        email,
+        email: trimmedEmail,
         password,
-        fullName,
+        fullName: trimmedName,
       });
 
-      await login(email, password);
+      await login(trimmedEmail, password);
       
       toast.success('Đăng ký tài khoản thành công!', { title: 'Tuyệt vời 🎉' });
       navigate('/');
