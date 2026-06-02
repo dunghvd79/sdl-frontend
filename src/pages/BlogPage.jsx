@@ -33,6 +33,21 @@ export default function BlogPage() {
   const totalCount = responseData?.total || articles.length;
   const totalPages = Math.ceil(totalCount / limit) || 1;
 
+  // Fetch 3 latest/featured articles as fallback suggestions when search results are empty
+  const { data: suggestionsData } = useQuery({
+    queryKey: ['blogSuggestions'],
+    queryFn: async () => {
+      const response = await api.get('/articles', {
+        params: {
+          limit: 3,
+          adminMode: false
+        }
+      });
+      return response.data?.data || [];
+    }
+  });
+  const suggestions = suggestionsData || [];
+
   // Format date to local Vietnamese style
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -128,14 +143,56 @@ export default function BlogPage() {
         </div>
       )}
 
-      {/* No articles state */}
+      {/* No articles state with recommendations */}
       {!isLoading && !isError && articles.length === 0 && (
-        <div className="text-center py-16 max-w-md mx-auto border border-dashed border-stone-200 p-8">
-          <span className="text-4xl block mb-4">🔍</span>
-          <h3 className="font-serif text-xl uppercase tracking-wider text-stone-800 mb-2">Không tìm thấy bài viết nào</h3>
-          <p className="text-xs font-sans text-stone-500 leading-relaxed uppercase tracking-wider">
-            Thử tìm kiếm từ khóa khác hoặc chuyển sang chuyên mục khác để có thêm gợi ý đọc sách thú vị.
-          </p>
+        <div className="space-y-16">
+          <div className="text-center py-16 max-w-md mx-auto border border-dashed border-stone-200 p-8 bg-stone-50/30">
+            <span className="text-4xl block mb-4">🔍</span>
+            <h3 className="font-serif text-xl uppercase tracking-wider text-stone-850 mb-2">Không tìm thấy bài viết nào</h3>
+            <p className="text-xs font-sans text-stone-500 leading-relaxed uppercase tracking-wider">
+              Thử tìm kiếm từ khóa khác hoặc chuyển sang chuyên mục khác để có thêm gợi ý đọc sách thú vị.
+            </p>
+          </div>
+
+          {suggestions.length > 0 && (
+            <div className="max-w-4xl mx-auto pt-10 border-t border-stone-100">
+              <h3 className="font-serif text-lg font-bold text-center text-stone-800 mb-8 uppercase tracking-widest text-xs">
+                Xem các bài viết gợi ý mới nhất
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {suggestions.map((article) => {
+                  const dateFormatted = formatDate(article.created_at);
+                  return (
+                    <Link
+                      key={article.id}
+                      to={`/blog/${article.id}`}
+                      className="flex flex-col group cursor-pointer"
+                    >
+                      <div className="aspect-[16/10] overflow-hidden rounded-2xl border border-divider-lt mb-4 relative bg-stone-50 shadow-xs">
+                        <img
+                          src={getImageUrl(article.cover_url)}
+                          alt={article.title}
+                          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500 ease-out"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="text-left px-1">
+                        <span className="text-[9px] font-sans font-bold uppercase tracking-[0.2em] text-[#2C4A3B] block mb-1.5">
+                          {article.category}
+                        </span>
+                        <h4 className="font-serif text-sm font-bold text-stone-900 leading-snug group-hover:text-[#2C4A3B] transition-colors line-clamp-2 mb-2">
+                          {article.title}
+                        </h4>
+                        <div className="flex items-center gap-3 text-[10px] text-stone-400 font-sans">
+                          {dateFormatted && <span>{dateFormatted}</span>}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
