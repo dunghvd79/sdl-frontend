@@ -58,6 +58,16 @@ export default function BlogPage() {
     return `${day} tháng ${month}, ${year}`;
   };
 
+  // Fetch unique categories dynamically from backend
+  const { data: uniqueCatsData } = useQuery({
+    queryKey: ['blogCategories'],
+    queryFn: async () => {
+      const response = await api.get('/articles/categories');
+      return response.data?.data || [];
+    }
+  });
+  const uniqueCategories = ['ALL', ...(uniqueCatsData || [])];
+
   const handleCategoryChange = (categoryName) => {
     setSelectedCategory(categoryName);
     setPage(1); // Reset to page 1 upon category filter switch
@@ -91,7 +101,7 @@ export default function BlogPage() {
       <div className="bg-white border border-stone-200 p-5 mb-12 flex flex-col md:flex-row items-center justify-between gap-5 shadow-sm">
         {/* Category filtering pills */}
         <div className="flex flex-wrap gap-2 justify-center md:justify-start w-full md:w-auto">
-          {['ALL', 'Chiêm nghiệm', 'Gợi ý tuyển đọc', 'Kinh nghiệm'].map((cat) => (
+          {uniqueCategories.map((cat) => (
             <button
               key={cat}
               onClick={() => handleCategoryChange(cat)}

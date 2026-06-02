@@ -5011,6 +5011,8 @@ function ArticleManagerTab() {
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false });
   const [uploadingCover, setUploadingCover] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(true);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [customCategoryText, setCustomCategoryText] = useState('');
 
   // Fetch danh sách bài viết (adminMode=true)
   const { data: responseData, isLoading } = useQuery({
@@ -5062,30 +5064,37 @@ function ArticleManagerTab() {
       status: 'PUBLISHED',
       is_featured: false
     });
+    setIsCustomCategory(false);
+    setCustomCategoryText('');
     setShowUrlInput(true);
     setShowModal(true);
   };
 
   const openEditModal = (article) => {
+    const isDefaultCat = ['Chiêm nghiệm', 'Gợi ý tuyển đọc', 'Kinh nghiệm'].includes(article.category);
     setEditArticle(article);
     setForm({
       title: article.title,
       summary: article.summary || '',
       content: article.content || '',
       cover_url: article.cover_url || '',
-      category: article.category || 'Chiêm nghiệm',
+      category: isDefaultCat ? article.category : 'Khác',
       reading_time: article.reading_time || '5 phút đọc',
       status: article.status || 'PUBLISHED',
       is_featured: article.is_featured || false
     });
+    setIsCustomCategory(!isDefaultCat);
+    setCustomCategoryText(isDefaultCat ? '' : article.category);
     setShowUrlInput(!article.cover_url || article.cover_url.startsWith('http://') || article.cover_url.startsWith('https://'));
     setShowModal(true);
   };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const finalCategory = form.category === 'Khác' ? customCategoryText.trim() : form.category;
       const payload = {
         ...form,
+        category: finalCategory || 'Khác',
         title: form.title.trim(),
         content: form.content.trim(),
         summary: form.summary.trim()
@@ -5276,14 +5285,29 @@ function ArticleManagerTab() {
                       <label className="block text-xs uppercase tracking-wider text-ink-light font-semibold mb-2">Chuyên mục *</label>
                       <select
                         value={form.category}
-                        onChange={(e) => setForm(f => ({ ...f, category: e.target.value }))}
-                        className="w-full border border-divider rounded-none py-2 px-3 focus:outline-none focus:border-ink bg-white text-ink text-xs"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setForm(f => ({ ...f, category: val }));
+                          setIsCustomCategory(val === 'Khác');
+                          if (val !== 'Khác') setCustomCategoryText('');
+                        }}
+                        className="w-full border border-divider rounded-none py-2 px-3 focus:outline-none focus:border-ink bg-white text-ink text-xs mb-2"
                       >
                         <option value="Chiêm nghiệm">Chiêm nghiệm</option>
                         <option value="Gợi ý tuyển đọc">Gợi ý tuyển đọc</option>
                         <option value="Kinh nghiệm">Kinh nghiệm</option>
-                        <option value="Khác">Khác</option>
+                        <option value="Khác">Khác (Tự gõ chuyên mục)</option>
                       </select>
+
+                      {isCustomCategory && (
+                        <input
+                          type="text"
+                          value={customCategoryText}
+                          onChange={(e) => setCustomCategoryText(e.target.value)}
+                          className="w-full border border-divider rounded-none py-2 px-3 focus:outline-none focus:border-ink bg-white text-ink text-xs"
+                          placeholder="Nhập tên chuyên mục mới..."
+                        />
+                      )}
                     </div>
 
                     <div>
