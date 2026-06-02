@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
@@ -704,6 +704,8 @@ function BookManagerTab() {
 function InventoryManagerTab() {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   // State bộ lọc và tìm kiếm tồn kho
   const [searchTermStock, setSearchTermStock] = useState('');
@@ -905,12 +907,16 @@ function InventoryManagerTab() {
                     <td className="py-3 px-4 text-center text-[#2C4A3B] font-semibold">{item.reserved_qty}</td>
                     <td className="py-3 px-4 text-center text-ink-light">{item.sold_qty}</td>
                     <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => handleOpenStockModal(item)}
-                        className="inline-flex items-center gap-1.5 border border-divider hover:border-ink hover:bg-surface-warm text-ink font-sans text-xs font-semibold py-1.5 px-3.5 transition-all rounded-none bg-white cursor-pointer"
-                      >
-                        <span>⚙️</span> Nhập / Điều chỉnh
-                      </button>
+                      {isAdmin ? (
+                        <button
+                          onClick={() => handleOpenStockModal(item)}
+                          className="inline-flex items-center gap-1.5 border border-divider hover:border-ink hover:bg-surface-warm text-ink font-sans text-xs font-semibold py-1.5 px-3.5 transition-all rounded-none bg-white cursor-pointer"
+                        >
+                          <span>⚙️</span> Nhập / Điều chỉnh
+                        </button>
+                      ) : (
+                        <span className="text-xs text-ink-light/50 italic bg-surface-subtle border border-divider-lt px-2.5 py-0.5 rounded-none font-medium">Chỉ xem</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -1339,6 +1345,8 @@ function RAGIndexerTab() {
 function OrderManagerTab() {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [dateFilter, setDateFilter] = useState('');
@@ -1927,7 +1935,7 @@ function OrderManagerTab() {
       </div>
 
       {/* Bulk Action Bar (Floating at bottom center) */}
-      {selectedOrderIds.length > 0 && (
+      {isAdmin && selectedOrderIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#FAF8F5] border-2 border-[#2C4A3B] px-6 py-4 shadow-xl flex flex-col sm:flex-row items-center gap-4 transition-all duration-300 rounded-none w-[90%] max-w-2xl">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 bg-[#2C4A3B] animate-pulse rounded-none" />
@@ -1970,14 +1978,16 @@ function OrderManagerTab() {
           <table className="w-full text-sm">
             <thead className="bg-surface-warm text-ink-light border-b border-divider uppercase text-xs tracking-wider font-semibold">
               <tr>
-                <th className="py-3 px-4 text-center w-10">
-                  <input
-                    type="checkbox"
-                    checked={filteredOrders.length > 0 && selectedOrderIds.length === filteredOrders.length}
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 rounded-none accent-[#2C4A3B] border-divider cursor-pointer"
-                  />
-                </th>
+                {isAdmin && (
+                  <th className="py-3 px-4 text-center w-10">
+                    <input
+                      type="checkbox"
+                      checked={filteredOrders.length > 0 && selectedOrderIds.length === filteredOrders.length}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 rounded-none accent-[#2C4A3B] border-divider cursor-pointer"
+                    />
+                  </th>
+                )}
                 <th className="text-left py-3 px-4">Mã ĐH</th>
                 <th className="text-left py-3 px-4">Khách hàng</th>
                 <th className="text-left py-3 px-4 hidden md:table-cell">Tổng tiền</th>
@@ -1998,14 +2008,16 @@ function OrderManagerTab() {
                 return (
                   <tr key={order.id} className="hover:bg-[#fcfbf9] transition-colors">
                     {/* Checkbox */}
-                    <td className="py-4 px-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedOrderIds.includes(order.id)}
-                        onChange={(e) => handleSelectOne(order.id, e.target.checked)}
-                        className="w-4 h-4 rounded-none accent-[#2C4A3B] border-divider cursor-pointer"
-                      />
-                    </td>
+                    {isAdmin && (
+                      <td className="py-4 px-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedOrderIds.includes(order.id)}
+                          onChange={(e) => handleSelectOne(order.id, e.target.checked)}
+                          className="w-4 h-4 rounded-none accent-[#2C4A3B] border-divider cursor-pointer"
+                        />
+                      </td>
+                    )}
 
                     {/* ID */}
                     <td className="py-4 px-4">
@@ -2118,7 +2130,7 @@ function OrderManagerTab() {
                         </button>
 
                         {/* Advance to next step */}
-                        {!isCancelled && !isDelivered && nextStatus && (
+                        {isAdmin && !isCancelled && !isDelivered && nextStatus && (
                           <button
                             onClick={() => handleAdvance(order)}
                             disabled={isUpdating}
@@ -2129,7 +2141,7 @@ function OrderManagerTab() {
                         )}
 
                         {/* Cancel */}
-                        {!isCancelled && !isDelivered && (
+                        {isAdmin && !isCancelled && !isDelivered && (
                           <button
                             onClick={() => handleCancel(order)}
                             disabled={isUpdating}
@@ -2257,7 +2269,7 @@ function OrderManagerTab() {
                     </div>
 
                     {/* Action buttons */}
-                    {selectedOrder.status !== 'DELIVERED' && (
+                    {isAdmin && selectedOrder.status !== 'DELIVERED' && (
                       <div className="flex items-center justify-center gap-3 pt-1">
                         {getNextStatus(selectedOrder.status) && (
                           <button
@@ -5101,15 +5113,28 @@ const TABS = [
 
 
 export default function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState('overview');
   const { user } = useAuth(); // Lấy user hiện tại
-
+  
   // Lọc tab dựa trên quyền
   const visibleTabs = TABS.filter(tab => {
     if (tab.id === 'users' && user?.role !== 'ADMIN') return false;
     if (tab.id === 'coupons' && user?.role !== 'ADMIN') return false;
+    if (tab.id === 'overview' && user?.role !== 'ADMIN') return false; // Ẩn tab Tổng quan đối với phi-ADMIN
     return true;
   });
+
+  const [activeTab, setActiveTab] = useState(() => {
+    // ADMIN mặc định vào overview, phi-ADMIN (Curator) mặc định vào books
+    const localUser = JSON.parse(localStorage.getItem('user'));
+    return localUser?.role === 'ADMIN' ? 'overview' : 'books';
+  });
+
+  // Tự động chuyển hướng nếu tab đang chọn không khả dụng đối với vai trò hiện tại
+  useEffect(() => {
+    if (visibleTabs.length > 0 && !visibleTabs.some(t => t.id === activeTab)) {
+      setActiveTab(visibleTabs[0].id);
+    }
+  }, [visibleTabs, activeTab]);
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 flex-grow w-full">
