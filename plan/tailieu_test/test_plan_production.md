@@ -233,15 +233,19 @@
 
 ---
 
-### [TC-A-03] Quản lý Sách (Thêm / Sửa / Ẩn / Xóa)
+### [TC-A-03] Quản lý Sách & Bộ sưu tập ảnh chi tiết (Thêm / Sửa / Ẩn / Xóa)
 - [ ] Chọn tab **Quản lý sách** — danh sách toàn bộ sách (kể cả sách ẩn).
 - [ ] Nhấn **+ Thêm Sách Mới** — điền đầy đủ thông tin và upload ảnh bìa (JPG/PNG < 5MB).
-- [ ] Nhấn **Thêm sách** — sách mới xuất hiện trong danh sách và trên trang chủ storefront.
-- [ ] Nhấn **Sửa** trên một cuốn sách — thay đổi tên, mô tả rồi lưu — xác nhận thay đổi hiệu lực ngay.
+- [ ] Tại phần **Bộ sưu tập ảnh chi tiết (Nhóm 4)**:
+  - Tải lên 2 ảnh chi tiết phụ từ máy tính và điền số thứ tự hiển thị (ví dụ: `2`, `1`).
+  - Dán một URL ảnh phụ trực tiếp và nhấn thêm thành công.
+- [ ] Nhấn **Thêm sách** — sách mới xuất hiện trong danh sách.
+- [ ] Mở trang chi tiết sách Storefront để xác nhận: Ảnh bìa chính hiển thị đầu tiên, các ảnh phụ hiển thị theo đúng thứ tự `1`, `2`.
+- [ ] Nhấn **Sửa** cuốn sách đó: thay đổi số thứ tự hiển thị, xóa bớt 1 ảnh phụ, tải thêm ảnh phụ mới và nhấn lưu — xác nhận thay đổi hiệu lực.
 - [ ] Chuyển trạng thái sách sang **Tạm ẩn** — sách biến mất khỏi trang chủ (kiểm tra ở tab ẩn danh).
 - [ ] Chuyển lại **Công khai** — sách xuất hiện trở lại.
-- [ ] Nhấn **Xóa** một cuốn sách — xác nhận popup — sách bị xóa khỏi hệ thống.
-- [ ] Thử nhập dữ liệu không hợp lệ (để trống tên, giá âm) — hệ thống ngăn chặn và báo lỗi.
+- [ ] Nhấn **Xóa** cuốn sách đó — xác nhận popup — cuốn sách cùng toàn bộ ảnh phụ chi tiết trong bảng `book_images` bị xóa sạch (cascade deletion).
+- [ ] Thử nhập dữ liệu không hợp lệ (để trống tên, giá âm, tệp ảnh > 5MB) — hệ thống ngăn chặn và báo lỗi rõ ràng.
 
 **Kết quả**: `Pass / Fail` — Ghi chú: _______________
 
@@ -335,10 +339,10 @@
 
 > Đăng nhập bằng: `curator@test.vn` / `pasword123`
 
-### [TC-CUR-01] Xác minh phân quyền giới hạn
-- [ ] Đăng nhập và vào trang `/admin`.
-- [ ] Tab **Người dùng** KHÔNG xuất hiện trong menu quản trị.
-- [ ] Tab **Người dùng** KHÔNG thể truy cập trực tiếp bằng URL (`/admin?tab=users` hoặc tương tự).
+### [TC-CUR-01] Xác minh phân quyền giới hạn & Chặn Tổng quan
+- [ ] Đăng nhập bằng tài khoản Curator.
+- [ ] Tab **Tổng quan (Overview)** và tab **Người dùng** hoàn toàn biến mất khỏi menu quản trị.
+- [ ] Nếu cố tình truy cập trực tiếp bằng URL (`/admin?tab=overview` hoặc `/admin?tab=users`), hệ thống tự động redirect về tab hợp lệ đầu tiên (ví dụ: `books`).
 - [ ] Nút **Xóa sách** KHÔNG hiển thị (chỉ Admin mới xóa được sách).
 - [ ] Nút **Xóa thể loại** KHÔNG hiển thị.
 - [ ] Nút **Xóa mã giảm giá** KHÔNG hiển thị.
@@ -347,27 +351,29 @@
 
 ---
 
-### [TC-CUR-02] Thêm & Sửa Sách (Curator có quyền)
-- [ ] Nhấn **+ Thêm Sách Mới**, nhập thông tin hợp lệ và lưu thành công.
-- [ ] Nhấn **Sửa** thông tin một cuốn sách — thay đổi mô tả, ảnh bìa rồi lưu thành công.
+### [TC-CUR-02] Thêm & Sửa Sách (Curator có quyền toàn diện)
+- [ ] Nhấn **+ Thêm Sách Mới**, nhập thông tin hợp lệ, thêm ảnh phụ chi tiết và lưu thành công.
+- [ ] Nhấn **Sửa** thông tin một cuốn sách — thay đổi mô tả, ảnh bìa, danh mục và cập nhật ảnh chi tiết phụ thành công.
 - [ ] Thay đổi trạng thái sách từ **Công khai** sang **Tạm ẩn** thành công.
 
 **Kết quả**: `Pass / Fail` — Ghi chú: _______________
 
 ---
 
-### [TC-CUR-03] Quản lý Kho hàng
-- [ ] Điều chỉnh số lượng tồn kho của một cuốn sách — lưu thành công.
-- [ ] Nhật ký biến động kho ghi nhận điều chỉnh với email `curator@test.vn`.
+### [TC-CUR-03] Quản lý Kho hàng (Chế độ Chỉ Xem - Read Only)
+- [ ] Click vào tab **Kho hàng**.
+- [ ] Nút "⚙️ Nhập / Điều chỉnh" của từng cuốn sách KHÔNG hiển thị, thay thế bằng nhãn `"Chỉ xem"` màu xám.
+- [ ] Xác nhận Curator chỉ có thể xem số lượng tồn kho hiện tại và **Nhật ký biến động kho** mà không thể sửa đổi số lượng.
 
 **Kết quả**: `Pass / Fail` — Ghi chú: _______________
 
 ---
 
-### [TC-CUR-04] Xử lý Đơn hàng
-- [ ] Xem danh sách toàn bộ đơn hàng.
-- [ ] Duyệt tiến trình đơn hàng qua các bước từ `PENDING` đến `DELIVERED`.
-- [ ] Xác nhận kho tồn tự động đồng bộ sau mỗi bước duyệt.
+### [TC-CUR-04] Xử lý Đơn hàng (Chế độ Chỉ Xem - Read Only)
+- [ ] Click vào tab **Đơn hàng**.
+- [ ] Cột chọn checkbox hàng loạt và thanh công cụ tác vụ hàng loạt (Bulk Action Bar) hoàn toàn biến mất.
+- [ ] Nút cập nhật tiến trình đơn hàng ("→ Đóng gói", "→ Đang giao"...) và nút "Hủy đơn" KHÔNG xuất hiện ở danh sách.
+- [ ] Nhấp xem **Chi tiết đơn hàng** — thông tin hiển thị đầy đủ, nút in hóa đơn có sẵn nhưng nút cập nhật trạng thái đơn hàng và hủy đơn hàng bị ẩn hoàn toàn.
 
 **Kết quả**: `Pass / Fail` — Ghi chú: _______________
 
@@ -388,7 +394,10 @@
 - [ ] Đăng nhập bằng `customer@test.vn`, lấy JWT Token từ `localStorage`.
 - [ ] Dùng token Customer gửi request `POST https://sdl-backend.onrender.com/api/books` (tạo sách) — nhận `403 Forbidden`.
 - [ ] Dùng token Customer gửi request `GET https://sdl-backend.onrender.com/api/admin/users` — nhận `403 Forbidden`.
-- [ ] Dùng token Curator gửi request `DELETE https://sdl-backend.onrender.com/api/books/1` — nhận `403 Forbidden`.
+- [ ] Dùng token Curator gửi request `DELETE https://sdl-backend.onrender.com/api/books/1` (xóa sách) — nhận `403 Forbidden`.
+- [ ] Dùng token Curator gửi request `GET https://sdl-backend.onrender.com/api/admin/stats` (thống kê tổng quan) — nhận `403 Forbidden`.
+- [ ] Dùng token Curator gửi request `PUT https://sdl-backend.onrender.com/api/admin/orders/[id]/status` (cập nhật đơn hàng) — nhận `403 Forbidden`.
+- [ ] Dùng token Curator gửi request `PUT https://sdl-backend.onrender.com/api/inventory/[id]` (sửa số lượng tồn kho) — nhận `403 Forbidden`.
 
 **Kết quả**: `Pass / Fail` — Ghi chú: _______________
 
