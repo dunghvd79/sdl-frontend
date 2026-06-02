@@ -163,9 +163,16 @@ export default function BlogPage() {
 
                   {/* Editorial Typography Details */}
                   <div className="text-left px-1">
-                    <span className="text-[9px] font-sans font-bold uppercase tracking-[0.2em] text-[#2C4A3B] block mb-2">
-                      {article.category}
-                    </span>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[9px] font-sans font-bold uppercase tracking-[0.2em] text-[#2C4A3B]">
+                        {article.category}
+                      </span>
+                      {article.is_featured && (
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 text-[8px] font-bold text-amber-800 bg-amber-100 border border-amber-200 uppercase tracking-wider rounded-full">
+                          📌 Nổi bật
+                        </span>
+                      )}
+                    </div>
                     <h3 className="font-serif text-lg font-bold text-stone-900 leading-snug group-hover:text-[#2C4A3B] transition-colors mb-2.5 line-clamp-2">
                       {article.title}
                     </h3>

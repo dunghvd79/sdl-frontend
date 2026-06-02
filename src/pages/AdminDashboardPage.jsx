@@ -5005,7 +5005,8 @@ function ArticleManagerTab() {
     cover_url: '',
     category: 'Chiêm nghiệm',
     reading_time: '5 phút đọc',
-    status: 'PUBLISHED'
+    status: 'PUBLISHED',
+    is_featured: false
   });
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false });
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -5058,7 +5059,8 @@ function ArticleManagerTab() {
       cover_url: '',
       category: 'Chiêm nghiệm',
       reading_time: '5 phút đọc',
-      status: 'PUBLISHED'
+      status: 'PUBLISHED',
+      is_featured: false
     });
     setShowUrlInput(true);
     setShowModal(true);
@@ -5073,7 +5075,8 @@ function ArticleManagerTab() {
       cover_url: article.cover_url || '',
       category: article.category || 'Chiêm nghiệm',
       reading_time: article.reading_time || '5 phút đọc',
-      status: article.status || 'PUBLISHED'
+      status: article.status || 'PUBLISHED',
+      is_featured: article.is_featured || false
     });
     setShowUrlInput(!article.cover_url || article.cover_url.startsWith('http://') || article.cover_url.startsWith('https://'));
     setShowModal(true);
@@ -5193,6 +5196,7 @@ function ArticleManagerTab() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-xs font-semibold text-ink leading-normal max-w-xs truncate">
+                      {article.is_featured && <span className="text-amber-500 mr-1.5" title="Bài viết được ghim nổi bật">📌</span>}
                       {article.title}
                     </td>
                     <td className="py-3 px-4 text-xs text-ink-light font-medium">{article.category}</td>
@@ -5299,12 +5303,27 @@ function ArticleManagerTab() {
                     <select
                       value={form.status}
                       onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-                      className="w-full border border-divider rounded-none py-2 px-3 focus:outline-none focus:border-ink bg-white text-ink text-xs"
+                      className="w-full border border-divider rounded-none py-2 px-3 focus:outline-none focus:border-ink bg-white text-ink text-xs mb-3"
                     >
                       <option value="PUBLISHED">Công khai (Published)</option>
                       <option value="DRAFT">Bản nháp (Draft)</option>
                       <option value="HIDDEN">Tạm ẩn (Hidden)</option>
                     </select>
+
+                    {isAdmin && (
+                      <label className={`flex items-center gap-2.5 p-2.5 border cursor-pointer transition-all ${form.is_featured ? 'border-[#2C4A3B] bg-[#fdf9f5]' : 'border-divider bg-white hover:bg-[#faf8f5]'}`}>
+                        <input
+                          type="checkbox"
+                          checked={form.is_featured}
+                          onChange={e => setForm(f => ({ ...f, is_featured: e.target.checked }))}
+                          className="w-3.5 h-3.5 rounded-none accent-[#2C4A3B] border-divider cursor-pointer"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold text-ink">Ghim nổi bật (Featured Post)</div>
+                          <div className="text-[9px] text-ink-light leading-tight">Đưa bài viết này lên vị trí đầu tiên trang tin tức</div>
+                        </div>
+                      </label>
+                    )}
                   </div>
 
                   {/* Ảnh bìa */}
