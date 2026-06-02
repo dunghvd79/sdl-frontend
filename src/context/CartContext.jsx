@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const CartContext = createContext(null);
 export const useCart = () => useContext(CartContext);
@@ -12,6 +13,7 @@ export function CartProvider({ children }) {
   const toast = useToast();
   const navigate = useNavigate();
   const [cartCount, setCartCount] = useState(0);
+  const [showLoginConfirm, setShowLoginConfirm] = useState(false);
 
   // 1. TẢI DỮ LIỆU GIỎ HÀNG TỪ BACKEND
   const fetchCartCount = async () => {
@@ -37,10 +39,7 @@ export function CartProvider({ children }) {
   // 3. THAO TÁC THÊM HÀNG VÀO GIỎ
   const addToCart = async (bookId, bookTitle) => {
     if (!user) {
-      toast.warning('Bạn cần đăng nhập để thêm sách vào giỏ hàng!', { title: 'Yêu cầu đăng nhập' });
-      if (window.confirm('Bạn chưa có tài khoản hoặc chưa đăng nhập!\n\nNhấn "OK" để tới trang Đăng nhập / Đăng ký để mua sách.\nNhấn "Hủy" để tiếp tục xem sách.')) {
-        navigate('/login');
-      }
+      setShowLoginConfirm(true);
       return;
     }
     try {
@@ -58,6 +57,19 @@ export function CartProvider({ children }) {
   return (
     <CartContext.Provider value={{ cartCount, addToCart, fetchCartCount }}>
       {children}
+      <ConfirmDialog
+        isOpen={showLoginConfirm}
+        title="Yêu cầu đăng nhập"
+        message="Vui lòng đăng nhập tài khoản để bắt đầu thêm các tác phẩm yêu thích vào giỏ hàng và mua sắm sách số hóa."
+        confirmText="Đăng nhập ngay"
+        cancelText="Để sau"
+        variant="primary"
+        onConfirm={() => {
+          setShowLoginConfirm(false);
+          navigate('/login');
+        }}
+        onCancel={() => setShowLoginConfirm(false)}
+      />
     </CartContext.Provider>
   );
 }
