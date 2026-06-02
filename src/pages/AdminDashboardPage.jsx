@@ -3953,15 +3953,66 @@ function CategoryManagerTab() {
     queryFn: () => api.get('/categories').then(r => r.data.data || [])
   });
 
-  // Fetch sách của danh mục được chọn để xem nhanh (adminMode=true)
+  // Fetch sách của danh mục được chọn từ API chuyên dụng mới
   const { data: categoryBooksData, isLoading: loadingBooks } = useQuery({
     queryKey: ['categoryBooks', selectedCategoryForBooks?.id],
-    queryFn: () => api.get('/books', {
-      params: { categoryId: selectedCategoryForBooks?.id, limit: 100, adminMode: true }
-    }).then(r => r.data.data?.books || r.data.data || []),
+    queryFn: () => api.get(`/categories/${selectedCategoryForBooks?.id}/books`).then(r => r.data.data?.books || []),
     enabled: !!selectedCategoryForBooks
   });
   const categoryBooks = Array.isArray(categoryBooksData) ? categoryBooksData : [];
+
+  // Fetch tất cả sách trong hệ thống để chọn gán nhanh
+  const { data: allBooksData } = useQuery({
+    queryKey: ['allBooksForAssign'],
+    queryFn: () => api.get('/books?limit=500&adminMode=true').then(r => r.data.data?.books || r.data.data || []),
+    enabled: !!selectedCategoryForBooks
+  });
+  const allBooks = Array.isArray(allBooksData) ? allBooksData : [];
+
+  // Các state hỗ trợ gán thêm sách
+  const [bookSearchQuery, setBookSearchQuery] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Tính toán sách chưa thuộc danh mục
+  const unassignedBooks = React.useMemo(() => {
+    const assignedIds = new Set(categoryBooks.map(b => b.id));
+    return allBooks.filter(b => !assignedIds.has(b.id));
+  }, [allBooks, categoryBooks]);
+
+  // Bộ lọc tìm kiếm sách chưa gán
+  const searchedUnassignedBooks = React.useMemo(() => {
+    if (!bookSearchQuery.trim()) return unassignedBooks.slice(0, 10);
+    return unassignedBooks.filter(b => 
+      b.title.toLowerCase().includes(bookSearchQuery.toLowerCase()) || 
+      (b.author && b.author.toLowerCase().includes(bookSearchQuery.toLowerCase()))
+    ).slice(0, 10);
+  }, [unassignedBooks, bookSearchQuery]);
+
+  // Mutation gán sách vào thể loại
+  const assignBookMutation = useMutation({
+    mutationFn: (bookId) => api.post(`/categories/${selectedCategoryForBooks?.id}/books`, { bookIds: [bookId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['categoryBooks', selectedCategoryForBooks?.id]);
+      queryClient.invalidateQueries(['adminCategories']);
+      toast.success('Đã gán sách vào thể loại thành công!', { title: 'Thành công' });
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || err.message, { title: 'Lỗi gán sách' });
+    }
+  });
+
+  // Mutation gỡ sách khỏi thể loại
+  const removeBookMutation = useMutation({
+    mutationFn: (bookId) => api.delete(`/categories/${selectedCategoryForBooks?.id}/books/${bookId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['categoryBooks', selectedCategoryForBooks?.id]);
+      queryClient.invalidateQueries(['adminCategories']);
+      toast.success('Đã gỡ sách khỏi thể loại thành công!', { title: 'Thành công' });
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || err.message, { title: 'Lỗi gỡ sách' });
+    }
+  });
 
   // Tính toán số liệu thống kê nhanh
   const stats = React.useMemo(() => {
@@ -4211,8 +4262,14 @@ function CategoryManagerTab() {
                   <td className="py-3 px-4 text-center">
                     <div className="flex justify-center gap-2">
                       <button
+                        onClick={() => setSelectedCategoryForBooks(cat)}
+                        className="border border-[#2C4A3B] hover:bg-[#2C4A3B]/10 text-[#2C4A3B] font-medium py-1 px-2.5 rounded-none text-xs transition-colors cursor-pointer"
+                      >
+                        Gán Sách
+                      </button>
+                      <button
                         onClick={() => openEditModal(cat)}
-                        className="border border-divider hover:bg-[#f0ece7] text-ink font-medium py-1 px-3 rounded-none text-xs transition-colors cursor-pointer"
+                        className="border border-divider hover:bg-[#f0ece7] text-ink font-medium py-1 px-2.5 rounded-none text-xs transition-colors cursor-pointer"
                       >
                         Sửa
                       </button>
@@ -4220,12 +4277,12 @@ function CategoryManagerTab() {
                         <button
                           onClick={() => handleDelete(cat)}
                           disabled={deleteMutation.isPending}
-                          className="border border-red-200 hover:bg-red-50 text-red-700 font-medium py-1 px-3 rounded-none text-xs transition-colors cursor-pointer"
+                          className="border border-red-200 hover:bg-red-50 text-red-700 font-medium py-1 px-2.5 rounded-none text-xs transition-colors cursor-pointer"
                         >
                           Xóa
                         </button>
                       ) : (
-                        <span className="text-[10px] text-ink-light/40 italic py-1 px-3">Chỉ Admin</span>
+                        <span className="text-[10px] text-ink-light/40 italic py-1 px-2.5">Chỉ Admin</span>
                       )}
                     </div>
                   </td>
@@ -4329,11 +4386,79 @@ function CategoryManagerTab() {
                   <p className="text-xs text-ink-light italic">Đang tải danh sách sách...</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-5">
+                  {/* Tìm kiếm và Gán sách mới */}
+                  <div 
+                    className="bg-[#faf8f5] border border-divider p-4 space-y-2 relative"
+                    onMouseLeave={() => setIsDropdownOpen(false)}
+                  >
+                    <div className="text-[10px] uppercase tracking-wider text-ink-light font-bold">Thêm sách nhanh vào thể loại</div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Tìm theo tên sách hoặc tác giả để gán..."
+                        value={bookSearchQuery}
+                        onChange={(e) => {
+                          setBookSearchQuery(e.target.value);
+                          setIsDropdownOpen(true);
+                        }}
+                        onFocus={() => setIsDropdownOpen(true)}
+                        className="w-full pl-3 pr-8 py-2 border border-divider rounded-none bg-white text-xs text-ink placeholder-ink-light/50 focus:outline-none focus:border-[#2C4A3B] transition-colors"
+                      />
+                      {bookSearchQuery && (
+                        <button 
+                          onClick={() => setBookSearchQuery('')} 
+                          className="absolute right-8 top-2 text-ink-light/50 hover:text-ink text-xs cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      )}
+                      <div className="absolute right-3 top-2.5 text-ink-light/40">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-3.5 h-3.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.604 10.604Z" />
+                        </svg>
+                      </div>
+                      
+                      {/* Dropdown kết quả tìm kiếm */}
+                      {isDropdownOpen && searchedUnassignedBooks.length > 0 && (
+                        <div className="absolute left-0 right-0 z-50 mt-1 bg-white border border-divider max-h-48 overflow-y-auto shadow-lg">
+                          {searchedUnassignedBooks.map(book => {
+                            const bookCover = book.cover_url ? getImageUrl(book.cover_url) : 'https://cdn-icons-png.flaticon.com/512/330/330732.png';
+                            return (
+                              <button
+                                key={book.id}
+                                onClick={() => {
+                                  assignBookMutation.mutate(book.id);
+                                  setBookSearchQuery('');
+                                  setIsDropdownOpen(false);
+                                }}
+                                className="w-full flex items-center gap-3 p-2 text-left hover:bg-[#faf8f5] border-b border-divider/30 last:border-0 transition-colors cursor-pointer"
+                              >
+                                <img src={bookCover} alt="Cover" className="w-6 h-8 object-cover border border-divider flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <div className="text-xs font-serif font-semibold text-ink truncate">{book.title}</div>
+                                  <div className="text-[9px] text-ink-light truncate">{book.author}</div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      
+                      {isDropdownOpen && searchedUnassignedBooks.length === 0 && bookSearchQuery.trim() && (
+                        <div className="absolute left-0 right-0 z-50 mt-1 bg-white border border-divider p-3 text-center text-xs text-ink-light italic">
+                          Không tìm thấy sách nào phù hợp để gán.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Danh sách sách đang thuộc danh mục */}
+                  <div className="text-[10px] uppercase tracking-wider text-ink-light font-bold">Danh sách sách liên kết ({categoryBooks.length})</div>
                   {categoryBooks.length === 0 ? (
-                    <p className="text-center py-8 text-ink-light italic text-xs">Thể loại này chưa có cuốn sách nào.</p>
+                    <p className="text-center py-8 text-ink-light italic text-xs bg-[#faf8f5] border border-divider">Thể loại này chưa có cuốn sách nào.</p>
                   ) : (
-                    <div className="max-h-96 overflow-y-auto divide-y divide-divider border border-divider">
+                    <div className="max-h-60 overflow-y-auto divide-y divide-divider border border-divider bg-white">
                       {categoryBooks.map(book => {
                         const bookCover = book.cover_url ? getImageUrl(book.cover_url) : 'https://cdn-icons-png.flaticon.com/512/330/330732.png';
                         const statusBadge = {
@@ -4346,7 +4471,7 @@ function CategoryManagerTab() {
                         return (
                           <div key={book.id} className="flex items-center gap-4 p-3 hover:bg-[#fcfbf9] transition-colors">
                             {/* Bìa sách */}
-                            <div className="w-10 aspect-[3/4] border border-divider bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
+                            <div className="w-9 aspect-[3/4] border border-divider bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
                               <img src={bookCover} alt="Bìa" className="w-full h-full object-cover" />
                             </div>
                             
@@ -4368,6 +4493,17 @@ function CategoryManagerTab() {
                               <span className="font-mono text-xs font-semibold text-ink">
                                 {Number(book.price).toLocaleString('vi-VN')} đ
                               </span>
+                            </div>
+
+                            {/* Nút gỡ */}
+                            <div className="flex-shrink-0 ml-1">
+                              <button
+                                onClick={() => removeBookMutation.mutate(book.id)}
+                                disabled={removeBookMutation.isPending}
+                                className="border border-red-200 hover:bg-red-50 text-red-600 font-semibold py-1 px-2.5 rounded-none text-[9px] uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                {removeBookMutation.isPending ? 'Đang gỡ...' : '🗑️ Gỡ'}
+                              </button>
                             </div>
                           </div>
                         );
