@@ -1226,12 +1226,8 @@ function RAGIndexerTab() {
         </div>
       </div>
 
-      {/* Thanh lọc + Lưu ý */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
-        <div className="bg-surface-warm border border-divider border-l-4 border-l-[#2C4A3B] rounded-none px-4 py-3 text-xs text-ink-light flex gap-2 flex-1">
-          <span>💡</span>
-          <span>Đảm bảo server AI (FastAPI) đang chạy tại <code className="bg-surface-subtle px-1 font-mono text-[11px] text-ink">localhost:8000</code> trước khi tải lên. Quá trình có thể mất từ 30 giây đến 2 phút.</span>
-        </div>
+      {/* Thanh lọc */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-5 justify-end">
         {/* Bộ lọc */}
         <div className="flex gap-2 items-center flex-shrink-0">
           <button
