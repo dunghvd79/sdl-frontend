@@ -5140,14 +5140,13 @@ export default function AdminDashboardPage() {
     <div className="max-w-6xl mx-auto py-12 px-4 flex-grow w-full">
       {/* Header */}
       <div className="mb-10 border-b border-divider pb-6 text-center">
-        <h1 className="text-2xl md:text-3xl font-serif font-semibold text-ink uppercase tracking-widest relative inline-block">
+        <h1 className="text-2xl md:text-3xl font-serif font-semibold text-[#1C1C1C] uppercase tracking-widest relative inline-block">
           BẢNG QUẢN TRỊ
-          <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-16 h-[2px] bg-[#2C4A3B]"></span>
         </h1>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex mb-8 border-b border-divider pb-0 overflow-x-auto hide-scrollbar relative z-0">
+      <div className="flex justify-center mb-8 border-b border-divider pb-0 overflow-x-auto hide-scrollbar relative z-0">
         {visibleTabs.map(tab => (
           <button
             key={tab.id}
