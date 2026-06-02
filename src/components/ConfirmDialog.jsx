@@ -13,7 +13,10 @@ export default function ConfirmDialog({
   variant = 'danger',   // 'danger' | 'warning' | 'primary'
   onConfirm,
   onCancel,
+  onClose,
 }) {
+  const handleCancel = onCancel || onClose;
+
   // Khóa scroll khi dialog mở
   useEffect(() => {
     if (isOpen) {
@@ -65,7 +68,7 @@ export default function ConfirmDialog({
       {/* Overlay */}
       <div
         className="absolute inset-0 bg-ink/40 backdrop-blur-xs"
-        onClick={onCancel}
+        onClick={handleCancel}
         style={{ animation: 'fadeIn 0.15s ease both' }}
       />
 
@@ -86,13 +89,13 @@ export default function ConfirmDialog({
 
         <div className="flex gap-3">
           <button
-            onClick={onCancel}
+            onClick={handleCancel}
             className="flex-1 py-3 px-4 rounded-none bg-surface-subtle hover:bg-divider-lt text-ink font-sans text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
           >
             {cancelText}
           </button>
           <button
-            onClick={() => { onConfirm?.(); onCancel?.(); }}
+            onClick={() => { onConfirm?.(); handleCancel?.(); }}
             className={`flex-1 py-3 px-4 rounded-none text-white font-sans text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer ${confirmBtnClass}`}
           >
             {confirmText}
