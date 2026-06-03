@@ -388,6 +388,14 @@ function BookManagerTab() {
                   </td>
                   <td className="py-3 px-4 text-center">
                     <div className="flex justify-center gap-2">
+                      <a
+                        href={`/books/${book.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="border border-[#2C4A3B] hover:bg-[#2C4A3B]/5 text-[#2C4A3B] font-medium py-1 px-3 rounded-none text-xs transition-colors cursor-pointer inline-flex items-center"
+                      >
+                        Xem
+                      </a>
                       <button
                         onClick={() => openEditModal(book)}
                         className="border border-divider hover:bg-[#f0ece7] text-ink font-medium py-1 px-3 rounded-none text-xs transition-colors cursor-pointer"
