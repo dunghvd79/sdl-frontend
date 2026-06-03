@@ -111,6 +111,13 @@ export default function HomePage() {
     }
   }, [page]);
 
+  // Tự động quay về trang 1 nếu trang hiện tại bị trống (ví dụ: sau khi xóa sách ở trang 2)
+  React.useEffect(() => {
+    if (!isLoading && books && books.length === 0 && page > 1) {
+      setPage(1);
+    }
+  }, [books, page, isLoading]);
+
   // Lấy danh sách sách dựa vào filters (phân trang 8 quyển/trang)
   const { data: books, isLoading, isFetching, isError } = useQuery({
     queryKey: ['books', searchTerm, selectedCategory, sortBy, maxPrice, page],
