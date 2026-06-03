@@ -111,13 +111,6 @@ export default function HomePage() {
     }
   }, [page]);
 
-  // Tự động quay về trang 1 nếu trang hiện tại bị trống (ví dụ: sau khi xóa sách ở trang 2)
-  React.useEffect(() => {
-    if (!isLoading && books && books.length === 0 && page > 1) {
-      setPage(1);
-    }
-  }, [books, page, isLoading]);
-
   // Lấy danh sách sách dựa vào filters (phân trang 8 quyển/trang)
   const { data: books, isLoading, isFetching, isError } = useQuery({
     queryKey: ['books', searchTerm, selectedCategory, sortBy, maxPrice, page],
@@ -136,6 +129,13 @@ export default function HomePage() {
     },
     placeholderData: (prev) => prev
   });
+
+  // Tự động quay về trang 1 nếu trang hiện tại bị trống (ví dụ: sau khi xóa sách ở trang 2)
+  React.useEffect(() => {
+    if (!isLoading && books && books.length === 0 && page > 1) {
+      setPage(1);
+    }
+  }, [books, page, isLoading]);
 
   // Lấy danh sách sách nổi bật (Editor's Picks)
   const { data: featuredBooks } = useQuery({
@@ -658,7 +658,7 @@ export default function HomePage() {
 
             <button
               onClick={() => setPage(p => p + 1)}
-              disabled={books.length < 8 || isFetching}
+              disabled={(books?.length || 0) < 8 || isFetching}
               className="w-9 h-9 flex items-center justify-center rounded-full border border-stone-200 text-stone-600 hover:border-[#2C4A3B] hover:text-[#2C4A3B] hover:bg-[#2C4A3B]/5 disabled:opacity-30 disabled:pointer-events-none transition-all duration-300 cursor-pointer bg-white"
               aria-label="Trang sau"
             >
