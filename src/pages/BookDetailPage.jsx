@@ -118,7 +118,15 @@ export default function BookDetailPage() {
   ));
 
   const handleBack = () => {
-    navigate(-1);
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      window.close();
+      // Dự phòng nếu trình duyệt chặn window.close()
+      setTimeout(() => {
+        navigate('/');
+      }, 100);
+    }
   };
 
   const handleChat = () => {
