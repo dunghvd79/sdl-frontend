@@ -20,7 +20,7 @@ export default function LoginPage() {
     try {
       await login(email, password); 
       const from = location.state?.from || '/';
-      navigate(from); 
+      window.location.href = from; 
     } catch (err) {
       setError(err.response?.data?.error || '❌ Đăng nhập thất bại.');
     } finally {

@@ -106,7 +106,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   const userName = user ? (user.fullName || user.email?.split('@')[0]) : '';
