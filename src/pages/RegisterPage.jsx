@@ -81,7 +81,7 @@ export default function RegisterPage() {
       await login(trimmedEmail, password);
       
       toast.success('Đăng ký tài khoản thành công!', { title: 'Tuyệt vời 🎉' });
-      navigate('/');
+      window.location.href = '/';
     } catch (err) {
       setError(err.response?.data?.error || '❌ Đăng ký thất bại. Email có thể đã tồn tại.');
     } finally {
