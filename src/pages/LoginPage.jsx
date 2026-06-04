@@ -35,12 +35,21 @@ export default function LoginPage() {
     }
   };
 
+  const queryParams = new URLSearchParams(location.search);
+  const isExpired = queryParams.get('expired') === 'true';
+
   return (
     <div className="flex items-center justify-center py-20 px-4">
       <div className="bg-white p-8 md:p-10 border border-divider rounded-none w-full max-w-md">
         <h2 className="text-3xl font-serif text-center uppercase tracking-widest text-ink mb-8">
           Đăng Nhập
         </h2>
+        
+        {isExpired && !error && (
+          <div className="bg-amber-50 border-l-2 border-amber-500 text-amber-800 p-3 mb-6 text-xs rounded-none">
+            ⚠️ Phiên đăng nhập của bạn đã hết hạn. Vui lòng đăng nhập lại.
+          </div>
+        )}
         
         {error && (
           <div className="bg-red-50 border-l-2 border-red-500 text-red-700 p-3 mb-6 text-xs rounded-none">

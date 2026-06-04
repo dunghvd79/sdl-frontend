@@ -48,17 +48,17 @@ function AppContent() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/books/:id" element={<BookDetailPage />} />
-        <Route path="/books/:id/chat" element={<ChatPage />} />
+        <Route path="/books/:id/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
         <Route path="/cart" element={<CartPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
         <Route path="/payment-result" element={<PaymentResultPage />} />
-        <Route path="/orders" element={<OrderHistoryPage />} />
-        <Route path="/orders/:id" element={<OrderDetailPage />} />
-        <Route path="/shelf" element={<MyShelfPage />} />
-        <Route path="/wishlist" element={<WishlistPage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/orders" element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>} />
+        <Route path="/orders/:id" element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
+        <Route path="/shelf" element={<ProtectedRoute><MyShelfPage /></ProtectedRoute>} />
+        <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/promotions" element={<PromotionsPage />} />
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:id" element={<ArticleDetailPage />} />

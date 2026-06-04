@@ -24,4 +24,24 @@ api.interceptors.request.use(
   }
 );
 
+// 3. Response Interceptor (Người bắt lỗi): TỰ ĐỘNG LOGOUT KHI PHIÊN ĐĂNG NHẬP HẾT HẠN (LỖI 401)
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Phiên hết hạn -> Xóa thông tin cá nhân
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Chuyển hướng về trang đăng nhập và gửi kèm tham số thông báo hết hạn
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login?expired=true';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;

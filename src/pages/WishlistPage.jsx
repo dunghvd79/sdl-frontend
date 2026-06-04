@@ -30,16 +30,36 @@ export default function WishlistPage() {
     enabled: !!user,
   });
 
-  // Toggle wishlist item
+  // Toggle wishlist item (Optimistic Update)
   const toggleWishlistMutation = useMutation({
     mutationFn: async (bookId) => {
       await api.post('/wishlists/toggle', { bookId });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['myWishlist']);
+    onMutate: async (bookId) => {
+      // Hủy bỏ các refetch đang chạy để tránh ghi đè
+      await queryClient.cancelQueries({ queryKey: ['myWishlist'] });
+
+      // Lưu lại trạng thái cache hiện tại
+      const previousWishlist = queryClient.getQueryData(['myWishlist']) || [];
+
+      // Dự báo trạng thái cache mới (gỡ bỏ sách bị unlike ngay lập tức)
+      const newWishlist = previousWishlist.filter(item => String(item.id) !== String(bookId));
+
+      // Cập nhật bộ đệm cache tức thì
+      queryClient.setQueryData(['myWishlist'], newWishlist);
+
+      // Trả về dữ liệu cũ đề phòng rollback
+      return { previousWishlist };
     },
-    onError: (err) => {
-      console.error('Error toggling wishlist:', err);
+    onError: (err, bookId, context) => {
+      // Rollback nếu xảy ra lỗi mạng
+      if (context?.previousWishlist) {
+        queryClient.setQueryData(['myWishlist'], context.previousWishlist);
+      }
+    },
+    onSettled: () => {
+      // Đồng bộ lại với DB
+      queryClient.invalidateQueries({ queryKey: ['myWishlist'] });
     }
   });
 
