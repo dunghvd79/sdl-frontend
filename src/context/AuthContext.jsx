@@ -1,6 +1,9 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import api from '../services/api';
 
+// Tạo kênh giao tiếp giữa các tab trình duyệt
+const authChannel = new BroadcastChannel('auth_channel');
+
 // 1. TẠO KHO CHỨA (Context) & HOOK TÙY CHỈNH
 // Tạo một Context để truyền dữ liệu user đi muôn nơi mà không cần truyền props qua từng lớp
 const AuthContext = createContext(null);
@@ -21,6 +24,22 @@ export function AuthProvider({ children }) {
     }
     return null;
   });
+
+  // Lắng nghe tín hiệu đăng xuất từ các tab khác
+  useEffect(() => {
+    const handleAuthMessage = (event) => {
+      if (event.data === 'logout') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+        window.location.href = '/login'; // Chuyển hướng tab hiện tại về trang login
+      }
+    };
+    authChannel.addEventListener('message', handleAuthMessage);
+    return () => {
+      authChannel.removeEventListener('message', handleAuthMessage);
+    };
+  }, []);
 
   // 3. XỬ LÝ ĐĂNG NHẬP (Lưu dữ liệu)
   const login = async (email, password) => {
@@ -48,6 +67,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('token'); // Vứt chìa khóa đi
     localStorage.removeItem('user');  // Xóa thông tin cá nhân
     setUser(null); // Đưa app về trạng thái Khách (Guest)
+    authChannel.postMessage('logout'); // Bắn tín hiệu cho các tab khác biết
   };
 
   return (
