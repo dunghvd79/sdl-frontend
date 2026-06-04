@@ -182,7 +182,7 @@ function BookManagerTab() {
       return api.post('/books', payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['adminBooks']);
+      queryClient.invalidateQueries({ queryKey: ['adminBooks'] });
       setShowModal(false);
       toast.success(editBook ? `Đã cập nhật sách thành công!` : 'Đã thêm sách mới thành công!', { title: editBook ? 'Cập nhật' : 'Thêm sách' });
     },
@@ -255,7 +255,7 @@ function BookManagerTab() {
   const deleteMutation = useMutation({
     mutationFn: (id) => api.delete(`/books/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['adminBooks']);
+      queryClient.invalidateQueries({ queryKey: ['adminBooks'] });
       toast.success('Đã xóa sách thành công!', { title: 'Đã xóa' });
       setConfirmDialog({ isOpen: false });
     },
@@ -1393,7 +1393,7 @@ function RAGIndexerTab() {
       setUploadStates(prev => ({ ...prev, [bookId]: { status: 'success', message: 'Vector hóa thành công! AI đã sẵn sàng trả lời về cuốn sách này.' } }));
       fileInput.value = '';
       // Refetch để cập nhật badge rag_indexed_at ngay lập tức
-      queryClient.invalidateQueries(['adminBooksRAG']);
+      queryClient.invalidateQueries({ queryKey: ['adminBooksRAG'] });
     } catch (err) {
       const errMsg = err.response?.data?.error || err.message;
       setUploadStates(prev => ({ ...prev, [bookId]: { status: 'error', message: 'Lỗi: ' + errMsg } }));
@@ -1592,10 +1592,10 @@ function OrderManagerTab() {
   const updateStatusMutation = useMutation({
     mutationFn: ({ orderId, status, cancelReason }) => api.put(`/admin/orders/${orderId}/status`, { status, cancelReason }),
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries(['adminOrders']);
+      queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
       // Also invalidate customer-facing queries so their UI updates too
-      queryClient.invalidateQueries(['myOrders']);
-      queryClient.invalidateQueries(['orderDetail', String(vars.orderId)]);
+      queryClient.invalidateQueries({ queryKey: ['myOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['orderDetail', String(vars.orderId)] });
       toast.success('Đã cập nhật trạng thái đơn hàng!', { title: 'Cập nhật thành công' });
     },
     onError: (err) => toast.error(err.response?.data?.error || err.message, { title: 'Lỗi' })
@@ -3290,7 +3290,7 @@ function UserManagerTab() {
   const updateRoleMutation = useMutation({
     mutationFn: ({ userId, role }) => api.put(`/admin/users/${userId}/role`, { role }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['adminUsers']);
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
       toast.success('Cập nhật phân quyền thành công!', { title: 'Cập nhật' });
     },
     onError: (err) => toast.error(err.response?.data?.error || err.message, { title: 'Lỗi phân quyền' })
@@ -3299,7 +3299,7 @@ function UserManagerTab() {
   const toggleStatusMutation = useMutation({
     mutationFn: ({ userId, isActive }) => api.put(`/admin/users/${userId}/status`, { isActive }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['adminUsers']);
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
       toast.success('Cập nhật trạng thái tài khoản thành công!', { title: 'Trạng thái' });
     },
     onError: (err) => toast.error(err.response?.data?.error || err.message, { title: 'Lỗi cập nhật trạng thái' })
@@ -3310,7 +3310,7 @@ function UserManagerTab() {
   const deleteUserMutation = useMutation({
     mutationFn: (userId) => api.delete(`/admin/users/${userId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['adminUsers']);
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
       toast.success('Xóa tài khoản người dùng thành công!', { title: 'Xóa người dùng' });
     },
     onError: (err) => toast.error(err.response?.data?.error || err.message, { title: 'Lỗi khi xóa người dùng' })
@@ -4019,8 +4019,8 @@ function CategoryManagerTab() {
   const assignBookMutation = useMutation({
     mutationFn: (bookId) => api.post(`/categories/${selectedCategoryForBooks?.id}/books`, { bookIds: [bookId] }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['categoryBooks', selectedCategoryForBooks?.id]);
-      queryClient.invalidateQueries(['adminCategories']);
+      queryClient.invalidateQueries({ queryKey: ['categoryBooks', selectedCategoryForBooks?.id] });
+      queryClient.invalidateQueries({ queryKey: ['adminCategories'] });
       toast.success('Đã gán sách vào thể loại thành công!', { title: 'Thành công' });
     },
     onError: (err) => {
@@ -4032,8 +4032,8 @@ function CategoryManagerTab() {
   const removeBookMutation = useMutation({
     mutationFn: (bookId) => api.delete(`/categories/${selectedCategoryForBooks?.id}/books/${bookId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['categoryBooks', selectedCategoryForBooks?.id]);
-      queryClient.invalidateQueries(['adminCategories']);
+      queryClient.invalidateQueries({ queryKey: ['categoryBooks', selectedCategoryForBooks?.id] });
+      queryClient.invalidateQueries({ queryKey: ['adminCategories'] });
       toast.success('Đã gỡ sách khỏi thể loại thành công!', { title: 'Thành công' });
     },
     onError: (err) => {
@@ -4094,7 +4094,7 @@ function CategoryManagerTab() {
       return api.post('/categories', form);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['adminCategories']);
+      queryClient.invalidateQueries({ queryKey: ['adminCategories'] });
       setShowModal(false);
       toast.success(editCategory ? 'Cập nhật thể loại thành công!' : 'Thêm thể loại mới thành công!', { title: 'Thành công' });
     },
@@ -4122,7 +4122,7 @@ function CategoryManagerTab() {
   const deleteMutation = useMutation({
     mutationFn: (id) => api.delete(`/categories/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['adminCategories']);
+      queryClient.invalidateQueries({ queryKey: ['adminCategories'] });
       setConfirmDialog({ isOpen: false });
       toast.success('Đã xóa thể loại thành công!', { title: 'Đã xóa' });
     },
@@ -4635,7 +4635,7 @@ function CouponManagerTab() {
     },
     onSuccess: () => {
       isSubmittingRef.current = false;
-      queryClient.invalidateQueries(['adminCoupons']);
+      queryClient.invalidateQueries({ queryKey: ['adminCoupons'] });
       setShowModal(false);
       toast.success(editCoupon ? 'Cập nhật mã giảm giá thành công!' : 'Tạo mã giảm giá mới thành công!', { title: 'Thành công' });
     },
@@ -4648,7 +4648,7 @@ function CouponManagerTab() {
   const toggleMutation = useMutation({
     mutationFn: ({ id, is_active }) => api.patch(`/coupons/${id}/toggle`, { is_active }),
     onSuccess: (resData) => {
-      queryClient.invalidateQueries(['adminCoupons']);
+      queryClient.invalidateQueries({ queryKey: ['adminCoupons'] });
       toast.success(resData.data.message || 'Cập nhật trạng thái thành công!', { title: 'Thành công' });
     },
     onError: (err) => {
@@ -4706,7 +4706,7 @@ function CouponManagerTab() {
   const deleteMutation = useMutation({
     mutationFn: (id) => api.delete(`/coupons/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['adminCoupons']);
+      queryClient.invalidateQueries({ queryKey: ['adminCoupons'] });
       toast.success('Đã xóa mã giảm giá thành công!', { title: 'Đã xóa' });
       setConfirmDialog({ isOpen: false });
     },
@@ -5113,7 +5113,7 @@ function ArticleManagerTab() {
       return api.post('/articles', payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['adminArticles']);
+      queryClient.invalidateQueries({ queryKey: ['adminArticles'] });
       setShowModal(false);
       toast.success(editArticle ? 'Cập nhật bài viết thành công!' : 'Thêm bài viết mới thành công!', { title: 'Thành công' });
     },
@@ -5141,7 +5141,7 @@ function ArticleManagerTab() {
   const deleteMutation = useMutation({
     mutationFn: (id) => api.delete(`/articles/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['adminArticles']);
+      queryClient.invalidateQueries({ queryKey: ['adminArticles'] });
       toast.success('Đã xóa bài viết thành công!', { title: 'Đã xóa' });
       setConfirmDialog({ isOpen: false });
     },
