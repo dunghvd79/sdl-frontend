@@ -30,13 +30,22 @@ const alphabets = {
   articles: getShuffledAlphabet('smart_digital_library_articles_salt_2026')
 };
 
+const OFFSETS = {
+  books: 1000000,
+  articles: 1000000,
+  orders: 400000000
+};
+
 function encode(num, type) {
   if (num === undefined || num === null) return '';
   const parsed = parseInt(num);
   if (isNaN(parsed) || parsed < 0) return '';
   
+  const offset = OFFSETS[type] || 0;
+  const nToEncode = parsed + offset;
+  
   const shuffled = alphabets[type] || ALPHABET;
-  let n = parsed;
+  let n = nToEncode;
   let result = '';
   const base = shuffled.length;
   
@@ -55,28 +64,47 @@ function decode(str, type) {
     return parseInt(str);
   }
   
+  let cleanStr = str;
+  if (type === 'orders' && str.includes('-')) {
+    const parts = str.split('-');
+    cleanStr = parts[parts.length - 1];
+  }
+  
   const shuffled = alphabets[type] || ALPHABET;
   const base = shuffled.length;
   let num = 0;
   
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
+  for (let i = 0; i < cleanStr.length; i++) {
+    const char = cleanStr[i];
     const index = shuffled.indexOf(char);
     if (index === -1) return NaN;
     num = num * base + index;
   }
   
-  return num;
+  const offset = OFFSETS[type] || 0;
+  const decodedVal = num - offset;
+  if (decodedVal < 0) {
+    return num;
+  }
+  return decodedVal;
 }
 
-// Sách (Books)
+function encodeOrderIdWithDate(id, createdAt) {
+  const hash = encode(id, 'orders');
+  const date = createdAt ? new Date(createdAt) : new Date();
+  
+  const yy = String(date.getFullYear()).slice(-2);
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  
+  return `${yy}${mm}${dd}-${hash}`;
+}
+
 export const encodeBookId = (id) => encode(id, 'books');
 export const decodeBookId = (hash) => decode(hash, 'books');
 
-// Đơn hàng (Orders)
-export const encodeOrderId = (id) => encode(id, 'orders');
+export const encodeOrderId = (id, createdAt) => encodeOrderIdWithDate(id, createdAt);
 export const decodeOrderId = (hash) => decode(hash, 'orders');
 
-// Bài viết (Articles)
 export const encodeArticleId = (id) => encode(id, 'articles');
 export const decodeArticleId = (hash) => decode(hash, 'articles');
