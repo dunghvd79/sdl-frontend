@@ -1577,7 +1577,7 @@ function OrderManagerTab() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase().trim();
       const cleanIdTerm = term.startsWith('#') ? term.substring(1) : term;
-      const matchId = String(o.id).includes(cleanIdTerm);
+      const matchId = String(o.id).includes(cleanIdTerm) || (o.hashId && o.hashId.toLowerCase().includes(term));
       const matchName = o.shipping_name?.toLowerCase().includes(term) || o.full_name?.toLowerCase().includes(term);
       const matchPhone = o.shipping_phone?.includes(term);
       const matchEmail = o.email?.toLowerCase().includes(term);
