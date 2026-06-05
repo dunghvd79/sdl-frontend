@@ -236,7 +236,7 @@ export default function OrderDetailPage() {
         </Link>
         <div className="flex flex-wrap justify-between items-center gap-4 mt-4 border-b border-divider pb-6">
           <div>
-            <h1 className="text-3xl font-serif font-medium text-ink">ĐƠN HÀNG #{order.id}</h1>
+            <h1 className="text-3xl font-serif font-medium text-ink">ĐƠN HÀNG #{order.hashId || order.id}</h1>
             <p className="text-ink-light text-xs mt-1.5">Đặt ngày: {orderDate}</p>
           </div>
           <div className="flex items-center gap-4">
@@ -268,7 +268,7 @@ export default function OrderDetailPage() {
             {getStatusBadge(order.status)}
             {order.status === 'PENDING' && order.payment_method !== 'COD' && (
               <button
-                onClick={() => handlePayNow(order.id)}
+                onClick={() => handlePayNow(order.hashId || order.id)}
                 disabled={payMutation.isPending}
                 className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-medium py-2 px-6 rounded-none text-xs transition-colors shadow-none uppercase tracking-wider"
               >
@@ -555,7 +555,7 @@ export default function OrderDetailPage() {
             </button>
 
             <div>
-              <h3 className="font-serif font-bold text-xl text-stone-950 uppercase tracking-wide">Hủy đơn hàng #{order.id}</h3>
+              <h3 className="font-serif font-bold text-xl text-stone-950 uppercase tracking-wide">Hủy đơn hàng #{order.hashId || order.id}</h3>
               <p className="text-stone-500 text-xs mt-1 leading-relaxed">
                 Vui lòng cho chúng tôi biết lý do bạn muốn hủy đơn hàng này. Ý kiến của bạn giúp chúng tôi cải thiện dịch vụ tốt hơn.
               </p>
