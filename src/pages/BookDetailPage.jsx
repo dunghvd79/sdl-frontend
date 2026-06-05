@@ -22,7 +22,7 @@ export default function BookDetailPage() {
     enabled: !!user
   });
 
-  const isLiked = Array.isArray(wishlist) && wishlist.some(item => String(item.id) === String(id));
+  const isLiked = Array.isArray(wishlist) && wishlist.some(item => String(item.hashId || item.id) === String(id));
 
   // Toggle wishlist item (Optimistic Update)
   const toggleWishlistMutation = useMutation({
@@ -36,15 +36,15 @@ export default function BookDetailPage() {
 
       // Dự đoán trạng thái cache mới sau khi toggle
       let newWishlist = [...previousWishlist];
-      const isAlreadyLiked = newWishlist.some(item => String(item.id) === String(id));
+      const isAlreadyLiked = newWishlist.some(item => String(item.hashId || item.id) === String(id));
       if (isAlreadyLiked) {
-        newWishlist = newWishlist.filter(item => String(item.id) !== String(id));
+        newWishlist = newWishlist.filter(item => String(item.hashId || item.id) !== String(id));
       } else {
         // Thêm sách hiện tại vào danh sách
         if (book) {
           newWishlist.push(book);
         } else {
-          newWishlist.push({ id });
+          newWishlist.push({ id, hashId: id });
         }
       }
 
@@ -148,7 +148,7 @@ export default function BookDetailPage() {
   const isEmployee = user && (user.role === 'ADMIN' || user.role === 'CURATOR');
   const hasAccess = isEmployee || (Array.isArray(orders) && orders.some(order =>
     order.status === 'DELIVERED' &&
-    order.items.some(item => String(item.bookId) === String(id))
+    order.items.some(item => String(item.hashId || item.bookId) === String(id))
   ));
 
   const handleBack = () => {

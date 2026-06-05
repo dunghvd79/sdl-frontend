@@ -139,7 +139,7 @@ export default function CheckoutPage() {
       }
 
       // BƯỚC 3: Tạo link thanh toán cho đơn hàng đó (nếu là ONLINE)
-      const paymentRes = await api.get(`/payments/url/${order.id}`);
+      const paymentRes = await api.get(`/payments/url/${order.hashId || order.id}`);
       return { isCOD: false, paymentUrl: paymentRes.data.paymentUrl };
     },
     onSuccess: (res) => {

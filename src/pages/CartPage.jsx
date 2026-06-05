@@ -193,7 +193,7 @@ export default function CartPage() {
           {/* Danh sách sản phẩm */}
           <div className="flex-1 space-y-4">
             {cartItems.map((item) => {
-              const bookId = item.bookId || item.book?.id;
+              const bookId = item.hashId || item.book?.hashId || item.bookId || item.book?.id;
               const bookTitle = item.book?.title || 'Cuốn sách';
               const bookAuthor = item.book?.author || 'Tác giả';
               const bookPrice = Number(item.price || item.book?.price || 0);

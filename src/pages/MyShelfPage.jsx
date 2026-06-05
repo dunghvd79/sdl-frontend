@@ -45,13 +45,13 @@ export default function MyShelfPage() {
   orders.forEach(order => {
     if (order.status === 'DELIVERED') {
       order.items?.forEach(item => {
-        ownedBookIds.add(Number(item.bookId));
+        ownedBookIds.add(String(item.hashId || item.bookId));
       });
     }
   });
 
   // Map owned book IDs back to detailed store book objects
-  const purchasedBooks = allBooks.filter(book => ownedBookIds.has(Number(book.id)));
+  const purchasedBooks = allBooks.filter(book => ownedBookIds.has(String(book.hashId || book.id)));
 
   // Apply search and filter criteria
   const filteredBooks = purchasedBooks.filter(book => {
@@ -148,7 +148,7 @@ export default function MyShelfPage() {
                       
                       {hasAi ? (
                         <button
-                          onClick={() => navigate(`/books/${book.id}/chat`)}
+                          onClick={() => navigate(`/books/${book.hashId || book.id}/chat`)}
                           className="w-full bg-white hover:bg-[#f0ece7] text-ink py-2 rounded-none font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer text-center border border-divider"
                         >
                           Tư Vấn AI
@@ -221,9 +221,9 @@ export default function MyShelfPage() {
           book={selectedReaderBook}
           onClose={() => setSelectedReaderBook(null)}
           onAiConsult={() => {
-            const id = selectedReaderBook.id;
+            const bookId = selectedReaderBook.hashId || selectedReaderBook.id;
             setSelectedReaderBook(null);
-            navigate(`/books/${id}/chat`);
+            navigate(`/books/${bookId}/chat`);
           }}
         />
       )}
@@ -470,7 +470,7 @@ function ShelfReviewModal({ book, onClose }) {
   const [comment, setComment] = useState('');
 
   const reviewMutation = useMutation({
-    mutationFn: (payload) => api.post(`/books/${book.id}/reviews`, payload),
+    mutationFn: (payload) => api.post(`/books/${book.hashId || book.id}/reviews`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries(['shelfOrders']);
       toast.success(`Đã đăng đánh giá cho sách "${book.title}" thành công!`, { title: 'Thành công' });

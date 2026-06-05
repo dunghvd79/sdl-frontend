@@ -43,7 +43,7 @@ export default function WishlistPage() {
       const previousWishlist = queryClient.getQueryData(['myWishlist']) || [];
 
       // Dự báo trạng thái cache mới (gỡ bỏ sách bị unlike ngay lập tức)
-      const newWishlist = previousWishlist.filter(item => String(item.id) !== String(bookId));
+      const newWishlist = previousWishlist.filter(item => String(item.hashId || item.id) !== String(bookId));
 
       // Cập nhật bộ đệm cache tức thì
       queryClient.setQueryData(['myWishlist'], newWishlist);
@@ -168,14 +168,14 @@ export default function WishlistPage() {
                 <div key={book.id} className="bg-white border border-stone-200 p-4 flex flex-col justify-between group transition-all duration-300 hover:shadow-md relative">
                   {/* Heart button to unlike */}
                   <button
-                    onClick={() => handleUnlike(book.id)}
+                    onClick={() => handleUnlike(book.hashId || book.id)}
                     className="absolute top-6 right-6 bg-white/95 p-2 rounded-full text-[#2C4A3B] hover:bg-stone-50 shadow-sm border border-stone-100 transition-colors z-20 cursor-pointer flex items-center justify-center"
                     title="Xóa khỏi danh sách yêu thích"
                   >
                     <Heart size={16} fill="#2C4A3B" />
                   </button>
 
-                  <Link to={`/books/${book.id}`} className="block">
+                  <Link to={`/books/${book.hashId || book.id}`} className="block">
                     {/* Cover Wrapper */}
                     <div className="w-full aspect-[4/5] overflow-hidden bg-stone-100 mb-5 relative border border-stone-100">
                       <img
@@ -205,14 +205,14 @@ export default function WishlistPage() {
 
                     <div className="flex gap-2">
                       <Link
-                        to={`/books/${book.id}`}
+                        to={`/books/${book.hashId || book.id}`}
                         className="flex-1 py-2.5 border border-stone-200 hover:border-stone-900 text-stone-700 hover:text-stone-900 text-center uppercase tracking-wider font-sans text-[10px] font-bold transition-all"
                       >
                         Chi tiết
                       </Link>
                       
                       <button
-                        onClick={() => addToCart(book.id, book.title)}
+                        onClick={() => addToCart(book.hashId || book.id, book.title)}
                         className="flex-1 bg-[#2C4A3B] hover:bg-[#1e3529] text-white py-2.5 uppercase tracking-wider font-sans text-[10px] font-bold transition-colors flex items-center justify-center gap-1.5 border-0"
                       >
                         <ShoppingCart size={12} />

@@ -26,11 +26,11 @@ export default function BookCard({ book }) {
     enabled: !!user
   });
 
-  const isLiked = Array.isArray(wishlist) && wishlist.some(item => String(item.id) === String(book.id));
+  const isLiked = Array.isArray(wishlist) && wishlist.some(item => String(item.hashId || item.id) === String(book.hashId || book.id));
 
   // Toggle wishlist item (Optimistic Update)
   const toggleWishlistMutation = useMutation({
-    mutationFn: () => api.post('/wishlists/toggle', { bookId: book.id }),
+    mutationFn: () => api.post('/wishlists/toggle', { bookId: book.hashId || book.id }),
     onMutate: async () => {
       // Hủy bỏ các lượt refetch đang chạy của wishlist để tránh ghi đè
       await queryClient.cancelQueries({ queryKey: ['myWishlist'] });
@@ -40,9 +40,9 @@ export default function BookCard({ book }) {
 
       // Dự đoán trạng thái cache mới sau khi toggle
       let newWishlist = [...previousWishlist];
-      const isAlreadyLiked = newWishlist.some(item => String(item.id) === String(book.id));
+      const isAlreadyLiked = newWishlist.some(item => String(item.hashId || item.id) === String(book.hashId || book.id));
       if (isAlreadyLiked) {
-        newWishlist = newWishlist.filter(item => String(item.id) !== String(book.id));
+        newWishlist = newWishlist.filter(item => String(item.hashId || item.id) !== String(book.hashId || book.id));
       } else {
         newWishlist.push(book);
       }
@@ -94,7 +94,7 @@ export default function BookCard({ book }) {
       
       {/* Cover Image Wrapper inside container */}
       <div className="w-full aspect-[4/5.2] overflow-hidden rounded-xl mb-4 relative bg-stone-50 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
-        <Link to={`/books/${book.id}`} className="block w-full h-full cursor-pointer">
+        <Link to={`/books/${book.hashId || book.id}`} className="block w-full h-full cursor-pointer">
           <img 
             src={defaultImage} 
             alt={book.title} 
@@ -143,7 +143,7 @@ export default function BookCard({ book }) {
           </span>
           
           {/* Book Title */}
-          <Link to={`/books/${book.id}`} className="font-serif text-sm font-bold text-stone-900 leading-snug hover:text-[#2C4A3B] transition-colors line-clamp-1 mb-1 block cursor-pointer">
+          <Link to={`/books/${book.hashId || book.id}`} className="font-serif text-sm font-bold text-stone-900 leading-snug hover:text-[#2C4A3B] transition-colors line-clamp-1 mb-1 block cursor-pointer">
             {book.title}
           </Link>
           
@@ -188,7 +188,7 @@ export default function BookCard({ book }) {
 
             {/* Square Add to Cart Button with Plus Icon */}
             <button 
-              onClick={() => addToCart(book.id, book.title)}
+              onClick={() => addToCart(book.hashId || book.id, book.title)}
               disabled={book.available_qty <= 0}
               className="w-8 h-8 rounded-lg bg-[#2C4A3B] hover:bg-[#1e3529] active:scale-95 text-white flex items-center justify-center shadow-xs transition-all disabled:opacity-40 disabled:scale-100 disabled:cursor-not-allowed cursor-pointer border-0 p-0"
               title="Thêm vào giỏ"
@@ -321,13 +321,13 @@ export default function BookCard({ book }) {
                   </button>
                 </div>
 
-                <Link
-                  to={`/books/${book.id}`}
-                  onClick={() => setShowQuickView(false)}
-                  className="block text-center text-[9px] font-sans font-bold uppercase tracking-[0.2em] text-[#2C4A3B] hover:text-[#1e3529] hover:underline transition-all pt-2 cursor-pointer"
-                >
-                  Xem chi tiết & đánh giá →
-                </Link>
+                  <Link
+                    to={`/books/${book.hashId || book.id}`}
+                    onClick={() => setShowQuickView(false)}
+                    className="block text-center text-[9px] font-sans font-bold uppercase tracking-[0.2em] text-[#2C4A3B] hover:text-[#1e3529] hover:underline transition-all pt-2 cursor-pointer"
+                  >
+                    Xem chi tiết & đánh giá →
+                  </Link>
               </div>
             </div>
           </div>

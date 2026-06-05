@@ -361,7 +361,7 @@ export default function HomePage() {
                       {/* Realistic book shadow casting downwards */}
                       <div className="absolute bottom-0 w-28 h-4 bg-stone-900/10 rounded-full blur-[8px] transform translate-y-2 group-hover:scale-110 transition-transform duration-500"></div>
 
-                      <Link to={`/books/${item.id}`} className="block relative z-10 w-40 aspect-[3/4.3] overflow-hidden rounded-[2px_8px_8px_2px] shadow-[0_12px_28px_rgba(0,0,0,0.12)] border-l-2 border-l-stone-900/10 group-hover:-translate-y-2 group-hover:shadow-[0_20px_35px_rgba(0,0,0,0.16)] transition-all duration-500 ease-out cursor-pointer">
+                      <Link to={`/books/${item.hashId || item.id}`} className="block relative z-10 w-40 aspect-[3/4.3] overflow-hidden rounded-[2px_8px_8px_2px] shadow-[0_12px_28px_rgba(0,0,0,0.12)] border-l-2 border-l-stone-900/10 group-hover:-translate-y-2 group-hover:shadow-[0_20px_35px_rgba(0,0,0,0.16)] transition-all duration-500 ease-out cursor-pointer">
                         <img
                           src={item.cover_url ? getImageUrl(item.cover_url) : `https://picsum.photos/seed/${item.id + 10}/800/1000`}
                           alt={item.title}
@@ -378,7 +378,7 @@ export default function HomePage() {
                       <span className="text-[9px] font-sans font-bold uppercase tracking-[0.15em] text-stone-500 block mb-1">
                         {item.author}
                       </span>
-                      <Link to={`/books/${item.id}`} className="font-serif text-base font-bold text-stone-900 leading-snug hover:text-[#2C4A3B] transition-colors line-clamp-2 min-h-[2.75rem] block cursor-pointer">
+                      <Link to={`/books/${item.hashId || item.id}`} className="font-serif text-base font-bold text-stone-900 leading-snug hover:text-[#2C4A3B] transition-colors line-clamp-2 min-h-[2.75rem] block cursor-pointer">
                         {item.title}
                       </Link>
                       <span className="text-[10px] text-stone-400 block mt-1">
@@ -410,7 +410,7 @@ export default function HomePage() {
                     </div>
 
                     <button
-                      onClick={() => addToCart(item.id, item.title)}
+                      onClick={() => addToCart(item.hashId || item.id, item.title)}
                       disabled={item.available_qty <= 0}
                       className="w-full py-2.5 border border-[#2C4A3B] text-[#2C4A3B] hover:bg-[#2C4A3B] hover:text-white transition-all text-[9px] font-sans font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 mt-4 rounded-none disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer bg-transparent"
                     >
@@ -429,7 +429,7 @@ export default function HomePage() {
               <div key={item.id} className="snap-center shrink-0 w-64 p-5 rounded-2xl border border-divider-lt bg-white text-stone-850 flex flex-col justify-between shadow-xs">
                 <div className="flex flex-col items-center">
                   {/* Book Cover Frame */}
-                  <Link to={`/books/${item.id}`} className="w-28 aspect-[3/4.2] overflow-hidden rounded-lg shadow-md border border-divider-lt block cursor-pointer">
+                  <Link to={`/books/${item.hashId || item.id}`} className="w-28 aspect-[3/4.2] overflow-hidden rounded-lg shadow-md border border-divider-lt block cursor-pointer">
                     <img
                       src={item.cover_url ? getImageUrl(item.cover_url) : `https://picsum.photos/seed/${item.id + 10}/800/1000`}
                       alt={item.title}
@@ -441,7 +441,7 @@ export default function HomePage() {
                     <span className="text-[8px] font-sans font-bold uppercase tracking-widest text-[#2C4A3B] block mb-1">
                       {item.author}
                     </span>
-                    <Link to={`/books/${item.id}`} className="font-serif text-sm font-bold truncate w-full block hover:underline cursor-pointer text-stone-900">
+                    <Link to={`/books/${item.hashId || item.id}`} className="font-serif text-sm font-bold truncate w-full block hover:underline cursor-pointer text-stone-900">
                       {item.title}
                     </Link>
                     <p className="text-[10px] font-sans tracking-wide mt-0.5 truncate w-full text-stone-500">
@@ -461,7 +461,7 @@ export default function HomePage() {
                       <span className="text-[8px] bg-red-50 border border-red-200 text-red-600 px-1.5 py-0.5 font-sans font-bold uppercase tracking-wider">Hết</span>
                     ) : (
                       <button
-                        onClick={() => addToCart(item.id, item.title)}
+                        onClick={() => addToCart(item.hashId || item.id, item.title)}
                         className="py-1.5 px-3 text-[9px] font-sans font-bold uppercase tracking-wider flex items-center gap-1 transition-colors border border-[#2C4A3B] text-[#2C4A3B] hover:bg-[#2C4A3B] hover:text-white bg-transparent cursor-pointer rounded-none"
                       >
                         <ShoppingCart size={10} />
@@ -702,7 +702,7 @@ export default function HomePage() {
             return (
               <Link
                 key={article.id}
-                to={`/blog/${article.id}`}
+                to={`/blog/${article.hashId || article.id}`}
                 className="flex flex-col group cursor-pointer"
               >
                 <div className="aspect-[16/10] overflow-hidden rounded-2xl shadow-sm border border-divider-lt mb-5 relative bg-stone-100">

@@ -57,7 +57,7 @@ export default function OrderDetailPage() {
 
   const reorderMutation = useMutation({
     mutationFn: async (items) => {
-      const payload = items.map(item => ({ bookId: item.bookId, quantity: item.quantity }));
+      const payload = items.map(item => ({ bookId: item.hashId || item.bookId, quantity: item.quantity }));
       return api.post('/cart/add-batch', { items: payload });
     },
     onSuccess: () => {
@@ -391,7 +391,7 @@ export default function OrderDetailPage() {
                     <div className="flex-grow flex flex-col sm:flex-row justify-between items-start gap-3">
                       <div className="space-y-1 flex-grow">
                         <h4 className="font-serif font-semibold text-ink text-base leading-tight hover:text-[#2C4A3B] transition-colors line-clamp-2">
-                          <Link to={`/books/${item.bookId}`}>{title}</Link>
+                          <Link to={`/books/${item.hashId || item.bookId}`}>{title}</Link>
                         </h4>
                         <p className="text-ink-light text-xs">Tác giả: <span className="text-ink font-medium">{author}</span></p>
                         <p className="text-ink-light text-xs font-mono">
@@ -403,7 +403,7 @@ export default function OrderDetailPage() {
                         <span className="font-semibold font-mono text-sm text-[#2C4A3B]">{subtotal.toLocaleString('vi-VN')} đ</span>
                         {order.status === 'DELIVERED' ? (
                           <Link
-                            to={`/books/${item.bookId}/chat`}
+                            to={`/books/${item.hashId || item.bookId}/chat`}
                             className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white text-[10px] font-semibold py-1.5 px-4 rounded-none transition-colors uppercase tracking-wider inline-flex items-center gap-1.5"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

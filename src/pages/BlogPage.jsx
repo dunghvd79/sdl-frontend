@@ -175,7 +175,7 @@ export default function BlogPage() {
                   return (
                     <Link
                       key={article.id}
-                      to={`/blog/${article.id}`}
+                      to={`/blog/${article.hashId || article.id}`}
                       className="flex flex-col group cursor-pointer"
                     >
                       <div className="aspect-[16/10] overflow-hidden rounded-2xl border border-divider-lt mb-4 relative bg-stone-50 shadow-xs">
@@ -215,7 +215,7 @@ export default function BlogPage() {
               return (
                 <Link
                   key={article.id}
-                  to={`/blog/${article.id}`}
+                  to={`/blog/${article.hashId || article.id}`}
                   className="flex flex-col group cursor-pointer"
                 >
                   {/* Article cover image with hover effects */}
