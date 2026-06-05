@@ -152,7 +152,7 @@ export default function OrderHistoryPage() {
     let matchesSearch = true;
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase().trim();
-      const matchesId = order.id.toString().includes(query);
+      const matchesId = order.id.toString().includes(query) || (order.hashId && order.hashId.toLowerCase().includes(query));
       const matchesTitle = order.items.some(item => 
         item.bookTitle.toLowerCase().includes(query)
       );
