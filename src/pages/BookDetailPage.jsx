@@ -118,6 +118,10 @@ export default function BookDetailPage() {
       alert('Vui lòng chọn số sao đánh giá!');
       return;
     }
+    if (!comment || comment.trim().length < 10) {
+      alert('Nội dung nhận xét phải có ít nhất 10 ký tự!');
+      return;
+    }
     createReviewMutation.mutate({ rating, comment });
   };
 
@@ -485,10 +489,15 @@ export default function BookDetailPage() {
                   {reviewsData.reviews.map((rev) => (
                     <div key={rev.id} className="py-6 first:pt-0 last:pb-0 space-y-2">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="font-sans text-xs font-bold uppercase text-ink">
                             {rev.user_name}
                           </span>
+                          {rev.is_verified_purchase && (
+                            <span className="inline-flex items-center text-[9px] font-bold text-[#2C4A3B] bg-green-50/50 border border-green-200 px-1.5 py-0.5 rounded-none uppercase tracking-wider">
+                              ✓ Đã mua hàng
+                            </span>
+                          )}
                           {renderStars(rev.rating)}
                         </div>
                         <span className="font-sans text-[10px] text-ink-60 uppercase tracking-wider">
