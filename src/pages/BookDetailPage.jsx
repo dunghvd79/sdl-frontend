@@ -5,7 +5,7 @@ import api from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../services/image';
-import { Heart, ShoppingCart } from 'lucide-react';
+import { Heart, ShoppingCart, ChevronLeft, ChevronRight } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function BookDetailPage() {
@@ -78,6 +78,7 @@ export default function BookDetailPage() {
 
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [reviewPage, setReviewPage] = useState(1);
 
   // Fetch dữ liệu chi tiết cuốn sách bằng React Query
   const { data: book, isLoading, isError } = useQuery({
@@ -97,6 +98,15 @@ export default function BookDetailPage() {
     }
   });
 
+  const reviewsList = reviewsData?.reviews || [];
+  const totalReviews = reviewsList.length;
+  const REVIEWS_PER_PAGE = 5;
+  const totalReviewPages = Math.ceil(totalReviews / REVIEWS_PER_PAGE);
+  const paginatedReviews = reviewsList.slice(
+    (reviewPage - 1) * REVIEWS_PER_PAGE,
+    reviewPage * REVIEWS_PER_PAGE
+  );
+
   const createReviewMutation = useMutation({
     mutationFn: async (newReview) => {
       const response = await api.post(`/books/${id}/reviews`, newReview);
@@ -106,6 +116,7 @@ export default function BookDetailPage() {
       setComment('');
       setRating(5);
       refetchReviews();
+      setReviewPage(1);
     },
     onError: (err) => {
       alert(err.response?.data?.error || 'Không thể gửi đánh giá. Vui lòng thử lại.');
@@ -468,8 +479,6 @@ export default function BookDetailPage() {
             {/* Phân phối xếp hạng sao */}
             <div className="space-y-2.5 pt-6 border-t border-divider-lt">
               {(() => {
-                const reviewsList = reviewsData?.reviews || [];
-                const total = reviewsList.length;
                 const dist = [0, 0, 0, 0, 0]; // 5, 4, 3, 2, 1 stars
                 reviewsList.forEach(r => {
                   const star = Math.round(r.rating);
@@ -480,7 +489,7 @@ export default function BookDetailPage() {
 
                 return [5, 4, 3, 2, 1].map((star, idx) => {
                   const count = dist[idx];
-                  const percent = total > 0 ? (count / total) * 100 : 0;
+                  const percent = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
                   return (
                     <div key={star} className="flex items-center gap-3 text-xs font-sans">
                       <span className="w-12 text-stone-500 font-bold whitespace-nowrap text-left">{star} sao</span>
@@ -498,8 +507,8 @@ export default function BookDetailPage() {
             </div>
           </div>
 
-          {/* Cột 2 & 3: Nhận xét và Form gửi nhận xét */}
-          <div className="lg:col-span-2 space-y-8">
+          {/* Cột 2 & 3: Form gửi nhận xét */}
+          <div className="lg:col-span-2">
             {/* Form gửi nhận xét (Chỉ cho user đã đăng nhập) */}
             {user ? (
               <form onSubmit={handleSubmitReview} className="border border-stone-200/80 p-8 bg-[#faf8f5]/60 rounded-2xl shadow-xs space-y-5">
@@ -560,58 +569,87 @@ export default function BookDetailPage() {
                 </p>
               </div>
             )}
-
-            {/* Danh sách nhận xét */}
-            <div className="space-y-6 pt-4">
-              <h3 className="font-serif text-lg font-bold uppercase tracking-wider text-ink border-b border-divider pb-3">
-                Nhận xét chi tiết
-              </h3>
-
-              {reviewsData?.reviews && reviewsData.reviews.length > 0 ? (
-                <div className="divide-y divide-stone-100 border border-stone-200/80 bg-white rounded-2xl px-6 shadow-sm">
-                  {reviewsData.reviews.map((rev) => {
-                    const initials = getInitials(rev.user_name);
-                    const avatarBg = getAvatarBgColor(rev.user_name);
-                    return (
-                      <div key={rev.id} className="py-6 flex gap-4 items-start">
-                        {/* Avatar */}
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-sans text-xs font-bold shrink-0 ${avatarBg}`}>
-                          {initials}
-                        </div>
-                        <div className="flex-grow space-y-2 min-w-0">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-sans text-xs font-bold text-stone-900 uppercase tracking-wide truncate max-w-[200px]">
-                                {rev.user_name}
-                              </span>
-                              {rev.is_verified_purchase && (
-                                <span className="inline-flex items-center text-[8px] font-sans font-bold text-[#2C4A3B] bg-green-50 border border-green-200/60 px-1.5 py-0.5 uppercase tracking-widest rounded-none">
-                                  ✓ Đã mua hàng
-                                </span>
-                              )}
-                              <div className="flex text-amber-500 text-xs mt-0.5">
-                                {renderStars(rev.rating)}
-                              </div>
-                            </div>
-                            <span className="font-sans text-[10px] text-stone-400 uppercase tracking-widest whitespace-nowrap">
-                              {formatReviewDate(rev.created_at)}
-                            </span>
-                          </div>
-                          <p className="text-sm font-sans text-stone-600 leading-relaxed text-justify whitespace-pre-wrap break-words pr-2">
-                            {rev.comment || 'Không có bình luận.'}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-xs italic font-sans text-ink-60 uppercase tracking-wider py-8 text-center bg-stone-50 border border-dashed border-stone-200 rounded-xl">
-                  Chưa có nhận xét nào. Hãy là người đầu tiên viết đánh giá cho cuốn sách này!
-                </p>
-              )}
-            </div>
           </div>
+        </div>
+
+        {/* Danh sách nhận xét - Moved outside of the grid, spanning full width */}
+        <div className="space-y-6 pt-10 mt-10 border-t border-stone-200/60">
+          <h3 className="font-serif text-xl font-bold uppercase tracking-wider text-ink">
+            Nhận xét chi tiết
+          </h3>
+
+          {paginatedReviews.length > 0 ? (
+            <div className="divide-y divide-stone-100 border border-stone-200/80 bg-white rounded-2xl px-6 shadow-sm">
+              {paginatedReviews.map((rev) => {
+                const initials = getInitials(rev.user_name);
+                const avatarBg = getAvatarBgColor(rev.user_name);
+                return (
+                  <div key={rev.id} className="py-6 flex gap-4 items-start">
+                    {/* Avatar */}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-sans text-xs font-bold shrink-0 ${avatarBg}`}>
+                      {initials}
+                    </div>
+                    <div className="flex-grow space-y-2 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-sans text-xs font-bold text-stone-900 uppercase tracking-wide truncate max-w-[200px]">
+                            {rev.user_name}
+                          </span>
+                          {rev.is_verified_purchase && (
+                            <span className="inline-flex items-center text-[8px] font-sans font-bold text-[#2C4A3B] bg-green-50 border border-green-200/60 px-1.5 py-0.5 uppercase tracking-widest rounded-none">
+                              ✓ Đã mua hàng
+                            </span>
+                          )}
+                          <div className="flex text-amber-500 text-xs mt-0.5">
+                            {renderStars(rev.rating)}
+                          </div>
+                        </div>
+                        <span className="font-sans text-[10px] text-stone-400 uppercase tracking-widest whitespace-nowrap">
+                          {formatReviewDate(rev.created_at)}
+                        </span>
+                      </div>
+                      <p className="text-sm font-sans text-stone-600 leading-relaxed text-justify whitespace-pre-wrap break-words pr-2">
+                        {rev.comment || 'Không có bình luận.'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs italic font-sans text-ink-60 uppercase tracking-wider py-8 text-center bg-stone-50 border border-dashed border-stone-200 rounded-xl">
+              Chưa có nhận xét nào. Hãy là người đầu tiên viết đánh giá cho cuốn sách này!
+            </p>
+          )}
+
+          {/* Pagination Controls for Reviews */}
+          {totalReviewPages > 1 && (
+            <div className="flex items-center justify-center gap-4 mt-8 pt-4">
+              <button
+                type="button"
+                onClick={() => setReviewPage(p => Math.max(1, p - 1))}
+                disabled={reviewPage === 1}
+                className="w-8 h-8 flex items-center justify-center rounded-full border border-stone-200 text-stone-600 hover:border-[#2C4A3B] hover:text-[#2C4A3B] hover:bg-[#2C4A3B]/5 disabled:opacity-30 disabled:pointer-events-none transition-all duration-300 cursor-pointer bg-white"
+                aria-label="Trang trước"
+              >
+                <ChevronLeft size={14} />
+              </button>
+
+              <span className="text-xs font-sans font-bold text-stone-500 uppercase tracking-widest">
+                Trang {reviewPage} / {totalReviewPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setReviewPage(p => Math.min(totalReviewPages, p + 1))}
+                disabled={reviewPage === totalReviewPages}
+                className="w-8 h-8 flex items-center justify-center rounded-full border border-stone-200 text-stone-600 hover:border-[#2C4A3B] hover:text-[#2C4A3B] hover:bg-[#2C4A3B]/5 disabled:opacity-30 disabled:pointer-events-none transition-all duration-300 cursor-pointer bg-white"
+                aria-label="Trang sau"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
       <ConfirmDialog
