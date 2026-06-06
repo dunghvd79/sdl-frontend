@@ -3377,6 +3377,7 @@ function UserManagerTab() {
                 <th className="text-left py-3 px-4">Thông tin</th>
                 <th className="text-left py-3 px-4">Ngày đăng ký</th>
                 <th className="text-center py-3 px-4 w-32">Trạng thái</th>
+                <th className="text-center py-3 px-4 w-28">Đơn hàng</th>
                 <th className="text-center py-3 px-4 w-40">Phân quyền</th>
                 <th className="text-center py-3 px-4 w-64">Thao tác</th>
               </tr>
@@ -3413,6 +3414,19 @@ function UserManagerTab() {
                         <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-green-500' : 'bg-red-500'}`} />
                         {isActive ? 'Hoạt động' : 'Đã khóa'}
                       </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {u.order_count > 0 ? (
+                        <div>
+                          <span className="text-xs font-bold text-ink">{u.order_count}</span>
+                          <span className="text-[10px] text-ink-light ml-0.5">đơn</span>
+                          <div className="text-[10px] text-[#2C4A3B] font-medium mt-0.5">
+                            {Number(u.total_spent).toLocaleString('vi-VN')} đ
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-ink-light/50 italic">Chưa có</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div title={isMe ? "Không thể tự đổi quyền của mình" : ""}>
@@ -3469,7 +3483,7 @@ function UserManagerTab() {
               })}
               {users?.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center py-10 text-ink-light italic">Không tìm thấy người dùng nào.</td>
+                  <td colSpan="7" className="text-center py-10 text-ink-light italic">Không tìm thấy người dùng nào.</td>
                 </tr>
               )}
             </tbody>
