@@ -119,7 +119,7 @@ export function ToastProvider({ children }) {
    * @param {object} options  { title, duration }
    */
   const showToast = useCallback((type, message, options = {}) => {
-    const { title, duration = 3500 } = options;
+    const { title, duration = 2000 } = options;
     const id = nextId++;
     setToasts(prev => [...prev, { id, type, message, title, duration }]);
     setTimeout(() => removeToast(id), duration);
