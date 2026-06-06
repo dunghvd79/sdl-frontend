@@ -41,6 +41,63 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  // Tự động đồng bộ role/trạng thái từ server khi user focus lại tab
+  // Đảm bảo khi Admin thay đổi quyền, user sẽ thấy ngay mà không cần đăng nhập lại
+  useEffect(() => {
+    if (!user) return;
+
+    const syncUserFromServer = async () => {
+      try {
+        const response = await api.get('/users/profile');
+        const serverUser = response.data.data;
+        if (!serverUser) return;
+
+        // Kiểm tra xem tài khoản có bị khóa không
+        if (serverUser.is_active === false) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+          authChannel.postMessage('logout');
+          window.location.href = '/login';
+          return;
+        }
+
+        // Cập nhật nếu role hoặc thông tin đã thay đổi
+        const hasChanges = serverUser.role !== user.role
+          || serverUser.full_name !== user.full_name
+          || serverUser.email !== user.email;
+
+        if (hasChanges) {
+          const updatedUser = { ...user, ...serverUser };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setUser(updatedUser);
+        }
+      } catch (err) {
+        // Token hết hạn hoặc bị revoke → đăng xuất
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+          window.location.href = '/login';
+        }
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncUserFromServer();
+      }
+    };
+
+    // Đồng bộ ngay khi component mount (reload trang)
+    syncUserFromServer();
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user?.id]); // Chỉ re-run khi user id thay đổi (login/logout)
+
   // 3. XỬ LÝ ĐĂNG NHẬP (Lưu dữ liệu)
   const login = async (email, password) => {
     // Sử dụng api instance thay vì axios thô
