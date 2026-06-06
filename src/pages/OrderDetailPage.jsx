@@ -25,6 +25,7 @@ export default function OrderDetailPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [selectedReason, setSelectedReason] = useState('');
   const [customReason, setCustomReason] = useState('');
+  const [selectedReviewBook, setSelectedReviewBook] = useState(null);
 
   // 1. Fetch chi tiết đơn hàng
   const { data: orderResponse, isLoading, isError, refetch } = useQuery({
@@ -402,15 +403,31 @@ export default function OrderDetailPage() {
                       <div className="text-left sm:text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2.5 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t border-dashed border-divider-lt sm:border-t-0 flex-shrink-0">
                         <span className="font-semibold font-mono text-sm text-[#2C4A3B]">{subtotal.toLocaleString('vi-VN')} đ</span>
                         {order.status === 'DELIVERED' ? (
-                          <Link
-                            to={`/books/${item.hashId || item.bookId}/chat`}
-                            className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white text-[10px] font-semibold py-1.5 px-4 rounded-none transition-colors uppercase tracking-wider inline-flex items-center gap-1.5"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                            </svg>
-                            Hỏi đáp AI
-                          </Link>
+                          <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedReviewBook({
+                                id: item.bookId,
+                                hashId: item.hashId,
+                                title: item.bookTitle || title
+                              })}
+                              className="text-ink hover:text-[#2C4A3B] text-[10px] font-bold flex items-center gap-1.5 border border-divider hover:border-ink rounded-none px-4 py-2 bg-transparent hover:bg-[#faf8f5] transition-all uppercase tracking-wider whitespace-nowrap shadow-sm hover:shadow active:translate-y-px cursor-pointer"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.961 0 1.36 1.252.586 1.813l-3.974 2.89a1 1 0 00-.364 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.89a1 1 0 00-1.176 0l-3.976 2.89c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.364-1.118l-3.976-2.89c-.775-.561-.377-1.813.586-1.813h4.906a1 1 0 00.95-.69l1.519-4.674z" />
+                              </svg>
+                              Đánh giá
+                            </button>
+                            <Link
+                              to={`/books/${item.hashId || item.bookId}/chat`}
+                              className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white text-[10px] font-semibold py-1.5 px-4 rounded-none transition-colors uppercase tracking-wider inline-flex items-center gap-1.5"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              </svg>
+                              Hỏi đáp AI
+                            </Link>
+                          </div>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[9px] text-ink-light uppercase tracking-wider font-semibold border border-divider px-2.5 py-1 bg-surface-warm/50 cursor-not-allowed">
                             <svg className="w-3.5 h-3.5 text-ink-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -632,6 +649,153 @@ export default function OrderDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Quick Review Modal integration */}
+      {selectedReviewBook && (
+        <OrderReviewModal
+          book={selectedReviewBook}
+          onClose={() => setSelectedReviewBook(null)}
+          orderId={id}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Sub-component: Hộp thoại đánh giá nhanh từ chi tiết đơn hàng ─────────────
+function OrderReviewModal({ book, onClose, orderId }) {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+
+  const [rating, setRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState('');
+
+  const reviewMutation = useMutation({
+    mutationFn: (payload) => api.post(`/books/${book.hashId || book.id}/reviews`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['orderDetail', orderId]);
+      queryClient.invalidateQueries(['myOrders']);
+      queryClient.invalidateQueries(['bookReviews', book.hashId || String(book.id)]);
+      toast.success(`Đã đăng đánh giá cho sách "${book.title}" thành công!`, { title: 'Thành công' });
+      onClose();
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || err.message, { title: 'Lỗi đăng đánh giá' });
+    }
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (rating < 1 || rating > 5) {
+      toast.error('Vui lòng chọn đánh giá từ 1 đến 5 sao!', { title: 'Lỗi nhập liệu' });
+      return;
+    }
+    if (!comment || comment.trim().length < 10) {
+      toast.error('Nội dung nhận xét phải có ít nhất 10 ký tự!', { title: 'Lỗi nhập liệu' });
+      return;
+    }
+    if (comment.trim().length > 1000) {
+      toast.error('Nội dung bình luận quá dài! Tối đa 1000 ký tự.', { title: 'Lỗi nhập liệu' });
+      return;
+    }
+    reviewMutation.mutate({ rating, comment: comment.trim() });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-white border border-divider w-full max-w-md shadow-2xl flex flex-col rounded-none animate-fadeIn">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-divider bg-[#faf8f5]">
+          <div>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-[#2C4A3B] font-semibold mb-0.5">Đánh giá tác phẩm</p>
+            <h4 className="text-sm font-serif font-semibold text-ink leading-tight">
+              {book.title}
+            </h4>
+          </div>
+          <button onClick={onClose} className="text-ink-light hover:text-ink transition-colors p-1 cursor-pointer bg-transparent border-0">
+            ✕
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-sm">
+          {/* Star selector */}
+          <div className="text-center space-y-2">
+            <span className="block text-xs uppercase tracking-wider text-ink-light font-bold">
+              Chọn mức độ hài lòng *
+            </span>
+            <div className="flex justify-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => {
+                const isLit = hoverRating ? star <= hoverRating : star <= rating;
+                return (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    className="p-1 cursor-pointer transition-transform duration-100 hover:scale-125 bg-transparent border-0"
+                  >
+                    <svg
+                      className={`w-8 h-8 ${isLit ? 'text-amber-500 fill-amber-500' : 'text-stone-300'}`}
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                    </svg>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-[#2C4A3B] font-semibold tracking-wider uppercase pt-1">
+              {
+                {
+                  1: 'Rất tệ',
+                  2: 'Tệ',
+                  3: 'Bình thường',
+                  4: 'Tốt',
+                  5: 'Tuyệt vời'
+                }[rating]
+              }
+            </p>
+          </div>
+
+          {/* Comment text area */}
+          <div className="space-y-1.5">
+            <label className="block text-xs uppercase tracking-wider text-ink-light font-bold">
+              Nội dung nhận xét *
+            </label>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Chia sẻ cảm nghĩ của bạn về nội dung sách, chất lượng in ấn hoặc cảm xúc sau khi đọc xong..."
+              rows="4"
+              className="w-full border border-divider rounded-none px-3.5 py-2.5 text-xs text-ink focus:border-ink focus:outline-none bg-transparent placeholder:text-stone-400 font-sans"
+              required
+            />
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex justify-end gap-2 pt-4 border-t border-divider/50">
+            <button
+              type="button"
+              onClick={onClose}
+              className="border border-divider hover:bg-[#f0ece7] text-ink font-semibold py-2 px-4 rounded-none text-xs uppercase tracking-wider transition-colors cursor-pointer bg-white"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={reviewMutation.isPending}
+              className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-semibold py-2 px-5 rounded-none text-xs uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {reviewMutation.isPending ? 'Đang gửi...' : 'Gửi đánh giá'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

@@ -487,8 +487,8 @@ function ShelfReviewModal({ book, onClose }) {
       toast.error('Vui lòng chọn đánh giá từ 1 đến 5 sao!', { title: 'Lỗi nhập liệu' });
       return;
     }
-    if (!comment || comment.trim().length === 0) {
-      toast.error('Vui lòng viết bình luận nhận xét của bạn!', { title: 'Lỗi nhập liệu' });
+    if (!comment || comment.trim().length < 10) {
+      toast.error('Nội dung nhận xét phải có ít nhất 10 ký tự!', { title: 'Lỗi nhập liệu' });
       return;
     }
     if (comment.trim().length > 1000) {

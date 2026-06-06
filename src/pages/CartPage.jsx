@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
@@ -29,6 +29,17 @@ export default function CartPage() {
   });
 
   const cartItems = cartData?.items || [];
+
+  // Tự động điều hướng về trang chủ nếu giỏ hàng trống
+  useEffect(() => {
+    if (user && !isLoading && cartItems.length === 0) {
+      toast.info('Giỏ hàng của bạn đang trống. Đang chuyển hướng về cửa hàng...');
+      const timer = setTimeout(() => {
+        navigate('/');
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [user, isLoading, cartItems.length, navigate, toast]);
 
   // Tính tổng số tiền trong giỏ
   const totalAmount = cartItems.reduce(
