@@ -8,6 +8,9 @@ import { useAuth } from '../context/AuthContext';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { getImageUrl } from '../services/image';
 
+// Key để lưu trạng thái selection vào sessionStorage
+const SELECTION_STORAGE_KEY = 'selected_cart_book_ids';
+
 export default function CartPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -45,27 +48,61 @@ export default function CartPage() {
     enabled: !!user
   });
 
+  // Helper: lấy bookId chuẩn hóa thành string
+  const getBookId = (item) => String(item.hashId || item.book?.hashId || item.bookId || item.book?.id);
+
   // Đồng bộ selectedItems khi cartItems được tải lần đầu
+  // Nếu có dữ liệu trong sessionStorage → khôi phục selection cũ
+  // Nếu không có → chọn tất cả (lần đầu vào giỏ hàng)
   useEffect(() => {
     if (cartItems.length > 0 && !hasInitializedSelection) {
-      const initial = new Set(cartItems.map(item => item.hashId || item.book?.hashId || item.bookId || item.book?.id));
-      setSelectedItems(initial);
+      const currentIds = cartItems.map(getBookId);
+      const currentIdSet = new Set(currentIds);
+
+      // Thử khôi phục từ sessionStorage
+      try {
+        const saved = sessionStorage.getItem(SELECTION_STORAGE_KEY);
+        if (saved) {
+          const savedIds = JSON.parse(saved);
+          // Chỉ giữ lại các ID còn tồn tại trong giỏ hàng hiện tại
+          const restoredIds = savedIds.filter(id => currentIdSet.has(String(id)));
+          setSelectedItems(new Set(restoredIds.map(String)));
+          setHasInitializedSelection(true);
+          return;
+        }
+      } catch (e) {
+        // Nếu parse lỗi, bỏ qua và chọn tất cả
+      }
+
+      // Không có dữ liệu saved → chọn tất cả
+      setSelectedItems(new Set(currentIds));
       setHasInitializedSelection(true);
     }
   }, [cartItems, hasInitializedSelection]);
+
+  // Lưu selectedItems vào sessionStorage mỗi khi thay đổi
+  useEffect(() => {
+    if (hasInitializedSelection) {
+      sessionStorage.setItem(
+        SELECTION_STORAGE_KEY,
+        JSON.stringify(Array.from(selectedItems))
+      );
+    }
+  }, [selectedItems, hasInitializedSelection]);
 
   // Đồng bộ selectedItems khi giỏ hàng có sự thay đổi (xóa bớt sản phẩm)
   useEffect(() => {
     if (cartItems.length === 0) {
       setSelectedItems(new Set());
       setHasInitializedSelection(false);
+      sessionStorage.removeItem(SELECTION_STORAGE_KEY);
     } else {
-      const currentBookIds = new Set(cartItems.map(item => item.hashId || item.book?.hashId || item.bookId || item.book?.id));
+      const currentBookIds = new Set(cartItems.map(getBookId));
       setSelectedItems(prev => {
         const next = new Set(prev);
         let changed = false;
         for (const id of next) {
-          if (!currentBookIds.has(id)) {
+          if (!currentBookIds.has(String(id))) {
             next.delete(id);
             changed = true;
           }
@@ -77,7 +114,7 @@ export default function CartPage() {
 
   // Lọc các item được chọn
   const selectedCartItems = cartItems.filter(item => {
-    const bookId = item.hashId || item.book?.hashId || item.bookId || item.book?.id;
+    const bookId = getBookId(item);
     return selectedItems.has(bookId);
   });
 
@@ -206,18 +243,19 @@ export default function CartPage() {
     if (isAllSelected) {
       setSelectedItems(new Set());
     } else {
-      const allIds = cartItems.map(item => item.hashId || item.book?.hashId || item.bookId || item.book?.id);
+      const allIds = cartItems.map(getBookId);
       setSelectedItems(new Set(allIds));
     }
   };
 
   const handleSelectItem = (bookId) => {
+    const id = String(bookId);
     setSelectedItems(prev => {
       const next = new Set(prev);
-      if (next.has(bookId)) {
-        next.delete(bookId);
+      if (next.has(id)) {
+        next.delete(id);
       } else {
-        next.add(bookId);
+        next.add(id);
       }
       return next;
     });
@@ -400,7 +438,7 @@ export default function CartPage() {
             {/* List Items */}
             <div className="space-y-4">
               {cartItems.map((item) => {
-                const bookId = item.hashId || item.book?.hashId || item.bookId || item.book?.id;
+                const bookId = getBookId(item);
                 const bookTitle = item.book?.title || 'Cuốn sách';
                 const bookAuthor = item.book?.author || 'Tác giả';
                 const bookPrice = Number(item.price || item.book?.price || 0);

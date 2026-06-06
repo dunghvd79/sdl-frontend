@@ -161,6 +161,8 @@ export default function CheckoutPage() {
       // Làm sạch số lượng giỏ hàng trên Navbar
       queryClient.invalidateQueries(['cartDetail']);
       fetchCartCount();
+      // Xóa cache selection giỏ hàng vì đơn hàng đã được đặt thành công
+      sessionStorage.removeItem('selected_cart_book_ids');
       
       if (res.isCOD) {
         toast.success('Đặt hàng thành công!');
