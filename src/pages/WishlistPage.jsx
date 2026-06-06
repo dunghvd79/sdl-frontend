@@ -112,7 +112,7 @@ export default function WishlistPage() {
       <div className="max-w-7xl mx-auto">
         {/* Navigation Breadcrumb */}
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/', { state: { scrollTo: 'explore' } })}
           className="group mb-8 flex items-center gap-2 text-xs text-stone-500 hover:text-stone-900 uppercase tracking-widest font-sans font-bold transition-colors border-0 bg-transparent cursor-pointer"
         >
           <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />

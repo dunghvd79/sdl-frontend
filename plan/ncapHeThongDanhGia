@@ -1,0 +1,49 @@
+# Kế hoạch: Khắc phục và Nâng cấp Hệ thống Đánh giá Sách (Reviews System)
+
+Khắc phục lỗi ràng buộc cơ sở dữ liệu khi gửi đánh giá sách, đồng thời nâng cấp hệ thống đánh giá bằng cách thêm xác thực độ dài nhận xét tối thiểu và hiển thị nhãn "Đã mua hàng" (Verified Purchase) để tăng tính uy tín và chuyên nghiệp cho hệ thống giống các trang lớn như Amazon/Tiki.
+
+## User Review Required
+
+> [!IMPORTANT]
+> 1. **Dọn dẹp dữ liệu trùng lặp tự động**: Trước khi thêm ràng buộc `UNIQUE(book_id, user_id)`, hệ thống sẽ tự động quét và dọn dẹp các dòng đánh giá bị trùng lặp của cùng một người dùng trên cùng một cuốn sách (chỉ giữ lại đánh giá mới nhất).
+> 2. **Xác thực độ dài chữ nhận xét**: Giới hạn nhận xét tối thiểu là **10 ký tự** để tăng chất lượng đánh giá, tránh các phản hồi vô nghĩa như "tốt", ".", "ok".
+> 3. **Nhãn Đã mua hàng (Verified Purchase)**: Bổ sung logic truy vấn từ database để xác nhận xem tài khoản đã mua cuốn sách đó thành công chưa (`status = 'DELIVERED'`) và hiển thị nhãn `✓ Đã mua hàng` màu xanh lá cây kế bên tên độc giả trong phần đánh giá.
+
+---
+
+## Proposed Changes
+
+### 1. [Backend] Di trú Database & Cải thiện Logic Truy vấn Đánh giá
+
+#### [MODIFY] [database.js](file:///e:/it-project/smart_digital_library/sdl-project/src/config/database.js)
+Tự động chạy Migration khi khởi chạy server:
+- Tìm và xóa các bản ghi trùng lặp trong bảng `reviews` (nếu có), giữ lại bản ghi có `id` lớn nhất cho mỗi cặp `(book_id, user_id)`.
+- Chạy lệnh `ALTER TABLE reviews ADD CONSTRAINT unique_book_user_review UNIQUE (book_id, user_id);` (bỏ qua nếu đã tồn tại).
+
+#### [MODIFY] [Review.js](file:///e:/it-project/smart_digital_library/sdl-project/src/models/Review.js)
+- Cập nhật hàm `getByBookId(bookId)` để bổ sung cột `is_verified_purchase` bằng truy vấn `EXISTS` kiểm tra đơn hàng thành công `DELIVERED` của người viết đánh giá.
+
+#### [MODIFY] [reviewController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/reviewController.js)
+- Thêm kiểm tra độ dài trường `comment` khi tạo đánh giá: Nếu nhỏ hơn 10 ký tự, phản hồi lỗi `400 Bad Request` kèm thông báo tiếng Việt tương ứng.
+
+---
+
+### 2. [Frontend] Cải tiến Giao diện Đánh giá sản phẩm
+
+#### [MODIFY] [BookDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/BookDetailPage.jsx)
+- Tại form gửi đánh giá, bổ sung kiểm tra độ dài nhận xét trên client (ít nhất 10 ký tự) trước khi gửi API.
+- Tại danh sách hiển thị đánh giá của độc giả, hiển thị nhãn `✓ Đã mua hàng` màu xanh lá cây bên cạnh tên độc giả nếu `rev.is_verified_purchase === true`.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Chạy các lệnh kiểm thử biên dịch và đóng gói frontend `npm run build` để đảm bảo không phát sinh lỗi biên dịch.
+
+### Manual Verification
+1. Đăng nhập tài khoản khách hàng `customer@test.vn`.
+2. Truy cập vào cuốn sách đã mua thành công, viết thử đánh giá nhỏ hơn 10 ký tự và xác nhận có thông báo lỗi.
+3. Viết đánh giá hợp lệ và xác nhận gửi thành công (không còn lỗi DB constraint).
+4. Kiểm tra tại trang chi tiết sách: Xem đánh giá của bạn có hiển thị nhãn xanh `✓ Đã mua hàng` hay không.
+5. Thử đánh giá lại cuốn sách đó, xác nhận hệ thống cập nhật đánh giá cũ thay vì tạo dòng mới.

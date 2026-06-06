@@ -238,7 +238,7 @@ export default function OrderHistoryPage() {
 
           <div className="mt-6 pt-6 border-t border-divider-lt flex justify-between text-[11px] font-sans text-[#2C4A3B]">
             <Link to="/register" className="hover:underline font-bold uppercase tracking-wider">Tạo tài khoản mới</Link>
-            <Link to="/" className="hover:underline font-bold uppercase tracking-wider text-stone-500">Quay lại cửa hàng</Link>
+            <Link to="/" state={{ scrollTo: 'explore' }} className="hover:underline font-bold uppercase tracking-wider text-stone-500">Quay lại cửa hàng</Link>
           </div>
         </div>
       </div>

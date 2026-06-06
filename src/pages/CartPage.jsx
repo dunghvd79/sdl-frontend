@@ -30,17 +30,6 @@ export default function CartPage() {
 
   const cartItems = cartData?.items || [];
 
-  // Tự động điều hướng về trang chủ nếu giỏ hàng trống
-  useEffect(() => {
-    if (user && !isLoading && cartItems.length === 0) {
-      toast.info('Giỏ hàng của bạn đang trống. Đang chuyển hướng về cửa hàng...');
-      const timer = setTimeout(() => {
-        navigate('/');
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [user, isLoading, cartItems.length, navigate, toast]);
-
   // Tính tổng số tiền trong giỏ
   const totalAmount = cartItems.reduce(
     (sum, item) => sum + Number(item.price || item.book?.price || 0) * item.quantity,
@@ -194,6 +183,7 @@ export default function CartPage() {
           <p className="text-ink-60 text-sm font-sans tracking-wide mb-8">Hãy khám phá thêm hàng ngàn cuốn sách hấp dẫn khác tại thư viện nhé!</p>
           <Link
             to="/"
+            state={{ scrollTo: 'explore' }}
             className="inline-block bg-ink hover:bg-[#2C4A3B] text-white font-sans text-xs font-bold py-3.5 px-8 uppercase tracking-[0.2em] transition-colors rounded-none"
           >
             Quay lại Cửa hàng
@@ -273,6 +263,7 @@ export default function CartPage() {
             <div className="pt-2">
               <Link
                 to="/"
+                state={{ scrollTo: 'explore' }}
                 className="inline-flex items-center gap-2 border border-[#2C4A3B]/30 hover:border-[#2C4A3B] hover:bg-[#faf8f5] text-[#2C4A3B] font-sans text-xs font-bold py-3 px-6 uppercase tracking-[0.15em] transition-all rounded-none bg-white cursor-pointer"
               >
                 ← Tiếp tục chọn sách khác

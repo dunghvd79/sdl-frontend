@@ -208,7 +208,7 @@ export default function CheckoutPage() {
         <div className="border border-[#2C4A3B]/20 p-10 rounded-none bg-white inline-block max-w-md">
           <p className="text-lg font-serif font-medium text-ink mb-3">Giỏ hàng trống hoặc có lỗi xảy ra</p>
           <p className="text-ink-light text-sm mb-8">Bạn chưa có sản phẩm nào được giữ kho để thanh toán.</p>
-          <Link to="/" className="inline-block bg-[#2C4A3B] hover:bg-[#1e3529] text-white px-6 py-3 rounded-none transition-colors text-sm uppercase tracking-wider font-medium">
+          <Link to="/" state={{ scrollTo: 'explore' }} className="inline-block bg-[#2C4A3B] hover:bg-[#1e3529] text-white px-6 py-3 rounded-none transition-colors text-sm uppercase tracking-wider font-medium">
             Quay lại Cửa hàng
           </Link>
         </div>
