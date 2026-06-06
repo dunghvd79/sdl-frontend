@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { useCart } from '../context/CartContext';
@@ -8,10 +8,15 @@ import { useAuth } from '../context/AuthContext';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { fetchCartCount } = useCart();
   const toast = useToast();
   const { user } = useAuth();
+
+  // Trích xuất sách được chọn và coupon được truyền sang từ Giỏ hàng
+  const selectedBookIds = location.state?.selectedBookIds || [];
+  const passedCouponCode = location.state?.couponCode || '';
 
   // State cho thông tin giao hàng
   const [shippingName, setShippingName] = useState('');
@@ -77,7 +82,13 @@ export default function CheckoutPage() {
     }
   });
 
-  const cartItems = cartData?.items || [];
+  // Lọc sản phẩm hiển thị dựa theo danh sách sách được chọn thanh toán từ giỏ hàng
+  const cartItems = (cartData?.items || []).filter(item => {
+    if (selectedBookIds.length === 0) return true;
+    const id = item.hashId || item.book?.hashId || item.bookId || item.book?.id;
+    return selectedBookIds.includes(id);
+  });
+
   const totalAmount = cartItems.reduce(
     (sum, item) => sum + Number(item.price || item.book?.price || 0) * item.quantity,
     0
@@ -86,38 +97,42 @@ export default function CheckoutPage() {
   const discountAmount = appliedCoupon ? appliedCoupon.discountAmount : 0;
   const finalTotalAmount = Math.max(0, totalAmount - discountAmount);
 
-  // Tự động áp dụng mã giảm giá đã kích hoạt từ Trạm Khuyến Mãi
+  // Tự động áp dụng mã giảm giá đã kích hoạt từ Trạm Khuyến Mãi hoặc truyền từ giỏ hàng sang
   useEffect(() => {
-    const savedCoupon = localStorage.getItem('active_coupon_code');
-    if (savedCoupon && totalAmount > 0 && !appliedCoupon) {
+    const couponToUse = passedCouponCode || localStorage.getItem('active_coupon_code');
+    if (couponToUse && totalAmount > 0 && !appliedCoupon) {
       const autoValidate = async () => {
         try {
-          const response = await api.get(`/coupons/validate?code=${savedCoupon.trim()}&orderAmount=${totalAmount}`);
+          const response = await api.get(`/coupons/validate?code=${couponToUse.trim()}&orderAmount=${totalAmount}`);
           setAppliedCoupon(response.data.data);
-          setCouponCode(savedCoupon);
-          toast.success(`Đã tự động áp dụng mã giảm giá "${savedCoupon}"!`);
-          localStorage.removeItem('active_coupon_code');
+          setCouponCode(couponToUse);
+          if (passedCouponCode) {
+            toast.success(`Đã áp dụng mã giảm giá từ giỏ hàng: "${couponToUse}"!`);
+          } else {
+            toast.success(`Đã tự động áp dụng mã giảm giá "${couponToUse}"!`);
+            localStorage.removeItem('active_coupon_code');
+          }
         } catch (err) {
-          // Nếu đơn hàng chưa đủ giá trị tối thiểu, chỉ điền mã giảm giá vào input
-          setCouponCode(savedCoupon);
+          setCouponCode(couponToUse);
           console.log('Tự động áp dụng mã giảm giá thất bại:', err.response?.data?.error);
         }
       };
       autoValidate();
     }
-  }, [totalAmount]);
+  }, [totalAmount, passedCouponCode]);
 
   // 2. Mutation đặt hàng & lấy link thanh toán
   const orderMutation = useMutation({
     mutationFn: async (shippingInfo) => {
-      // BƯỚC 1: Tạo đơn hàng với thông tin giao hàng và phương thức thanh toán
+      // BƯỚC 1: Tạo đơn hàng với thông tin giao hàng, phương thức thanh toán và sách được chọn
       const orderRes = await api.post('/orders/checkout', {
         shippingName: shippingInfo.shippingName,
         shippingPhone: shippingInfo.shippingPhone,
         shippingAddress: shippingInfo.shippingAddress,
         shippingNotes: shippingInfo.shippingNotes,
         paymentMethod: shippingInfo.paymentMethod,
-        couponCode: shippingInfo.couponCode // Truyền mã giảm giá
+        couponCode: shippingInfo.couponCode, // Truyền mã giảm giá
+        selectedBookIds: selectedBookIds.length > 0 ? selectedBookIds : null
       });
       const order = orderRes.data.data;
 
@@ -378,11 +393,11 @@ export default function CheckoutPage() {
           <div className="p-4 bg-surface-warm text-xs text-ink-light border border-divider rounded-none">
             {paymentMethod === 'COD' ? (
               <p className="leading-relaxed">
-                📍 Bạn đã chọn thanh toán <strong>Tiền mặt khi nhận hàng (COD)</strong>. Đơn hàng sẽ được xác nhận ngay lập tức sau khi bấm đặt hàng và giỏ hàng của bạn sẽ được dọn sạch.
+                📍 Bạn đã chọn thanh toán <strong>Tiền mặt khi nhận hàng (COD)</strong>. Đơn hàng sẽ được xác nhận ngay lập tức sau khi bấm đặt hàng và các sách tương ứng trong giỏ sẽ được dọn sạch.
               </p>
             ) : (
               <p className="leading-relaxed">
-                🌐 Bạn đã chọn thanh toán <strong>Chuyển khoản (Online)</strong>. Sau khi bấm đặt hàng, hệ thống sẽ chuyển hướng bạn sang cổng thanh toán <strong>PayOS</strong> hiển thị mã <strong>VietQR</strong> để quét mã chuyển khoản nhanh 24/7. Giỏ hàng chỉ được dọn sạch khi thanh toán thành công.
+                🌐 Bạn đã chọn thanh toán <strong>Chuyển khoản (Online)</strong>. Sau khi bấm đặt hàng, hệ thống sẽ chuyển hướng bạn sang cổng thanh toán <strong>PayOS</strong> hiển thị mã <strong>VietQR</strong> để quét mã chuyển khoản nhanh 24/7. Các sách tương ứng trong giỏ chỉ được dọn sạch khi thanh toán thành công.
               </p>
             )}
           </div>
@@ -401,7 +416,7 @@ export default function CheckoutPage() {
             <input
               type="text"
               value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
+              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
               disabled={!!appliedCoupon}
               className="flex-grow border border-divider rounded-none px-4 py-2 text-sm focus:outline-none focus:border-ink transition-colors bg-white text-ink uppercase placeholder-ink-light/40"
               placeholder="Nhập mã giảm giá (VD: GIAM10)"

@@ -1,0 +1,81 @@
+# Kế hoạch nâng cấp trang Giỏ hàng (Cart Upgrade Plan)
+
+Kế hoạch này tập trung vào việc thiết kế lại và nâng cấp trang Giỏ hàng với 4 tính năng chính: thanh toán từng phần (chọn sản phẩm cần mua), lưu lại mua sau (chuyển sang Wishlist), cảnh báo tồn kho thời gian thực (real-time stock warning) và áp dụng mã giảm giá trực tiếp tại giỏ hàng.
+
+## User Review Required
+
+> [!IMPORTANT]
+> 1. **Thanh toán từng phần (Partial Checkout)**: Người dùng có thể chọn một hoặc một số quyển sách trong giỏ hàng để tiến hành thanh toán. Những sản phẩm còn lại không được chọn sẽ vẫn được giữ lại trong giỏ hàng sau khi thanh toán hoàn tất (cả COD và thanh toán Online thành công).
+> 2. **Tự động đồng bộ Coupon**: Khi người dùng thay đổi danh sách sản phẩm được chọn hoặc thay đổi số lượng, tổng giá trị đơn hàng tạm tính thay đổi. Hệ thống sẽ tự động gọi lại API xác thực mã giảm giá để kiểm tra xem đơn hàng mới có còn đủ điều kiện áp dụng mã hay không (ví dụ: yêu cầu giá trị đơn hàng tối thiểu).
+> 3. **Nhãn tồn kho & nút vô hiệu hóa**: Nút tăng số lượng `+` sẽ bị vô hiệu hóa khi số lượng sách trong giỏ hàng đạt đến giới hạn tồn kho khả dụng của thư viện. Cảnh báo lỗi sẽ hiển thị trực tiếp dưới dòng sách đó nếu số lượng vượt quá tồn kho.
+
+---
+
+## Proposed Changes
+
+### 1. Backend: Hỗ trợ Thanh toán từng phần & Quản lý tồn kho trong giỏ hàng
+
+#### [MODIFY] [Cart.js](file:///e:/it-project/smart_digital_library/sdl-project/src/models/Cart.js)
+- Thêm phương thức tĩnh `removeItems(cartId, bookIds, client = null)` để xóa các sách được chỉ định khỏi giỏ hàng.
+- Cập nhật phương thức `getByUserId` để left join với bảng `inventory` nhằm trả về thêm thông tin số lượng tồn kho khả dụng (`stock = available_qty - reserved_qty`) cho từng sách trong giỏ hàng.
+
+#### [MODIFY] [cartService.js](file:///e:/it-project/smart_digital_library/sdl-project/src/services/cartService.js)
+- Cập nhật `prepareCheckout(userId, selectedBookIds)` để chỉ thực hiện kiểm tra tồn kho trên các cuốn sách được chọn.
+- Thêm phương thức `removeBulkFromCart(userId, bookIds)` để xóa nhiều sản phẩm cùng lúc.
+
+#### [MODIFY] [cartController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/cartController.js)
+- Cập nhật `prepareCheckout` để trích xuất `selectedBookIds` từ body yêu cầu.
+- Thêm phương thức `removeBulkFromCart` để gọi `CartService.removeBulkFromCart`.
+
+#### [MODIFY] [cart.js](file:///e:/it-project/smart_digital_library/sdl-project/src/routes/cart.js)
+- Bổ sung định tuyến `POST /remove-bulk` ánh xạ đến `cartController.removeBulkFromCart`.
+
+#### [MODIFY] [orderService.js](file:///e:/it-project/smart_digital_library/sdl-project/src/services/orderService.js)
+- Cập nhật `checkout(userId, shippingInfo, paymentMethod, couponCode, selectedBookIds)` để nhận thêm tham số danh sách sách được chọn.
+- Chỉ tạo đơn hàng và giữ chỗ trong kho cho các sách được chọn.
+- Thay thế việc dọn sạch giỏ hàng (`Cart.clear`) bằng cách xóa các sách đã đặt hàng (`Cart.removeItems`) trong transaction.
+
+#### [MODIFY] [orderController.js](file:///e:/it-project/smart_digital_library/sdl-project/src/controllers/orderController.js)
+- Trích xuất `selectedBookIds` từ `req.body` và truyền vào dịch vụ `OrderService.checkout`.
+
+#### [MODIFY] [paymentService.js](file:///e:/it-project/smart_digital_library/sdl-project/src/services/paymentService.js)
+- Thay đổi logic dọn giỏ hàng sau khi cổng thanh toán (PayOS/VNPay) xác nhận giao dịch thành công. Thay vì xóa toàn bộ giỏ hàng (`Cart.clear`), chỉ xóa các sản phẩm nằm trong đơn hàng vừa được thanh toán thành công (`order.items.map(item => item.bookId)`).
+
+---
+
+### 2. Frontend: Nâng cấp trải nghiệm người dùng trang Giỏ hàng
+
+#### [MODIFY] [CartPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/CartPage.jsx)
+- **Checkboxes chọn lọc**: Thêm cột checkbox trước mỗi quyển sách. Thêm checkbox "Chọn tất cả" ở trên đầu danh sách kèm nút "Xóa đã chọn" khi có ít nhất 1 sản phẩm được tick chọn.
+- **Lưu lại mua sau**: Bổ sung liên kết "Lưu lại mua sau" cho từng quyển sách. Khi click, hệ thống tự động kiểm tra và thêm sách vào Wishlist thông qua `api.post('/wishlists/toggle')` (nếu chưa có), sau đó xóa sách khỏi giỏ hàng.
+- **Cảnh báo tồn kho**: Đọc thông tin tồn kho khả dụng từ API. Vô hiệu hóa nút `+` nếu số lượng đạt giới hạn và hiển thị thông báo cảnh báo màu đỏ nếu số lượng vượt quá số sách khả dụng trong kho.
+- **Áp dụng coupon trực tiếp**: Tích hợp ô nhập coupon và hiển thị chi tiết số tiền được giảm giá trực tiếp trong phần Tóm tắt đơn hàng của giỏ hàng. Gọi API kiểm tra coupon tự động khi có bất kỳ thay đổi nào về số lượng hoặc lựa chọn sản phẩm.
+- **Truyền trạng thái thanh toán**: Khi click "Tiến hành thanh toán", kiểm tra tồn kho thông qua API `/cart/checkout` với payload `selectedBookIds`. Nếu thành công, điều hướng sang `/checkout` và truyền `selectedBookIds` cùng `couponCode` qua trạng thái định tuyến (`location.state`).
+
+#### [MODIFY] [CheckoutPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/CheckoutPage.jsx)
+- Import `useLocation` để lấy `selectedBookIds` và `couponCode` từ giỏ hàng truyền sang.
+- Lọc danh sách sản phẩm hiển thị dựa trên `selectedBookIds` nhận được.
+- Tự động điền mã và gọi API áp dụng coupon nếu có thông tin truyền sang từ giỏ hàng.
+- Truyền `selectedBookIds` vào payload gọi API `/orders/checkout` để tiến hành tạo đơn hàng tương ứng.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Di chuyển vào thư mục frontend `code_frontend/sdl-frontend` và chạy `npm run build` để kiểm tra lỗi biên dịch React.
+
+### Manual Verification
+1. **Kiểm tra lựa chọn & thanh toán từng phần**:
+   - Thêm 3 cuốn sách vào giỏ hàng.
+   - Chỉ chọn 2 cuốn, nhấn thanh toán bằng COD.
+   - Xác nhận đơn hàng hiển thị chính xác 2 cuốn sách đã chọn. Sau khi đặt hàng thành công, kiểm tra giỏ hàng vẫn còn lưu lại cuốn sách thứ 3 (không bị chọn).
+2. **Kiểm tra Lưu lại mua sau**:
+   - Nhấn "Lưu lại mua sau" trên một quyển sách trong giỏ.
+   - Xác nhận quyển sách đó bị xóa khỏi giỏ và số lượng biểu tượng Wishlist tăng lên.
+   - Truy cập trang Wishlist để kiểm tra xem sách đã xuất hiện ở đó chưa.
+3. **Kiểm tra Cảnh báo tồn kho**:
+   - Thử tăng số lượng sách đến khi đạt giới hạn kho. Xác nhận nút `+` bị khóa và hiển thị cảnh báo tồn kho.
+4. **Kiểm tra Áp dụng mã giảm giá**:
+   - Thử nhập mã giảm giá trực tiếp tại giỏ hàng và xem số tiền giảm cùng tổng cộng cập nhật tại chỗ.
+   - Bỏ chọn bớt sản phẩm để giá trị đơn hàng nhỏ hơn mức tối thiểu yêu cầu của coupon, kiểm tra hệ thống có tự động báo hủy áp dụng mã giảm giá hay không.
