@@ -509,59 +509,67 @@ export default function BookDetailPage() {
 
           {/* Cột 2 & 3: Form gửi nhận xét */}
           <div className="lg:col-span-2">
-            {/* Form gửi nhận xét (Chỉ cho user đã đăng nhập) */}
+            {/* Form gửi nhận xét (Chỉ cho user đã mua sách thành công) */}
             {user ? (
-              <form onSubmit={handleSubmitReview} className="border border-stone-200/80 p-8 bg-[#faf8f5]/60 rounded-2xl shadow-xs space-y-5">
-                <h3 className="font-serif text-lg font-bold uppercase tracking-wider text-ink">
-                  Viết nhận xét của bạn
-                </h3>
-                
-                <div className="flex flex-col gap-2">
-                  <span className="text-xs font-sans uppercase font-bold tracking-wider text-[#2C4A3B]">Đánh giá của bạn:</span>
-                  <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setRating(star)}
-                        className={`text-2xl transition-all duration-200 hover:scale-125 focus:outline-none cursor-pointer bg-transparent border-none ${
-                          star <= rating ? 'text-amber-500 transform scale-110' : 'text-stone-300 hover:text-amber-400'
-                        }`}
-                      >
-                        ★
-                      </button>
-                    ))}
-                    <span className="text-xs font-sans font-bold text-stone-500 ml-3 uppercase tracking-wider">
-                      {rating === 5 && '🌟 Tuyệt vời'}
-                      {rating === 4 && '✨ Rất tốt'}
-                      {rating === 3 && '👍 Bình thường'}
-                      {rating === 2 && '👎 Chưa hài lòng'}
-                      {rating === 1 && '😢 Tệ'}
-                    </span>
+              hasAccess ? (
+                <form onSubmit={handleSubmitReview} className="border border-stone-200/80 p-8 bg-[#faf8f5]/60 rounded-2xl shadow-xs space-y-5">
+                  <h3 className="font-serif text-lg font-bold uppercase tracking-wider text-ink">
+                    Viết nhận xét của bạn
+                  </h3>
+                  
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-sans uppercase font-bold tracking-wider text-[#2C4A3B]">Đánh giá của bạn:</span>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(star)}
+                          className={`text-2xl transition-all duration-200 hover:scale-125 focus:outline-none cursor-pointer bg-transparent border-none ${
+                            star <= rating ? 'text-amber-500 transform scale-110' : 'text-stone-300 hover:text-amber-400'
+                          }`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                      <span className="text-xs font-sans font-bold text-stone-500 ml-3 uppercase tracking-wider">
+                        {rating === 5 && '🌟 Tuyệt vời'}
+                        {rating === 4 && '✨ Rất tốt'}
+                        {rating === 3 && '👍 Bình thường'}
+                        {rating === 2 && '👎 Chưa hài lòng'}
+                        {rating === 1 && '😢 Tệ'}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="comment" className="text-xs font-sans uppercase font-bold tracking-wider text-[#2C4A3B]">Bình luận nhận xét:</label>
-                  <textarea
-                    id="comment"
-                    rows="3"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Chia sẻ cảm nghĩ chi tiết của bạn về nội dung cuốn sách này để giúp những độc giả khác nhé..."
-                    className="border border-stone-300 rounded-none p-3.5 text-sm focus:border-[#2C4A3B] focus:ring-1 focus:ring-[#2C4A3B] outline-none transition-all w-full resize-none font-sans bg-white"
-                    required
-                  />
-                </div>
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="comment" className="text-xs font-sans uppercase font-bold tracking-wider text-[#2C4A3B]">Bình luận nhận xét:</label>
+                    <textarea
+                      id="comment"
+                      rows="3"
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder="Chia sẻ cảm nghĩ chi tiết của bạn về nội dung cuốn sách này để giúp những độc giả khác nhé..."
+                      className="border border-stone-300 rounded-none p-3.5 text-sm focus:border-[#2C4A3B] focus:ring-1 focus:ring-[#2C4A3B] outline-none transition-all w-full resize-none font-sans bg-white"
+                      required
+                    />
+                  </div>
 
-                <button
-                  type="submit"
-                  disabled={createReviewMutation.isPending}
-                  className="bg-ink hover:bg-[#2C4A3B] active:bg-[#1e3529] disabled:opacity-50 text-white font-sans text-xs font-bold uppercase tracking-widest px-8 py-3.5 transition-colors cursor-pointer rounded-none animate-none"
-                >
-                  {createReviewMutation.isPending ? 'Đang gửi...' : 'Gửi nhận xét ngay'}
-                </button>
-              </form>
+                  <button
+                    type="submit"
+                    disabled={createReviewMutation.isPending}
+                    className="bg-ink hover:bg-[#2C4A3B] active:bg-[#1e3529] disabled:opacity-50 text-white font-sans text-xs font-bold uppercase tracking-widest px-8 py-3.5 transition-colors cursor-pointer rounded-none animate-none"
+                  >
+                    {createReviewMutation.isPending ? 'Đang gửi...' : 'Gửi nhận xét ngay'}
+                  </button>
+                </form>
+              ) : (
+                <div className="border border-dashed border-stone-300 p-8 bg-stone-50 text-center rounded-xl">
+                  <p className="text-xs uppercase tracking-widest font-sans font-bold text-stone-500">
+                    Bạn chỉ có thể đánh giá cuốn sách này sau khi đã mua và nhận giao hàng thành công.
+                  </p>
+                </div>
+              )
             ) : (
               <div className="border border-dashed border-stone-300 p-8 bg-stone-50 text-center rounded-xl">
                 <p className="text-xs uppercase tracking-widest font-sans font-bold text-stone-500">
