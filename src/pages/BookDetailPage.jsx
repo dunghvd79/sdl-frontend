@@ -171,6 +171,46 @@ export default function BookDetailPage() {
     navigate(`/books/${id}/chat`);
   };
 
+  const getInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.split('@')[0].split(/[._-]/);
+    const initials = parts.map(p => p[0]).join('');
+    return initials.substring(0, 2).toUpperCase();
+  };
+
+  const getAvatarBgColor = (name) => {
+    if (!name) return 'bg-[#2C4A3B]';
+    const colors = [
+      'bg-emerald-700',
+      'bg-teal-700',
+      'bg-blue-700',
+      'bg-indigo-700',
+      'bg-purple-700',
+      'bg-stone-700'
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
+  const formatReviewDate = (dateStr) => {
+    if (!dateStr) return 'Đã nhận xét';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'Đã nhận xét';
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays <= 1 && now.getDate() === date.getDate()) {
+      return 'Hôm nay';
+    } else if (diffDays <= 2 && now.getDate() - date.getDate() === 1) {
+      return 'Hôm qua';
+    }
+    return date.toLocaleDateString('vi-VN');
+  };
+
   const defaultImage = book 
     ? (book.cover_url ? getImageUrl(book.cover_url) : `https://picsum.photos/seed/${book.id + 10}/400/600`) 
     : '';
@@ -410,54 +450,97 @@ export default function BookDetailPage() {
           Đánh giá & Nhận xét
         </h2>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Cột 1: Thống kê số sao */}
-          <div className="bg-stone-50 border border-divider p-6 flex flex-col items-center justify-center text-center h-fit">
-            <span className="text-5xl font-serif font-bold text-[#2C4A3B] mb-2">
-              {reviewsData?.stats ? Number(reviewsData.stats.avg_rating).toFixed(1) : '0.0'}
-            </span>
-            <div className="mb-3">
-              {renderStars(reviewsData?.stats?.avg_rating || 0)}
+          <div className="bg-white border border-stone-200/80 p-8 rounded-2xl shadow-sm space-y-6">
+            <div className="text-center">
+              <span className="text-6xl font-serif font-black text-stone-900 leading-none block mb-2">
+                {reviewsData?.stats ? Number(reviewsData.stats.avg_rating).toFixed(1) : '0.0'}
+              </span>
+              <div className="flex justify-center mb-1.5">
+                {renderStars(reviewsData?.stats?.avg_rating || 0)}
+              </div>
+              <p className="text-[10px] uppercase tracking-widest font-sans font-bold text-stone-400">
+                Có tất cả {reviewsData?.stats?.review_count || 0} đánh giá
+              </p>
             </div>
-            <p className="text-xs uppercase tracking-widest font-sans text-ink-60">
-              Có tất cả {reviewsData?.stats?.review_count || 0} đánh giá
-            </p>
+
+            {/* Phân phối xếp hạng sao */}
+            <div className="space-y-2.5 pt-6 border-t border-divider-lt">
+              {(() => {
+                const reviewsList = reviewsData?.reviews || [];
+                const total = reviewsList.length;
+                const dist = [0, 0, 0, 0, 0]; // 5, 4, 3, 2, 1 stars
+                reviewsList.forEach(r => {
+                  const star = Math.round(r.rating);
+                  if (star >= 1 && star <= 5) {
+                    dist[5 - star]++;
+                  }
+                });
+
+                return [5, 4, 3, 2, 1].map((star, idx) => {
+                  const count = dist[idx];
+                  const percent = total > 0 ? (count / total) * 100 : 0;
+                  return (
+                    <div key={star} className="flex items-center gap-3 text-xs font-sans">
+                      <span className="w-12 text-stone-500 font-bold whitespace-nowrap text-left">{star} sao</span>
+                      <div className="flex-grow bg-stone-100 h-2 rounded-full overflow-hidden">
+                        <div 
+                          className="bg-[#2C4A3B] h-full rounded-full transition-all duration-500" 
+                          style={{ width: `${percent}%` }}
+                        ></div>
+                      </div>
+                      <span className="w-6 text-stone-400 font-medium text-right">{count}</span>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
           </div>
 
           {/* Cột 2 & 3: Nhận xét và Form gửi nhận xét */}
-          <div className="lg:col-span-2 space-y-10">
+          <div className="lg:col-span-2 space-y-8">
             {/* Form gửi nhận xét (Chỉ cho user đã đăng nhập) */}
             {user ? (
-              <form onSubmit={handleSubmitReview} className="border border-divider p-6 bg-white space-y-4">
+              <form onSubmit={handleSubmitReview} className="border border-stone-200/80 p-8 bg-[#faf8f5]/60 rounded-2xl shadow-xs space-y-5">
                 <h3 className="font-serif text-lg font-bold uppercase tracking-wider text-ink">
                   Viết nhận xét của bạn
                 </h3>
                 
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-sans uppercase tracking-wider text-ink-60">Đánh giá của bạn:</span>
-                  <div className="flex gap-1 text-xl text-amber-500">
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-sans uppercase font-bold tracking-wider text-[#2C4A3B]">Đánh giá của bạn:</span>
+                  <div className="flex items-center gap-1">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
                         type="button"
                         onClick={() => setRating(star)}
-                        className="hover:scale-110 transition-transform focus:outline-none cursor-pointer"
+                        className={`text-2xl transition-all duration-200 hover:scale-125 focus:outline-none cursor-pointer bg-transparent border-none ${
+                          star <= rating ? 'text-amber-500 transform scale-110' : 'text-stone-300 hover:text-amber-400'
+                        }`}
                       >
-                        {star <= rating ? '★' : '☆'}
+                        ★
                       </button>
                     ))}
+                    <span className="text-xs font-sans font-bold text-stone-500 ml-3 uppercase tracking-wider">
+                      {rating === 5 && '🌟 Tuyệt vời'}
+                      {rating === 4 && '✨ Rất tốt'}
+                      {rating === 3 && '👍 Bình thường'}
+                      {rating === 2 && '👎 Chưa hài lòng'}
+                      {rating === 1 && '😢 Tệ'}
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label htmlFor="comment" className="text-xs font-sans uppercase tracking-wider text-ink-60">Bình luận:</label>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="comment" className="text-xs font-sans uppercase font-bold tracking-wider text-[#2C4A3B]">Bình luận nhận xét:</label>
                   <textarea
                     id="comment"
                     rows="3"
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    placeholder="Chia sẻ cảm nghĩ của bạn về cuốn sách này..."
-                    className="border border-divider rounded-none p-3 text-sm focus:border-ink outline-none transition-colors w-full resize-none font-sans"
+                    placeholder="Chia sẻ cảm nghĩ chi tiết của bạn về nội dung cuốn sách này để giúp những độc giả khác nhé..."
+                    className="border border-stone-300 rounded-none p-3.5 text-sm focus:border-[#2C4A3B] focus:ring-1 focus:ring-[#2C4A3B] outline-none transition-all w-full resize-none font-sans bg-white"
                     required
                   />
                 </div>
@@ -465,15 +548,15 @@ export default function BookDetailPage() {
                 <button
                   type="submit"
                   disabled={createReviewMutation.isPending}
-                  className="bg-ink hover:bg-[#2C4A3B] disabled:opacity-50 text-white font-sans text-[10px] font-bold uppercase tracking-widest px-6 py-3 transition-colors cursor-pointer rounded-none animate-none"
+                  className="bg-ink hover:bg-[#2C4A3B] active:bg-[#1e3529] disabled:opacity-50 text-white font-sans text-xs font-bold uppercase tracking-widest px-8 py-3.5 transition-colors cursor-pointer rounded-none animate-none"
                 >
-                  {createReviewMutation.isPending ? 'Đang gửi...' : 'Gửi đánh giá'}
+                  {createReviewMutation.isPending ? 'Đang gửi...' : 'Gửi nhận xét ngay'}
                 </button>
               </form>
             ) : (
-              <div className="border border-divider border-dashed p-6 bg-stone-50 text-center">
-                <p className="text-xs uppercase tracking-widest font-sans text-ink-60">
-                  Vui lòng <span className="font-bold text-[#2C4A3B] cursor-pointer hover:underline" onClick={() => navigate('/login')}>đăng nhập</span> để có thể viết đánh giá cho cuốn sách này.
+              <div className="border border-dashed border-stone-300 p-8 bg-stone-50 text-center rounded-xl">
+                <p className="text-xs uppercase tracking-widest font-sans font-bold text-stone-500">
+                  Vui lòng <span className="text-[#2C4A3B] cursor-pointer hover:underline font-extrabold" onClick={() => navigate('/login')}>đăng nhập</span> để viết đánh giá cho cuốn sách này.
                 </p>
               </div>
             )}
@@ -485,33 +568,45 @@ export default function BookDetailPage() {
               </h3>
 
               {reviewsData?.reviews && reviewsData.reviews.length > 0 ? (
-                <div className="divide-y divide-divider-lt">
-                  {reviewsData.reviews.map((rev) => (
-                    <div key={rev.id} className="py-6 first:pt-0 last:pb-0 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-sans text-xs font-bold uppercase text-ink">
-                            {rev.user_name}
-                          </span>
-                          {rev.is_verified_purchase && (
-                            <span className="inline-flex items-center text-[9px] font-bold text-[#2C4A3B] bg-green-50/50 border border-green-200 px-1.5 py-0.5 rounded-none uppercase tracking-wider">
-                              ✓ Đã mua hàng
-                            </span>
-                          )}
-                          {renderStars(rev.rating)}
+                <div className="divide-y divide-stone-100 border border-stone-200/80 bg-white rounded-2xl px-6 shadow-sm">
+                  {reviewsData.reviews.map((rev) => {
+                    const initials = getInitials(rev.user_name);
+                    const avatarBg = getAvatarBgColor(rev.user_name);
+                    return (
+                      <div key={rev.id} className="py-6 flex gap-4 items-start">
+                        {/* Avatar */}
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-sans text-xs font-bold shrink-0 ${avatarBg}`}>
+                          {initials}
                         </div>
-                        <span className="font-sans text-[10px] text-ink-60 uppercase tracking-wider">
-                          {new Date(rev.created_at).toLocaleDateString('vi-VN')}
-                        </span>
+                        <div className="flex-grow space-y-2 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-sans text-xs font-bold text-stone-900 uppercase tracking-wide truncate max-w-[200px]">
+                                {rev.user_name}
+                              </span>
+                              {rev.is_verified_purchase && (
+                                <span className="inline-flex items-center text-[8px] font-sans font-bold text-[#2C4A3B] bg-green-50 border border-green-200/60 px-1.5 py-0.5 uppercase tracking-widest rounded-none">
+                                  ✓ Đã mua hàng
+                                </span>
+                              )}
+                              <div className="flex text-amber-500 text-xs mt-0.5">
+                                {renderStars(rev.rating)}
+                              </div>
+                            </div>
+                            <span className="font-sans text-[10px] text-stone-400 uppercase tracking-widest whitespace-nowrap">
+                              {formatReviewDate(rev.created_at)}
+                            </span>
+                          </div>
+                          <p className="text-sm font-sans text-stone-600 leading-relaxed text-justify whitespace-pre-wrap break-words pr-2">
+                            {rev.comment || 'Không có bình luận.'}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm font-sans text-ink-60 leading-relaxed text-justify">
-                        {rev.comment || 'Không có bình luận.'}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <p className="text-xs italic font-sans text-ink-60 uppercase tracking-wider py-6">
+                <p className="text-xs italic font-sans text-ink-60 uppercase tracking-wider py-8 text-center bg-stone-50 border border-dashed border-stone-200 rounded-xl">
                   Chưa có nhận xét nào. Hãy là người đầu tiên viết đánh giá cho cuốn sách này!
                 </p>
               )}

@@ -3774,7 +3774,7 @@ function UserDetailModal({ userId, onClose }) {
                               </h4>
                             </div>
                             <span className="text-[10px] text-ink-light font-mono bg-white border border-divider px-2 py-0.5">
-                              {new Date(r.created_at).toLocaleDateString('vi-VN')}
+                              {r.created_at ? new Date(r.created_at).toLocaleDateString('vi-VN') : 'Đã nhận xét'}
                             </span>
                           </div>
 
