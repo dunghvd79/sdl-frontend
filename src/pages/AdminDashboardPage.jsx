@@ -2995,8 +2995,9 @@ function DashboardOverviewTab() {
         </div>
       </div>
 
-      {/* Visual Charts */}
+      {/* Visual Charts - Custom SVG Column Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Chart 1: Top 5 Bestsellers */}
         <div className="border border-divider rounded-none p-6 bg-white shadow-none">
           <h3 className="text-sm font-serif font-bold text-ink uppercase tracking-wider mb-5 border-b border-divider pb-2">
             Top 5 Sách bán chạy nhất
@@ -3004,64 +3005,198 @@ function DashboardOverviewTab() {
           {dynamicTopBooks.length === 0 ? (
             <p className="text-center py-12 text-ink-light italic text-xs">Chưa có dữ liệu bán sách trong khoảng thời gian này.</p>
           ) : (
-            <div className="space-y-4">
-              {dynamicTopBooks.map((book, idx) => {
-                const pct = (Number(book.total_sold) / maxTopBookVal) * 100;
-                return (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-serif font-semibold text-ink truncate max-w-[80%]">
-                        {idx + 1}. {book.title}
-                      </span>
-                      <span className="font-mono text-ink-light font-bold">
-                        {book.total_sold} cuốn
-                      </span>
-                    </div>
-                    <div className="w-full bg-[#f0ece7] h-5 rounded-none overflow-hidden relative border border-divider">
-                      <div 
-                        className="bg-[#2C4A3B] h-full transition-all duration-500 rounded-none" 
-                        style={{ width: `${pct}%` }} 
+            <div>
+              {/* Custom SVG Column Chart */}
+              <svg viewBox="0 0 500 220" className="w-full h-auto border border-divider/40 bg-[#faf8f5]/20 p-2">
+                {/* Horizontal Grid lines */}
+                <line x1="45" y1="20" x2="480" y2="20" stroke="#c5a880" strokeWidth="0.5" strokeDasharray="3 3" opacity="0.3" />
+                <line x1="45" y1="100" x2="480" y2="100" stroke="#c5a880" strokeWidth="0.5" strokeDasharray="3 3" opacity="0.3" />
+                <line x1="45" y1="180" x2="480" y2="180" stroke="#c5a880" strokeWidth="1" opacity="0.8" />
+                
+                {/* Y-axis Labels */}
+                <text x="35" y="24" textAnchor="end" className="font-mono text-[9px] fill-ink-light">{maxTopBookVal}</text>
+                <text x="35" y="104" textAnchor="end" className="font-mono text-[9px] fill-ink-light">{Math.round(maxTopBookVal / 2)}</text>
+                <text x="35" y="184" textAnchor="end" className="font-mono text-[9px] fill-ink-light">0</text>
+
+                {/* Bars */}
+                {dynamicTopBooks.map((book, idx) => {
+                  const barWidth = 35;
+                  const gap = 50;
+                  const x = 45 + 25 + idx * (barWidth + gap);
+                  const height = (Number(book.total_sold) / maxTopBookVal) * 160;
+                  const y = 180 - height;
+                  
+                  return (
+                    <g key={idx} className="group cursor-pointer">
+                      {/* Background guideline track */}
+                      <rect x={x} y="20" width={barWidth} height="160" fill="#f0ece7" opacity="0.1" />
+                      
+                      {/* Actual column bar */}
+                      <rect 
+                        x={x} 
+                        y={y} 
+                        width={barWidth} 
+                        height={height} 
+                        fill="#2C4A3B" 
+                        className="transition-all duration-300 hover:fill-[#1e3529]"
                       />
-                    </div>
+                      
+                      {/* Value label on top of bar */}
+                      <text 
+                        x={x + barWidth / 2} 
+                        y={y - 6} 
+                        textAnchor="middle" 
+                        className="font-mono text-[10px] font-bold fill-ink"
+                      >
+                        {book.total_sold}
+                      </text>
+                      
+                      {/* X-axis code label */}
+                      <text 
+                        x={x + barWidth / 2} 
+                        y="200" 
+                        textAnchor="middle" 
+                        className="font-serif font-bold text-xs fill-[#2C4A3B]"
+                      >
+                        #{idx + 1}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+
+              {/* Bestseller Legend Map */}
+              <div className="mt-5 space-y-2 border-t border-divider/60 pt-4 text-xs">
+                {dynamicTopBooks.map((book, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="w-5 h-5 flex items-center justify-center bg-[#2C4A3B] text-white text-[9px] font-serif font-bold">
+                      #{idx + 1}
+                    </span>
+                    <span className="font-medium text-ink truncate flex-1">{book.title}</span>
+                    <span className="font-mono text-ink-light/80 text-[10px] font-semibold">{book.total_sold} cuốn</span>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
           )}
         </div>
 
+        {/* Chart 2: Order Status Structure */}
         <div className="border border-divider rounded-none p-6 bg-white shadow-none">
           <h3 className="text-sm font-serif font-bold text-ink uppercase tracking-wider mb-5 border-b border-divider pb-2">
             Cơ cấu đơn hàng theo trạng thái
           </h3>
-          <div className="space-y-4">
-            {Object.entries(dynamicOrderStats).map(([status, count]) => {
-              const pct = (count / maxOrderStatusVal) * 100;
-              const isZero = count === 0;
-              return (
-                <div key={status} className="space-y-1">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-semibold text-ink-light uppercase text-[10px] tracking-wider">
-                      {STEP_LABELS[status] || status}
-                    </span>
-                    <span className="font-mono text-ink font-bold">
-                      {count} đơn
-                    </span>
-                  </div>
-                  <div className="w-full bg-[#f0ece7] h-5 rounded-none overflow-hidden relative border border-divider">
-                    <div 
-                      className={`h-full transition-all duration-500 rounded-none ${
-                        status === 'DELIVERED' ? 'bg-green-700' :
-                        status === 'CANCELLED' ? 'bg-red-700' :
-                        status === 'PENDING' ? 'bg-amber-500' :
-                        'bg-ink'
-                      }`} 
-                      style={{ width: isZero ? '0%' : `${pct}%` }} 
+          <div>
+            {/* Custom SVG Column Chart */}
+            <svg viewBox="0 0 500 220" className="w-full h-auto border border-divider/40 bg-[#faf8f5]/20 p-2">
+              {/* Horizontal Grid lines */}
+              <line x1="45" y1="20" x2="480" y2="20" stroke="#c5a880" strokeWidth="0.5" strokeDasharray="3 3" opacity="0.3" />
+              <line x1="45" y1="100" x2="480" y2="100" stroke="#c5a880" strokeWidth="0.5" strokeDasharray="3 3" opacity="0.3" />
+              <line x1="45" y1="180" x2="480" y2="180" stroke="#c5a880" strokeWidth="1" opacity="0.8" />
+              
+              {/* Y-axis Labels */}
+              <text x="35" y="24" textAnchor="end" className="font-mono text-[9px] fill-ink-light">{maxOrderStatusVal}</text>
+              <text x="35" y="104" textAnchor="end" className="font-mono text-[9px] fill-ink-light">{Math.round(maxOrderStatusVal / 2)}</text>
+              <text x="35" y="184" textAnchor="end" className="font-mono text-[9px] fill-ink-light">0</text>
+
+              {/* Bars */}
+              {Object.entries(dynamicOrderStats).map(([status, count], idx) => {
+                const barWidth = 26;
+                const gap = 44;
+                const x = 45 + 18 + idx * (barWidth + gap);
+                const height = (count / maxOrderStatusVal) * 160;
+                const y = 180 - height;
+                const isZero = count === 0;
+
+                // Color mapping
+                const color = 
+                  status === 'DELIVERED' ? '#2C4A3B' :   // Olive Green
+                  status === 'CANCELLED' ? '#8C2D19' :   // Red-brown
+                  status === 'PENDING' ? '#C27D38' :     // Amber
+                  status === 'CONFIRMED' ? '#3D4E5B' :   // Slate
+                  status === 'PACKAGING' ? '#5E7485' :   // Light Slate
+                  '#8fa0ad';                             // Gray-blue
+
+                // X-axis label translations
+                const labelMap = {
+                  PENDING: 'Chờ',
+                  CONFIRMED: 'Nhận',
+                  PACKAGING: 'Gói',
+                  DELIVERING: 'Giao',
+                  DELIVERED: 'Xong',
+                  CANCELLED: 'Hủy'
+                };
+                
+                return (
+                  <g key={status} className="group cursor-pointer">
+                    {/* Background guideline track */}
+                    <rect x={x} y="20" width={barWidth} height="160" fill="#f0ece7" opacity="0.1" />
+                    
+                    {/* Actual column bar */}
+                    <rect 
+                      x={x} 
+                      y={isZero ? 180 : y} 
+                      width={barWidth} 
+                      height={isZero ? 0 : height} 
+                      fill={color} 
+                      className="transition-all duration-300 hover:opacity-85"
                     />
+                    
+                    {/* Value label on top of bar */}
+                    <text 
+                      x={x + barWidth / 2} 
+                      y={(isZero ? 180 : y) - 6} 
+                      textAnchor="middle" 
+                      className="font-mono text-[10px] font-bold fill-ink"
+                    >
+                      {count}
+                    </text>
+                    
+                    {/* X-axis code label */}
+                    <text 
+                      x={x + barWidth / 2} 
+                      y="200" 
+                      textAnchor="middle" 
+                      className="font-sans font-bold text-[9px] fill-ink-light uppercase tracking-wider"
+                    >
+                      {labelMap[status] || status.substring(0, 3)}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* Order Status Legend Map */}
+            <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-2.5 border-t border-divider/60 pt-4 text-[10px]">
+              {Object.entries(dynamicOrderStats).map(([status, count]) => {
+                const colorClass = 
+                  status === 'DELIVERED' ? 'bg-green-700' :
+                  status === 'CANCELLED' ? 'bg-red-700' :
+                  status === 'PENDING' ? 'bg-amber-500' :
+                  status === 'CONFIRMED' ? 'bg-slate-700' :
+                  status === 'PACKAGING' ? 'bg-slate-500' :
+                  'bg-stone-400';
+                
+                const labelMap = {
+                  PENDING: 'Chờ',
+                  CONFIRMED: 'Nhận',
+                  PACKAGING: 'Gói',
+                  DELIVERING: 'Giao',
+                  DELIVERED: 'Xong',
+                  CANCELLED: 'Hủy'
+                };
+
+                return (
+                  <div key={status} className="flex items-center gap-1.5 font-sans">
+                    <span className={`w-2 h-2 ${colorClass}`} />
+                    <span className="text-ink-light/80 uppercase font-semibold">
+                      {labelMap[status]} ({STEP_LABELS[status] || status}):
+                    </span>
+                    <span className="font-mono text-ink font-bold">{count} ĐH</span>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
