@@ -316,28 +316,28 @@ export default function OrderHistoryPage() {
       {orders.length > 0 && (
         /* Thống kê đơn hàng dạng Editorial */
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white border border-divider p-5 hover:bg-surface-warm/40 transition-colors shadow-sm">
+          <div className="bg-white border border-divider p-5 hover:bg-surface-warm/40 transition-colors shadow-none">
             <span className="text-[10px] font-sans font-bold tracking-widest text-ink-light uppercase block mb-2">Tổng đơn hàng</span>
             <div className="flex items-baseline gap-2">
               <span className="font-serif text-3xl font-bold text-ink">{totalOrdersCount}</span>
               <span className="text-[10px] uppercase font-bold text-ink-light">đơn</span>
             </div>
           </div>
-          <div className="bg-white border border-divider p-5 hover:bg-surface-warm/40 transition-colors shadow-sm">
+          <div className="bg-white border border-divider p-5 hover:bg-surface-warm/40 transition-colors shadow-none">
             <span className="text-[10px] font-sans font-bold tracking-widest text-ink-light uppercase block mb-2">Đang xử lý & giao</span>
             <div className="flex items-baseline gap-2">
               <span className="font-serif text-3xl font-bold text-[#2C4A3B]">{activeShippingCount}</span>
               <span className="text-[10px] uppercase font-bold text-[#2C4A3B]">đơn</span>
             </div>
           </div>
-          <div className="bg-white border border-divider p-5 hover:bg-surface-warm/40 transition-colors shadow-sm">
+          <div className="bg-white border border-divider p-5 hover:bg-surface-warm/40 transition-colors shadow-none">
             <span className="text-[10px] font-sans font-bold tracking-widest text-ink-light uppercase block mb-2">Đã hoàn thành</span>
             <div className="flex items-baseline gap-2">
               <span className="font-serif text-3xl font-bold text-green-700">{completedCount}</span>
               <span className="text-[10px] uppercase font-bold text-green-700">đơn</span>
             </div>
           </div>
-          <div className="bg-white border border-divider p-5 hover:bg-surface-warm/40 transition-colors shadow-sm">
+          <div className="bg-white border border-divider p-5 hover:bg-surface-warm/40 transition-colors shadow-none">
             <span className="text-[10px] font-sans font-bold tracking-widest text-ink-light uppercase block mb-2">Tổng chi tiêu</span>
             <div className="flex items-baseline gap-1">
               <span className="font-serif text-2xl font-bold text-ink">{totalSpent.toLocaleString('vi-VN')}</span>
@@ -528,7 +528,7 @@ export default function OrderHistoryPage() {
                 return (
                   <div
                     key={order.id}
-                    className="bg-white border border-divider rounded-none shadow-sm overflow-hidden hover:border-divider-lt hover:shadow-md transition-all duration-300 flex flex-col"
+                    className="bg-white border border-divider rounded-none shadow-none overflow-hidden hover:border-divider-lt transition-all duration-300 flex flex-col"
                   >
                     {/* Header đơn hàng */}
                     <div className="p-5 border-b border-divider bg-[#faf8f5]/80 flex flex-wrap justify-between items-center gap-4">
@@ -563,7 +563,7 @@ export default function OrderHistoryPage() {
                           <div key={idx} className="py-4 first:pt-0 last:pb-0 flex justify-between items-center gap-4 flex-wrap sm:flex-nowrap">
                             <div className="flex items-center gap-4 flex-grow">
                               {/* Bìa sách thu nhỏ */}
-                              <div className="w-12 h-16 bg-surface-subtle flex-shrink-0 border border-divider-lt overflow-hidden relative shadow-sm">
+                              <div className="w-12 h-16 bg-surface-subtle flex-shrink-0 border border-divider-lt overflow-hidden relative shadow-none">
                                 <img
                                   src={bookCover}
                                   alt={item.bookTitle}
@@ -599,7 +599,7 @@ export default function OrderHistoryPage() {
                                 </button>
                                 <Link
                                   to={`/books/${item.hashId || item.bookId}/chat`}
-                                  className="text-[#2C4A3B] hover:text-[#1e3529] text-[10px] font-bold flex items-center gap-1.5 border border-[#2C4A3B]/30 hover:border-[#2C4A3B] rounded-none px-4 py-2 bg-transparent hover:bg-[#faf8f5] transition-all uppercase tracking-wider whitespace-nowrap shadow-sm hover:shadow active:translate-y-px"
+                                  className="text-[#2C4A3B] hover:text-[#1e3529] text-[10px] font-bold flex items-center gap-1.5 border border-[#2C4A3B]/30 hover:border-[#2C4A3B] rounded-none px-4 py-2 bg-transparent hover:bg-[#faf8f5] transition-all uppercase tracking-wider whitespace-nowrap shadow-none active:translate-y-px"
                                 >
                                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -644,14 +644,14 @@ export default function OrderHistoryPage() {
                               setIsCancelModalOpen(true);
                             }}
                             disabled={cancelOrderMutation.isPending}
-                            className="border border-red-200 hover:bg-red-50 text-red-600 font-bold py-2 px-5 rounded-none text-xs transition-all shadow-sm hover:shadow uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
+                            className="border border-red-200 hover:bg-red-50 text-red-600 font-bold py-2 px-5 rounded-none text-xs transition-all uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
                           >
                             Hủy đơn
                           </button>
                         )}
                         <Link
                           to={`/orders/${order.hashId || order.id}`}
-                          className="border border-divider bg-white hover:bg-surface-warm text-ink font-bold py-2 px-5 rounded-none text-xs transition-all shadow-sm hover:shadow uppercase tracking-wider flex items-center gap-1.5"
+                          className="border border-divider bg-white hover:bg-surface-warm text-ink font-bold py-2 px-5 rounded-none text-xs transition-all uppercase tracking-wider flex items-center gap-1.5"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -663,7 +663,7 @@ export default function OrderHistoryPage() {
                           <button
                             onClick={() => handleReorder(order.items)}
                             disabled={reorderMutation.isPending}
-                            className="border border-[#2C4A3B] text-[#2C4A3B] hover:bg-[#2C4A3B] hover:text-white bg-white font-bold py-2 px-5 rounded-none text-xs transition-all shadow-sm hover:shadow uppercase tracking-wider flex items-center gap-1.5 active:translate-y-px disabled:opacity-50"
+                            className="border border-[#2C4A3B] text-[#2C4A3B] hover:bg-[#2C4A3B] hover:text-white bg-white font-bold py-2 px-5 rounded-none text-xs transition-all uppercase tracking-wider flex items-center gap-1.5 active:translate-y-px disabled:opacity-50"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89" />
@@ -675,7 +675,7 @@ export default function OrderHistoryPage() {
                           <button
                             onClick={() => handlePayNow(order.hashId || order.id)}
                             disabled={payMutation.isPending}
-                            className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-bold py-2 px-5 rounded-none text-xs transition-all shadow-sm hover:shadow uppercase tracking-wider flex items-center gap-1.5 active:translate-y-px"
+                            className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-bold py-2 px-5 rounded-none text-xs transition-all uppercase tracking-wider flex items-center gap-1.5 active:translate-y-px"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />

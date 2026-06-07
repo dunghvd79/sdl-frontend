@@ -117,7 +117,7 @@ export default function PromotionsPage() {
             </div>
             <button
               onClick={() => navigate('/login')}
-              className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white px-6 py-2.5 uppercase font-bold tracking-wider text-xs transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+              className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white px-6 py-2.5 uppercase font-bold tracking-wider text-xs transition-colors shadow-none cursor-pointer whitespace-nowrap"
             >
               Đăng nhập ngay
             </button>
@@ -158,7 +158,7 @@ export default function PromotionsPage() {
         {!isLoading && !isError && (
           <>
             {coupons?.length === 0 ? (
-              <div className="border border-stone-200 bg-white p-16 text-center max-w-xl mx-auto shadow-sm flex flex-col items-center justify-center space-y-6">
+              <div className="border border-stone-200 bg-white p-16 text-center max-w-xl mx-auto shadow-none flex flex-col items-center justify-center space-y-6">
                 <div className="w-16 h-16 rounded-full border border-stone-100 flex items-center justify-center bg-stone-50 text-stone-400">
                   <Gift size={28} className="animate-bounce" />
                 </div>
@@ -187,10 +187,10 @@ export default function PromotionsPage() {
                   return (
                     <div 
                       key={coupon.id} 
-                      className={`relative bg-white border border-stone-200 flex h-44 shadow-sm transition-all duration-300 ${
+                      className={`relative bg-white border border-stone-200 flex h-44 shadow-none transition-all duration-300 ${
                         isUsed 
                           ? 'opacity-60 grayscale' 
-                          : 'hover:shadow-md hover:border-stone-300'
+                          : 'hover:shadow-none hover:border-stone-300'
                       }`}
                     >
                       {/* Cắt hình tròn làm vé xe (Circular cutouts on top/bottom card borders) */}
@@ -338,7 +338,7 @@ export default function PromotionsPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             <div className="space-y-3">
-              <div className="w-10 h-10 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-600 font-serif font-bold mx-auto shadow-sm">
+              <div className="w-10 h-10 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-600 font-serif font-bold mx-auto shadow-none">
                 1
               </div>
               <h4 className="font-bold text-sm uppercase tracking-wide text-stone-700">Sao chép mã</h4>

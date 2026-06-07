@@ -135,7 +135,7 @@ export default function WishlistPage() {
 
         {/* Wishlist Grid */}
         {items.length === 0 ? (
-          <div className="border border-stone-200 bg-white p-16 text-center max-w-xl mx-auto shadow-sm flex flex-col items-center justify-center space-y-6">
+          <div className="border border-stone-200 bg-white p-16 text-center max-w-xl mx-auto shadow-none flex flex-col items-center justify-center space-y-6">
             <div className="w-16 h-16 rounded-full border border-stone-100 flex items-center justify-center bg-stone-50 text-stone-400">
               <Heart size={28} className="animate-pulse" />
             </div>
@@ -149,7 +149,7 @@ export default function WishlistPage() {
             </div>
             <Link
               to="/"
-              className="inline-flex items-center gap-2 bg-[#2C4A3B] hover:bg-[#1e3529] text-white px-8 py-3.5 uppercase font-sans font-bold tracking-widest text-xs transition-colors shadow-sm"
+              className="inline-flex items-center gap-2 bg-[#2C4A3B] hover:bg-[#1e3529] text-white px-8 py-3.5 uppercase font-sans font-bold tracking-widest text-xs transition-colors shadow-none"
             >
               <BookOpen size={14} />
               Khám phá sách ngay
@@ -165,11 +165,11 @@ export default function WishlistPage() {
               const priceFormatted = Number(book.price).toLocaleString('vi-VN');
 
               return (
-                <div key={book.id} className="bg-white border border-stone-200 p-4 flex flex-col justify-between group transition-all duration-300 hover:shadow-md relative">
+                <div key={book.id} className="bg-white border border-stone-200 p-4 flex flex-col justify-between group transition-all duration-300 hover:shadow-none relative">
                   {/* Heart button to unlike */}
                   <button
                     onClick={() => handleUnlike(book.hashId || book.id)}
-                    className="absolute top-6 right-6 bg-white/95 p-2 rounded-full text-[#2C4A3B] hover:bg-stone-50 shadow-sm border border-stone-100 transition-colors z-20 cursor-pointer flex items-center justify-center"
+                    className="absolute top-6 right-6 bg-white/95 p-2 rounded-full text-[#2C4A3B] hover:bg-stone-50 shadow-none border border-stone-100 transition-colors z-20 cursor-pointer flex items-center justify-center"
                     title="Xóa khỏi danh sách yêu thích"
                   >
                     <Heart size={16} fill="#2C4A3B" />
@@ -184,7 +184,7 @@ export default function WishlistPage() {
                         className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
                       />
                       {book.rag_indexed_at && (
-                        <span className="absolute bottom-3 left-3 bg-[#2C4A3B] text-white text-[9px] font-sans font-bold px-2 py-0.5 tracking-wider uppercase flex items-center gap-1 shadow-sm">
+                        <span className="absolute bottom-3 left-3 bg-[#2C4A3B] text-white text-[9px] font-sans font-bold px-2 py-0.5 tracking-wider uppercase flex items-center gap-1 shadow-none">
                           <Sparkles size={8} />
                           Sẵn sàng AI
                         </span>
