@@ -26,6 +26,7 @@ export default function OrderDetailPage() {
   const [selectedReason, setSelectedReason] = useState('');
   const [customReason, setCustomReason] = useState('');
   const [selectedReviewBook, setSelectedReviewBook] = useState(null);
+  const [dialog, setDialog] = useState({ isOpen: false });
 
   // 1. Fetch chi tiết đơn hàng
   const { data: orderResponse, isLoading, isError, refetch } = useQuery({
@@ -54,6 +55,32 @@ export default function OrderDetailPage() {
 
   const handlePayNow = (orderId) => {
     payMutation.mutate(orderId);
+  };
+
+  const changeToCodMutation = useMutation({
+    mutationFn: async (orderId) => {
+      return api.put(`/orders/${orderId}/change-to-cod`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['orderDetail', id]);
+      queryClient.invalidateQueries(['myOrders']);
+      toast.success('Đã chuyển sang phương thức thanh toán COD thành công!', { title: 'Đã cập nhật' });
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || err.message, { title: 'Lỗi chuyển phương thức' });
+    }
+  });
+
+  const handleChangeToCod = (orderId) => {
+    setDialog({
+      isOpen: true,
+      title: 'Chuyển sang thanh toán COD',
+      message: 'Bạn có chắc chắn muốn chuyển sang hình thức nhận hàng thanh toán tiền mặt (COD) cho đơn hàng này? Sách trong giỏ hàng tương ứng sẽ được dọn sạch.',
+      confirmText: 'Xác nhận chuyển',
+      cancelText: 'Hủy',
+      variant: 'info',
+      onConfirm: () => changeToCodMutation.mutate(orderId)
+    });
   };
 
   const reorderMutation = useMutation({
@@ -265,17 +292,25 @@ export default function OrderDetailPage() {
               >
                 Hủy đơn
               </button>
+            {order.status === 'PENDING' && order.payment_method !== 'COD' && (
+              <>
+                <button
+                  onClick={() => handlePayNow(order.hashId || order.id)}
+                  disabled={payMutation.isPending || changeToCodMutation.isPending}
+                  className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-medium py-2 px-6 rounded-none text-xs transition-colors shadow-none uppercase tracking-wider"
+                >
+                  Thanh toán ngay
+                </button>
+                <button
+                  onClick={() => handleChangeToCod(order.hashId || order.id)}
+                  disabled={payMutation.isPending || changeToCodMutation.isPending}
+                  className="border border-[#2C4A3B] text-[#2C4A3B] hover:bg-[#2C4A3B] hover:text-white bg-white font-bold py-2 px-6 rounded-none text-xs transition-all shadow-sm hover:shadow uppercase tracking-wider flex items-center gap-1.5 active:translate-y-px"
+                >
+                  Thanh toán COD
+                </button>
+              </>
             )}
             {getStatusBadge(order.status)}
-            {order.status === 'PENDING' && order.payment_method !== 'COD' && (
-              <button
-                onClick={() => handlePayNow(order.hashId || order.id)}
-                disabled={payMutation.isPending}
-                className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-medium py-2 px-6 rounded-none text-xs transition-colors shadow-none uppercase tracking-wider"
-              >
-                Thanh toán ngay
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -298,6 +333,14 @@ export default function OrderDetailPage() {
                 <div className="mt-3 bg-white border border-red-200/60 p-3.5 text-xs text-stone-700 rounded-none max-w-xl">
                   <span className="font-bold text-red-700 uppercase tracking-wider text-[10px] block mb-0.5">Lý do hủy đơn:</span>
                   <span className="font-semibold italic text-stone-900">"{order.cancel_reason}"</span>
+                </div>
+              )}
+              {order.payment_status === 'REFUND_PENDING' && (
+                <div className="mt-3 border border-amber-300 bg-amber-50/50 p-3 text-xs text-amber-800 rounded-none max-w-xl flex items-start gap-2">
+                  <span className="text-sm">ℹ️</span>
+                  <p className="leading-relaxed">
+                    Yêu cầu hoàn tiền của bạn đang được hệ thống xử lý đối soát. Tiền sẽ được hoàn về trong vòng 2-3 ngày làm việc.
+                  </p>
                 </div>
               )}
             </div>
@@ -658,6 +701,12 @@ export default function OrderDetailPage() {
           orderId={id}
         />
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        {...dialog}
+        onCancel={() => setDialog({ isOpen: false })}
+      />
     </div>
   );
 }

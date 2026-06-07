@@ -30,6 +30,7 @@ export default function OrderHistoryPage() {
   const [selectedReason, setSelectedReason] = useState('');
   const [customReason, setCustomReason] = useState('');
   const [selectedReviewBook, setSelectedReviewBook] = useState(null);
+  const [dialog, setDialog] = useState({ isOpen: false });
 
   // 1. Fetch danh sách đơn hàng của tôi
   const { data: ordersData, isLoading, isError, refetch } = useQuery({
@@ -59,6 +60,31 @@ export default function OrderHistoryPage() {
 
   const handlePayNow = (orderId) => {
     payMutation.mutate(orderId);
+  };
+
+  const changeToCodMutation = useMutation({
+    mutationFn: async (orderId) => {
+      return api.put(`/orders/${orderId}/change-to-cod`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['myOrders']);
+      toast.success('Đã chuyển sang phương thức thanh toán COD thành công!', { title: 'Đã cập nhật' });
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || err.message, { title: 'Lỗi chuyển phương thức' });
+    }
+  });
+
+  const handleChangeToCod = (orderId) => {
+    setDialog({
+      isOpen: true,
+      title: 'Chuyển sang thanh toán COD',
+      message: 'Bạn có chắc chắn muốn chuyển sang hình thức nhận hàng thanh toán tiền mặt (COD) cho đơn hàng này? Sách trong giỏ hàng tương ứng sẽ được dọn sạch.',
+      confirmText: 'Xác nhận chuyển',
+      cancelText: 'Hủy',
+      variant: 'info',
+      onConfirm: () => changeToCodMutation.mutate(orderId)
+    });
   };
 
   const reorderMutation = useMutation({
@@ -672,16 +698,25 @@ export default function OrderHistoryPage() {
                           </button>
                         )}
                         {order.status === 'PENDING' && order.payment_method !== 'COD' && (
-                          <button
-                            onClick={() => handlePayNow(order.hashId || order.id)}
-                            disabled={payMutation.isPending}
-                            className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-bold py-2 px-5 rounded-none text-xs transition-all uppercase tracking-wider flex items-center gap-1.5 active:translate-y-px"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                            </svg>
-                            Thanh toán ngay
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handlePayNow(order.hashId || order.id)}
+                              disabled={payMutation.isPending || changeToCodMutation.isPending}
+                              className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-bold py-2 px-5 rounded-none text-xs transition-all uppercase tracking-wider flex items-center gap-1.5 active:translate-y-px"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                              </svg>
+                              Thanh toán ngay
+                            </button>
+                            <button
+                              onClick={() => handleChangeToCod(order.hashId || order.id)}
+                              disabled={payMutation.isPending || changeToCodMutation.isPending}
+                              className="border border-[#2C4A3B] text-[#2C4A3B] hover:bg-[#2C4A3B] hover:text-white bg-white font-bold py-2 px-5 rounded-none text-xs transition-all uppercase tracking-wider flex items-center gap-1.5 active:translate-y-px"
+                            >
+                              Thanh toán COD
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -798,6 +833,12 @@ export default function OrderHistoryPage() {
           onClose={() => setSelectedReviewBook(null)}
         />
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        {...dialog}
+        onCancel={() => setDialog({ isOpen: false })}
+      />
     </div>
   );
 }
