@@ -406,7 +406,7 @@ export default function BookDetailPage() {
               <h3 className="font-serif text-[11px] font-bold text-ink uppercase tracking-widest flex items-center gap-1.5 select-none mb-3">
                 — Thông số kỹ thuật
               </h3>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2 border border-divider p-4 bg-[#faf8f5]/40 text-xs font-sans">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 border border-divider p-4 bg-[#faf8f5]/40 text-xs font-sans">
                 <div className="flex justify-between border-b border-stone-200/50 pb-1.5">
                   <span className="text-stone-400 uppercase tracking-wider text-[9px] font-bold">Mã ISBN</span>
                   <span className="font-mono text-ink font-semibold">{book.isbn || '978-604-x-xxxx'}</span>
@@ -434,26 +434,28 @@ export default function BookDetailPage() {
 
           {/* Action buttons */}
           <div className="space-y-4 mt-6">
-            <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center max-w-3xl">
-              <button
-                onClick={() => addToCart(book.id, book.title)}
-                className="flex-grow h-[48px] bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-sans text-xs font-bold rounded-none transition-all duration-300 uppercase tracking-[0.2em] shadow-sm hover:shadow cursor-pointer flex items-center justify-center gap-2"
-              >
-                <ShoppingCart size={13} /> Thêm vào giỏ hàng
-              </button>
+            <div className="flex flex-col sm:flex-row gap-3.5 max-w-3xl items-stretch sm:items-center">
+              <div className="flex gap-3 items-center flex-grow">
+                <button
+                  onClick={() => addToCart(book.id, book.title)}
+                  className="flex-grow h-[48px] bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-sans text-xs font-bold rounded-none transition-all duration-300 uppercase tracking-[0.2em] shadow-sm hover:shadow cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <ShoppingCart size={13} /> Thêm vào giỏ hàng
+                </button>
 
-              <button
-                onClick={handleToggleWishlist}
-                className="w-[48px] h-[48px] border border-stone-200 hover:border-stone-900 hover:bg-stone-50 transition-all flex items-center justify-center cursor-pointer bg-white shrink-0"
-                title={isLiked ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
-              >
-                <Heart size={16} fill={isLiked ? "#2C4A3B" : "none"} stroke={isLiked ? "#2C4A3B" : "currentColor"} className="transition-transform duration-300 active:scale-125" />
-              </button>
+                <button
+                  onClick={handleToggleWishlist}
+                  className="w-[48px] h-[48px] border border-stone-200 hover:border-stone-900 hover:bg-stone-50 transition-all flex items-center justify-center cursor-pointer bg-white shrink-0"
+                  title={isLiked ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
+                >
+                  <Heart size={16} fill={isLiked ? "#2C4A3B" : "none"} stroke={isLiked ? "#2C4A3B" : "currentColor"} className="transition-transform duration-300 active:scale-125" />
+                </button>
+              </div>
 
               {hasAccess ? (
                 <button
                   onClick={handleChat}
-                  className="flex-grow sm:flex-initial h-[48px] bg-white hover:bg-stone-50 border border-[#2C4A3B] text-[#2C4A3B] font-sans text-xs font-bold px-6 rounded-none transition-all duration-300 uppercase tracking-[0.15em] flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                  className="h-[48px] w-full sm:w-auto sm:px-6 bg-white hover:bg-stone-50 border border-[#2C4A3B] text-[#2C4A3B] font-sans text-xs font-bold rounded-none transition-all duration-300 uppercase tracking-[0.15em] flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <MessageSquare size={13} /> Hỏi đáp AI (RAG)
                 </button>
@@ -461,7 +463,7 @@ export default function BookDetailPage() {
                 <button
                   disabled
                   title="Tính năng hỏi đáp AI chỉ mở khóa sau khi bạn mua sách và nhận giao hàng thành công"
-                  className="flex-grow sm:flex-initial h-[48px] bg-stone-100 border border-stone-200 text-stone-400 font-sans text-[9px] font-bold px-6 rounded-none uppercase tracking-[0.15em] flex items-center justify-center gap-1.5 cursor-not-allowed"
+                  className="h-[48px] w-full sm:w-auto sm:px-6 bg-stone-100 border border-stone-200 text-stone-400 font-sans text-[9px] font-bold rounded-none uppercase tracking-[0.15em] flex items-center justify-center gap-1.5 cursor-not-allowed"
                 >
                   <Lock size={12} /> AI Chat (Chưa mua)
                 </button>

@@ -497,65 +497,68 @@ export default function CartPage() {
                 return (
                   <div
                     key={item.id}
-                    className={`bg-white border p-4 flex gap-4 items-center rounded-none transition-all hover:shadow-[0_4px_15px_rgba(44,74,59,0.03)] group/item ${
+                    className={`bg-white border p-4 flex flex-col sm:flex-row gap-4 sm:items-center rounded-none transition-all hover:shadow-[0_4px_15px_rgba(44,74,59,0.03)] group/item relative ${
                       isSelected ? 'border-[#2C4A3B] bg-[#fdfbf9]/30' : 'border-divider'
                     }`}
                   >
-                    {/* Checkbox chọn sản phẩm */}
-                    <div className="flex-shrink-0 flex items-center justify-center pr-1 select-none">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleSelectItem(bookId)}
-                        className="w-4.5 h-4.5 accent-[#2C4A3B] cursor-pointer"
-                      />
-                    </div>
-
-                    {/* Book Cover Image */}
-                    <div className="w-16 h-22 bg-[#faf8f5] border border-divider-lt rounded-none flex-shrink-0 overflow-hidden shadow-sm relative">
-                      <img
-                        src={defaultImage}
-                        alt={bookTitle}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover/item:scale-105"
-                      />
-                    </div>
-                    
-                    {/* Book Text Info */}
-                    <div className="flex-grow min-w-0">
-                      <Link
-                        to={`/books/${bookId}`}
-                        className="font-serif font-bold text-base text-ink hover:text-[#2C4A3B] transition-colors line-clamp-1 leading-snug"
-                      >
-                        {bookTitle}
-                      </Link>
-                      <p className="text-[9px] text-stone-500 font-sans uppercase tracking-widest mt-0.5 font-bold line-clamp-1">{bookAuthor}</p>
-                      
-                      <div className="flex items-center gap-4 mt-2">
-                        {/* Lưu mua sau */}
-                        <button
-                          onClick={() => handleSaveForLater(bookId)}
-                          className="text-[10px] text-stone-400 hover:text-rose-600 font-sans font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-colors bg-transparent border-0"
-                          title="Lưu vào Wishlist để mua sau và gỡ khỏi giỏ hàng"
-                        >
-                          <Heart size={11} className="fill-none" /> Lưu lại mua sau
-                        </button>
+                    {/* Checkbox, Image and Text in a flex row */}
+                    <div className="flex gap-3 items-center flex-grow min-w-0 w-full sm:w-auto">
+                      {/* Checkbox chọn sản phẩm */}
+                      <div className="flex-shrink-0 flex items-center justify-center pr-1 select-none">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectItem(bookId)}
+                          className="w-4.5 h-4.5 accent-[#2C4A3B] cursor-pointer"
+                        />
                       </div>
 
-                      {/* Hiển thị cảnh báo tồn kho */}
-                      {item.quantity > maxStock ? (
-                        <div className="bg-red-50 text-red-800 border border-red-200/50 p-2 text-[10px] font-sans font-semibold mt-2.5 flex items-center gap-1.5 leading-none">
-                          <AlertTriangle size={12} /> Chỉ còn {maxStock} sản phẩm khả dụng trong kho!
+                      {/* Book Cover Image */}
+                      <div className="w-16 h-22 bg-[#faf8f5] border border-divider-lt rounded-none flex-shrink-0 overflow-hidden shadow-sm relative">
+                        <img
+                          src={defaultImage}
+                          alt={bookTitle}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover/item:scale-105"
+                        />
+                      </div>
+                      
+                      {/* Book Text Info */}
+                      <div className="flex-grow min-w-0">
+                        <Link
+                          to={`/books/${bookId}`}
+                          className="font-serif font-bold text-sm sm:text-base text-ink hover:text-[#2C4A3B] transition-colors line-clamp-1 leading-snug"
+                        >
+                          {bookTitle}
+                        </Link>
+                        <p className="text-[9px] text-stone-500 font-sans uppercase tracking-widest mt-0.5 font-bold line-clamp-1">{bookAuthor}</p>
+                        
+                        <div className="flex items-center gap-4 mt-2">
+                          {/* Lưu mua sau */}
+                          <button
+                            onClick={() => handleSaveForLater(bookId)}
+                            className="text-[10px] text-stone-400 hover:text-rose-600 font-sans font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-colors bg-transparent border-0"
+                            title="Lưu vào Wishlist để mua sau và gỡ khỏi giỏ hàng"
+                          >
+                            <Heart size={11} className="fill-none" /> Lưu lại mua sau
+                          </button>
                         </div>
-                      ) : item.quantity === maxStock ? (
-                        <div className="bg-amber-50/50 text-amber-800 border border-amber-200/50 p-2 text-[10px] font-sans font-semibold mt-2.5 flex items-center gap-1.5 leading-none">
-                          <AlertTriangle size={12} /> Đã đạt giới hạn tồn kho khả dụng ({maxStock} cuốn)
-                        </div>
-                      ) : null}
+
+                        {/* Hiển thị cảnh báo tồn kho */}
+                        {item.quantity > maxStock ? (
+                          <div className="bg-red-50 text-red-800 border border-red-200/50 p-2 text-[10px] font-sans font-semibold mt-2.5 flex items-center gap-1.5 leading-none">
+                            <AlertTriangle size={12} /> Chỉ còn {maxStock} sản phẩm khả dụng trong kho!
+                          </div>
+                        ) : item.quantity === maxStock ? (
+                          <div className="bg-amber-50/50 text-amber-800 border border-amber-200/50 p-2 text-[10px] font-sans font-semibold mt-2.5 flex items-center gap-1.5 leading-none">
+                            <AlertTriangle size={12} /> Đã đạt giới hạn tồn kho khả dụng ({maxStock} cuốn)
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
 
                     {/* Cụm giá tiền & Tăng/giảm số lượng */}
-                    <div className="flex flex-col items-end gap-3.5 flex-shrink-0">
-                      <p className="text-[#2C4A3B] font-serif font-bold text-base font-mono">
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-divider-lt flex-shrink-0">
+                      <p className="text-[#2C4A3B] font-serif font-bold text-sm sm:text-base font-mono">
                         {(bookPrice * item.quantity).toLocaleString('vi-VN')} đ
                       </p>
                       
@@ -582,7 +585,7 @@ export default function CartPage() {
                     </div>
 
                     {/* Nút Xóa riêng biệt */}
-                    <div className="flex-shrink-0 pl-1 border-l border-divider-lt self-stretch flex items-center justify-center">
+                    <div className="absolute top-2 right-2 sm:relative sm:top-auto sm:right-auto sm:pl-1 sm:border-l sm:border-divider-lt sm:self-stretch flex items-center justify-center">
                       <button
                         onClick={() => handleRemoveItem(bookId)}
                         disabled={removeItemMutation.isPending}
@@ -592,7 +595,6 @@ export default function CartPage() {
                         <Trash2 size={15} />
                       </button>
                     </div>
-
                   </div>
                 );
               })}

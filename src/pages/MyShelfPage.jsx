@@ -449,7 +449,7 @@ Cuốn sách "${book.title}" của tác giả ${book.author || 'Khuyết Danh'} 
             </div>
 
             {/* Simulated Paper Book Page Content (Scrollable) */}
-            <div className="flex-1 overflow-y-auto p-8 md:p-14 font-serif leading-relaxed max-w-2xl mx-auto w-full transition-all duration-150">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8 md:p-14 font-serif leading-relaxed max-w-2xl mx-auto w-full transition-all duration-150">
               <h2 className="text-xl md:text-2xl font-bold mb-6 border-b border-divider/10 pb-4 tracking-wide font-serif">
                 {mockChaptersContent.title}
               </h2>

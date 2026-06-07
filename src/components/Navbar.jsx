@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { Search, Heart, ShoppingCart, Gift, Settings, Bell } from 'lucide-react';
+import { Search, Heart, ShoppingCart, Gift, Settings, Bell, Menu, X } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import pigeonImg from '../../picture/bo_Cau.png';
@@ -26,8 +26,18 @@ export default function Navbar() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileSearchQuery, setMobileSearchQuery] = useState('');
   const dropdownRef = useRef(null);
   const bellRef = useRef(null);
+
+  const handleMobileSearchSubmit = (e) => {
+    e.preventDefault();
+    if (!mobileSearchQuery.trim()) return;
+    setIsMobileMenuOpen(false);
+    navigate(`/?search=${encodeURIComponent(mobileSearchQuery.trim())}`, { state: { scrollTo: 'explore' } });
+    setMobileSearchQuery('');
+  };
 
   const handleNavbarSearchClick = () => {
     if (location.pathname === '/') {
@@ -126,6 +136,15 @@ export default function Navbar() {
       <header className="sticky top-0 z-50 w-full flex flex-col font-sans border-b border-divider transition-all duration-300">
         {/* Main Navbar */}
         <nav className="w-full px-6 py-3 flex items-center justify-between relative bg-beige">
+
+          {/* Mobile Hamburger Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="flex lg:hidden text-ink-60 hover:text-ink transition-colors cursor-pointer bg-transparent border-none p-1 -ml-2"
+            title="Mở menu"
+          >
+            <Menu size={22} strokeWidth={2} />
+          </button>
 
           {/* Left Menu */}
           <div className="hidden lg:flex items-center gap-8 text-[11px] font-bold uppercase tracking-[0.2em] text-ink-60">
@@ -451,6 +470,196 @@ export default function Navbar() {
           </p>
         </div>
       </header>
+
+      {/* Mobile Drawer (Menu trượt di động) */}
+      <div 
+        className={`fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+          isMobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'
+        }`}
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
+        <div 
+          className={`fixed top-0 left-0 bottom-0 w-[80%] max-w-[340px] bg-[#faf8f5] z-[101] p-6 flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-out border-r border-divider ${
+            isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Top Drawer Section */}
+          <div className="space-y-6">
+            
+            {/* Header / Logo */}
+            <div className="flex items-center justify-between pb-4 border-b border-divider">
+              <Link 
+                to="/" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-lg font-serif font-bold text-ink flex items-center gap-2"
+              >
+                <img src={pigeonImg} alt="Logo" className="w-6 h-6 object-contain" />
+                <span className="italic uppercase">Pigeon Book</span>
+              </Link>
+              <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1.5 text-stone-400 hover:text-ink transition-colors cursor-pointer bg-transparent border-0"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Mobile Search Bar */}
+            <form onSubmit={handleMobileSearchSubmit} className="relative w-full">
+              <input
+                type="text"
+                placeholder="Tìm sách, tác giả..."
+                value={mobileSearchQuery}
+                onChange={(e) => setMobileSearchQuery(e.target.value)}
+                className="w-full border border-stone-200 bg-white rounded-none py-2 pl-9 pr-4 text-xs font-sans focus:outline-none focus:border-[#2C4A3B] text-ink placeholder:text-stone-400"
+              />
+              <Search size={14} className="absolute left-3 top-2.5 text-stone-400" />
+            </form>
+
+            {/* Nav Links */}
+            <div className="flex flex-col gap-4 text-xs font-bold uppercase tracking-[0.15em] text-stone-500">
+              <Link 
+                to="/" 
+                onClick={() => { setIsMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className="hover:text-stone-900 transition-colors py-1.5 border-b border-stone-200/50"
+              >
+                Trang chủ
+              </Link>
+              <button 
+                onClick={() => { setIsMobileMenuOpen(false); handleScrollToSection('explore'); }}
+                className="text-left hover:text-stone-900 transition-colors py-1.5 border-b border-stone-200/50 bg-transparent border-none p-0 cursor-pointer uppercase font-bold text-stone-500 tracking-[0.15em]"
+              >
+                Danh mục sách
+              </button>
+              <Link 
+                to="/blog" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="hover:text-stone-900 transition-colors py-1.5 border-b border-stone-200/50"
+              >
+                Bài viết
+              </Link>
+              <button 
+                onClick={() => { setIsMobileMenuOpen(false); handleScrollToSection('about'); }}
+                className="text-left hover:text-stone-900 transition-colors py-1.5 border-b border-stone-200/50 bg-transparent border-none p-0 cursor-pointer uppercase font-bold text-stone-500 tracking-[0.15em]"
+              >
+                Về chúng tôi
+              </button>
+            </div>
+
+            {/* Quick Actions (Wishlist, Promotions, Notifications) */}
+            <div className="pt-2 flex flex-col gap-3.5">
+              <Link 
+                to="/wishlist" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-between text-xs font-semibold text-stone-600 hover:text-stone-900"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Heart size={16} className="text-stone-500" />
+                  <span>Sách yêu thích</span>
+                </div>
+                {wishlistCount > 0 && (
+                  <span className="bg-[#2C4A3B] text-white text-[9px] font-mono font-bold px-2 py-0.5 rounded-full">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
+
+              <Link 
+                to="/promotions" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 text-xs font-semibold text-stone-600 hover:text-stone-900"
+              >
+                <Gift size={16} className="text-stone-500" />
+                <span>Trạm khuyến mãi</span>
+              </Link>
+
+              {user && (
+                <Link 
+                  to="/notifications" 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center justify-between text-xs font-semibold text-stone-600 hover:text-stone-900"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Bell size={16} className="text-stone-500" />
+                    <span>Thông báo</span>
+                  </div>
+                  {unreadCount > 0 && (
+                    <span className="bg-[#2C4A3B] text-white text-[9px] font-mono font-bold px-2 py-0.5 rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Link>
+              )}
+            </div>
+
+          </div>
+
+          {/* Bottom Drawer Section (Account info) */}
+          <div className="pt-6 border-t border-divider">
+            {user ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full border border-divider flex items-center justify-center overflow-hidden p-0.5 bg-stone-100">
+                    <img src="https://cdn-icons-png.flaticon.com/512/3069/3069172.png" alt="Avatar" className="w-full h-full object-contain" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-ink truncate">{userName}</p>
+                    <span className="inline-block text-[8px] font-mono font-bold px-1.5 py-0.2 bg-stone-200 border border-stone-300 text-stone-600 uppercase tracking-widest">
+                      {user.role}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-center text-[10px] font-bold uppercase tracking-wider">
+                  <Link 
+                    to="/profile" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="border border-divider py-2 hover:bg-stone-50 text-stone-700 bg-white"
+                  >
+                    Hồ sơ
+                  </Link>
+                  <Link 
+                    to="/shelf" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="border border-[#2C4A3B] py-2 bg-[#2C4A3B] hover:bg-[#1e3529] text-white"
+                  >
+                    Tủ sách
+                  </Link>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full border border-red-200 hover:bg-red-50 text-red-600 py-2.5 text-center text-[10px] font-bold uppercase tracking-widest cursor-pointer bg-white"
+                >
+                  Đăng xuất tài khoản
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                <Link 
+                  to="/login" 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full bg-[#2C4A3B] hover:bg-[#1e3529] text-white py-2.5 text-center text-[10px] font-bold uppercase tracking-widest"
+                >
+                  Đăng nhập
+                </Link>
+                <Link 
+                  to="/register" 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full border border-divider hover:bg-stone-50 text-stone-700 py-2.5 text-center text-[10px] font-bold uppercase tracking-widest bg-white"
+                >
+                  Đăng ký tài khoản
+                </Link>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
     </>
   );
 }
