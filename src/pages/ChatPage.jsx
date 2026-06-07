@@ -250,7 +250,7 @@ export default function ChatPage() {
         </div>
 
         {/* Cột phải: Giao diện Chat */}
-        <div className="flex-1 flex flex-col min-h-0 bg-white">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-white">
           
           {/* Header phòng chat (Cho mobile) */}
           <div className="md:hidden p-4 border-b border-stone-200/80 bg-[#fcfaf7] flex items-center justify-between flex-shrink-0">
