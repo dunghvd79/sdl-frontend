@@ -641,15 +641,27 @@ export default function OrderHistoryPage() {
                     </div>
 
                     {/* Hộp lý do hủy đơn hàng (nếu có) */}
-                    {order.status === 'CANCELLED' && order.cancel_reason && (
-                      <div className="mx-5 my-3 bg-red-50 border border-red-100 p-3.5 text-xs text-stone-700 flex items-start gap-2.5">
-                        <svg className="w-4 h-4 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <div>
-                          <span className="font-bold block uppercase tracking-wide text-[10px] text-red-700 font-sans">Đơn hàng đã bị hủy</span>
-                          <p className="mt-0.5 font-medium leading-relaxed font-sans">Lý do: <span className="italic font-bold text-stone-900">"{order.cancel_reason}"</span></p>
-                        </div>
+                    {order.status === 'CANCELLED' && (
+                      <div className="mx-5 my-3 flex flex-col gap-2">
+                        {order.cancel_reason && (
+                          <div className="bg-red-50 border border-red-100 p-3.5 text-xs text-stone-700 flex items-start gap-2.5">
+                            <svg className="w-4 h-4 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div>
+                              <span className="font-bold block uppercase tracking-wide text-[10px] text-red-700 font-sans">Đơn hàng đã bị hủy</span>
+                              <p className="mt-0.5 font-medium leading-relaxed font-sans">Lý do: <span className="italic font-bold text-stone-900">"{order.cancel_reason}"</span></p>
+                            </div>
+                          </div>
+                        )}
+                        {order.payment_status === 'REFUND_PENDING' && (
+                          <div className="border border-amber-300 bg-amber-50/50 p-3.5 text-xs text-amber-800 rounded-none flex items-start gap-2.5">
+                            <span className="text-sm shrink-0">ℹ️</span>
+                            <p className="leading-relaxed font-sans">
+                              Yêu cầu hoàn tiền của bạn đang được hệ thống xử lý đối soát. Tiền sẽ được hoàn về trong vòng 2-3 ngày làm việc.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
 
