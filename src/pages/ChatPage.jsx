@@ -66,7 +66,7 @@ export default function ChatPage() {
   const isEmployee = user && (user.role === 'ADMIN' || user.role === 'CURATOR');
   const hasAccess = isEmployee || (Array.isArray(orders) && orders.some(order =>
     order.status === 'DELIVERED' &&
-    order.items.some(item => String(item.bookId) === String(id))
+    order.items.some(item => String(item.bookId) === String(book?.id) || String(item.hashId || item.bookId) === String(id))
   ));
 
   const scrollToBottom = () => {
