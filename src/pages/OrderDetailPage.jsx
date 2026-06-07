@@ -292,6 +292,7 @@ export default function OrderDetailPage() {
               >
                 Hủy đơn
               </button>
+            )}
             {order.status === 'PENDING' && order.payment_method !== 'COD' && (
               <>
                 <button
