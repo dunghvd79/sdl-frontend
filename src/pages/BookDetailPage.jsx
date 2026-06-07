@@ -5,7 +5,20 @@ import api from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../services/image';
-import { Heart, ShoppingCart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { 
+  Heart, 
+  ShoppingCart, 
+  ChevronLeft, 
+  ChevronRight, 
+  Star, 
+  Sparkles, 
+  ShieldCheck, 
+  Lock, 
+  Award, 
+  MessageSquare,
+  FileText,
+  Bookmark
+} from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function BookDetailPage() {
@@ -40,7 +53,6 @@ export default function BookDetailPage() {
       if (isAlreadyLiked) {
         newWishlist = newWishlist.filter(item => String(item.hashId || item.id) !== String(id));
       } else {
-        // Thêm sách hiện tại vào danh sách
         if (book) {
           newWishlist.push(book);
         } else {
@@ -61,7 +73,6 @@ export default function BookDetailPage() {
       }
     },
     onSettled: () => {
-      // Invalidate để đồng bộ chuẩn xác với cơ sở dữ liệu trên server
       queryClient.invalidateQueries({ queryKey: ['myWishlist'] });
     }
   });
@@ -80,7 +91,7 @@ export default function BookDetailPage() {
   const [comment, setComment] = useState('');
   const [reviewPage, setReviewPage] = useState(1);
 
-  // Fetch dữ liệu chi tiết cuốn sách bằng React Query
+  // Fetch dữ liệu chi tiết cuốn sách
   const { data: book, isLoading, isError } = useQuery({
     queryKey: ['book', id],
     queryFn: async () => {
@@ -136,9 +147,9 @@ export default function BookDetailPage() {
     createReviewMutation.mutate({ rating, comment });
   };
 
-  const renderStars = (ratingCount) => {
+  const renderStars = (ratingCount, sizeClass = 'text-xs') => {
     return (
-      <div className="flex gap-0.5 text-amber-500 text-sm">
+      <div className={`flex gap-0.5 text-amber-500 ${sizeClass}`}>
         {Array.from({ length: 5 }).map((_, i) => (
           <span key={i}>{i < Math.round(ratingCount) ? '★' : '☆'}</span>
         ))}
@@ -163,18 +174,14 @@ export default function BookDetailPage() {
   const isEmployee = user && (user.role === 'ADMIN' || user.role === 'CURATOR');
   const hasAccess = isEmployee || (Array.isArray(orders) && orders.some(order =>
     order.status === 'DELIVERED' &&
-    order.items.some(item => String(item.hashId || item.bookId) === String(id))
+    order.items.some(item => String(item.bookId) === String(id))
   ));
 
   const handleBack = () => {
     if (window.history.length > 1) {
       navigate(-1);
     } else {
-      window.close();
-      // Dự phòng nếu trình duyệt chặn window.close()
-      setTimeout(() => {
-        navigate('/');
-      }, 100);
+      navigate('/');
     }
   };
 
@@ -192,12 +199,10 @@ export default function BookDetailPage() {
   const getAvatarBgColor = (name) => {
     if (!name) return 'bg-[#2C4A3B]';
     const colors = [
-      'bg-emerald-700',
-      'bg-teal-700',
-      'bg-blue-700',
-      'bg-indigo-700',
-      'bg-purple-700',
-      'bg-stone-700'
+      'bg-emerald-700/80',
+      'bg-teal-700/80',
+      'bg-indigo-700/80',
+      'bg-stone-700/80'
     ];
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -222,21 +227,17 @@ export default function BookDetailPage() {
     return date.toLocaleDateString('vi-VN');
   };
 
-  const defaultImage = book 
-    ? (book.cover_url ? getImageUrl(book.cover_url) : `https://picsum.photos/seed/${book.id + 10}/400/600`) 
-    : '';
-
   const [selectedImage, setSelectedImage] = useState('');
 
   React.useEffect(() => {
     if (book) {
-      setSelectedImage(book.cover_url ? getImageUrl(book.cover_url) : `https://picsum.photos/seed/${book.id + 10}/400/600`);
+      setSelectedImage(book.cover_url ? getImageUrl(book.cover_url) : `https://picsum.photos/seed/${book.id}/400/600`);
     }
   }, [book]);
 
   const defaultCover = book?.cover_url
     ? getImageUrl(book.cover_url)
-    : `https://picsum.photos/seed/${book?.id + 10}/400/600`;
+    : `https://picsum.photos/seed/${book?.id}/400/600`;
 
   const thumbnails = book ? [
     defaultCover,
@@ -252,18 +253,17 @@ export default function BookDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto py-16 px-4 flex-grow w-full">
-        {/* Loading skeleton */}
-        <div className="animate-pulse flex flex-col md:flex-row gap-8">
-          <div className="bg-gray-200 h-96 w-full md:w-1/3 rounded-lg"></div>
-          <div className="flex-1 space-y-6 py-1">
-            <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-            <div className="space-y-3">
-              <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+      <div className="max-w-6xl mx-auto py-16 px-4 flex-grow w-full bg-[#fdfcfa]">
+        <div className="animate-pulse space-y-8">
+          <div className="h-6 w-32 bg-[#f0ece7]"></div>
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className="bg-[#f0ece7] h-96 w-full md:w-1/3 border border-divider-lt"></div>
+            <div className="flex-1 space-y-6">
+              <div className="h-10 bg-[#f0ece7] w-3/4"></div>
+              <div className="h-4 bg-[#f0ece7] w-1/4"></div>
+              <div className="h-24 bg-[#f0ece7]"></div>
+              <div className="h-12 bg-[#f0ece7] w-1/3"></div>
             </div>
-            <div className="h-24 bg-gray-200 rounded"></div>
-            <div className="h-10 bg-gray-200 rounded w-1/3"></div>
           </div>
         </div>
       </div>
@@ -272,14 +272,14 @@ export default function BookDetailPage() {
 
   if (isError || !book) {
     return (
-      <div className="max-w-4xl mx-auto py-20 px-4 text-center flex-grow w-full">
-        <div className="bg-red-50 text-red-700 p-6 rounded-lg inline-block border border-red-200">
-          <p className="text-lg font-semibold">❌ Không tìm thấy cuốn sách này hoặc có lỗi kết nối.</p>
+      <div className="max-w-6xl mx-auto py-20 px-4 text-center flex-grow w-full bg-[#fdfcfa]">
+        <div className="bg-white border border-divider p-8 inline-block max-w-md text-center">
+          <p className="text-sm font-serif font-bold text-ink mb-6">❌ Không tìm thấy cuốn sách này hoặc có lỗi kết nối.</p>
           <button 
             onClick={handleBack} 
-            className="mt-4 bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white px-8 py-3.5 text-xs font-bold uppercase tracking-widest rounded-none transition-colors cursor-pointer"
           >
-            Quay lại Cửa hàng
+            Quay lại cửa hàng
           </button>
         </div>
       </div>
@@ -287,174 +287,199 @@ export default function BookDetailPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-4 flex-grow w-full">
+    <div className="max-w-6xl mx-auto py-12 px-4 flex-grow w-full bg-[#fdfcfa]">
+      
       {/* Nút quay lại */}
       <button
         onClick={handleBack}
-        className="mb-8 flex items-center gap-1.5 text-xs text-stone-700 hover:text-[#2C4A3B] uppercase tracking-[0.15em] font-sans font-extrabold transition-colors cursor-pointer"
+        className="mb-8 flex items-center gap-1.5 text-[10px] text-stone-500 hover:text-[#2C4A3B] uppercase tracking-[0.2em] font-sans font-bold transition-colors cursor-pointer bg-transparent border-0"
       >
-        ← QUAY LẠI DANH SÁCH
+        <ChevronLeft size={14} /> Quay lại danh sách sách
       </button>
 
-      <div className="bg-white border border-stone-200/80 rounded-2xl p-6 md:p-12 flex flex-col md:flex-row gap-10 lg:gap-16 relative overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.02)] min-h-[500px]">
-        {/* SVG book outline */}
-        <svg className="absolute -top-4 -right-4 text-stone-100 w-44 h-44 opacity-25 select-none pointer-events-none z-0" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-        </svg>
-
+      {/* Main Details Card */}
+      <div className="bg-white border border-divider rounded-none p-6 md:p-10 lg:p-12 flex flex-col md:flex-row gap-8 lg:gap-12 relative overflow-hidden">
+        
         {/* Cột trái: Ảnh bìa & Thumbnails */}
-        <div className="w-full md:w-[32%] flex flex-col items-center justify-start z-10">
-          <div className="relative aspect-[3/4] w-full max-w-sm rounded-none overflow-hidden border border-stone-200/60 shadow-[0_12px_28px_rgba(0,0,0,0.06)] bg-stone-50">
-            {/* 3D Book spine effect */}
+        <div className="w-full md:w-[32%] flex flex-col items-center justify-start flex-shrink-0">
+          
+          {/* Cover Frame with 3D spine and shadow */}
+          <div className="relative aspect-[3/4] w-full max-w-xs rounded-none border border-stone-200/80 shadow-[0_8px_24px_rgba(0,0,0,0.06)] bg-[#faf8f5] overflow-hidden select-none">
             <div className="absolute top-0 left-0 bottom-0 w-2.5 bg-gradient-to-r from-black/15 via-black/5 to-transparent z-10"></div>
-            <div className="absolute top-0 left-2.5 bottom-0 w-[1px] bg-white/10 z-10"></div>
             <img
               src={selectedImage}
               alt={book.title}
-              className="w-full h-full object-cover transition-opacity duration-300"
+              className="w-full h-full object-cover transition-all duration-300"
             />
           </div>
 
           {/* Thumbnails Carousel */}
-          <div className="flex items-center gap-2 mt-5 w-full justify-center max-w-sm relative">
-            {thumbnails.map((thumb, idx) => {
-              const isSelected = selectedImage === thumb;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedImage(thumb)}
-                  className={`w-12 h-16 rounded-md overflow-hidden border-2 bg-stone-50 transition-all cursor-pointer ${
-                    isSelected ? 'border-[#2C4A3B] scale-105 shadow-sm' : 'border-stone-200 hover:border-stone-400'
-                  }`}
-                >
-                  <img src={thumb} alt="" className="w-full h-full object-cover" />
-                </button>
-              );
-            })}
-            
-            {/* Carousel Right arrow helper */}
-            <button
-              onClick={handleNextImage}
-              className="w-6 h-6 rounded-full border border-stone-200 bg-white shadow-sm flex items-center justify-center text-stone-500 hover:text-stone-800 hover:border-stone-400 cursor-pointer hover:scale-105 active:scale-95 transition-all ml-1"
-              title="Xem tiếp ảnh"
-            >
-              <span className="text-[10px] leading-none mt-px font-bold">›</span>
-            </button>
-          </div>
+          {thumbnails.length > 1 && (
+            <div className="flex items-center gap-2 mt-4 w-full justify-center max-w-xs relative">
+              {thumbnails.map((thumb, idx) => {
+                const isSelected = selectedImage === thumb;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedImage(thumb)}
+                    className={`w-10 h-14 rounded-none overflow-hidden border-2 bg-stone-50 transition-all cursor-pointer ${
+                      isSelected ? 'border-[#2C4A3B] scale-105 shadow-sm' : 'border-stone-200 hover:border-stone-400'
+                    }`}
+                  >
+                    <img src={thumb} alt="" className="w-full h-full object-cover" />
+                  </button>
+                );
+              })}
+              
+              <button
+                onClick={handleNextImage}
+                className="w-6 h-6 rounded-full border border-stone-200 bg-white shadow-sm flex items-center justify-center text-stone-500 hover:text-stone-800 hover:border-stone-400 cursor-pointer hover:scale-105 active:scale-95 transition-all ml-1"
+                title="Xem tiếp ảnh"
+              >
+                <ChevronRight size={12} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Cột phải: Thông tin chi tiết */}
-        <div className="flex-grow flex flex-col justify-between z-10 text-left">
-          <div className="space-y-5">
-            <div className="flex flex-wrap gap-2.5">
-              <span className="border border-stone-400 text-stone-700 bg-white text-[8px] font-sans font-bold px-3 py-1 uppercase tracking-[0.15em] rounded-none">
+        <div className="flex-grow flex flex-col justify-between text-left space-y-6">
+          <div className="space-y-4">
+            
+            {/* Tags */}
+            <div className="flex flex-wrap gap-2">
+              <span className="border border-stone-300 text-stone-500 bg-white text-[8px] font-sans font-bold px-2.5 py-0.5 uppercase tracking-widest rounded-none">
                 {book.category || 'Văn học'}
               </span>
-              <span className="border border-[#c5a880]/30 text-[#c5a880] bg-[#faf8f5] text-[8px] font-sans font-bold px-3 py-1 uppercase tracking-[0.15em] rounded-none">
-                Sách số hóa cao cấp
+              <span className="border border-[#2C4A3B]/30 text-[#2C4A3B] bg-[#2C4A3B]/5 text-[8px] font-sans font-bold px-2.5 py-0.5 uppercase tracking-widest rounded-none flex items-center gap-1">
+                <Sparkles size={8} /> Sách số hóa RAG AI
               </span>
             </div>
 
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-stone-900 leading-tight tracking-wide uppercase">
+            {/* Title */}
+            <h1 className="text-2xl md:text-3xl font-serif font-bold text-ink leading-tight tracking-wide uppercase">
               {book.title}
             </h1>
 
-            {/* Điểm số sao */}
+            {/* Stars rating summary */}
             {reviewsData?.stats && (
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex gap-0.5 text-amber-400 text-sm">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <span key={i}>{i < Math.round(reviewsData.stats.avg_rating) ? '★' : '☆'}</span>
-                  ))}
-                </div>
+              <div className="flex items-center gap-2">
+                {renderStars(reviewsData.stats.avg_rating, 'text-sm')}
                 <span className="text-[9px] font-sans text-stone-500 uppercase tracking-widest font-bold mt-0.5">
-                  {Number(reviewsData.stats.avg_rating).toFixed(1)} / 5.0 ({reviewsData.stats.review_count} ĐÁNH GIÁ CỦA ĐỘC GIẢ)
+                  {Number(reviewsData.stats.avg_rating).toFixed(1)} / 5.0 ({reviewsData.stats.review_count} Nhận xét từ độc giả)
                 </span>
               </div>
             )}
 
-            {/* Divider line exactly matching the mockup */}
-            <hr className="border-stone-200/80 my-4" />
+            <hr className="border-divider my-2" />
 
-            <p className="text-[10px] text-stone-500 uppercase font-sans tracking-[0.15em] mb-4">
-              TÁC GIẢ: <span className="font-serif font-bold italic text-stone-850 capitalize ml-1.5">{book.author}</span>
+            {/* Author */}
+            <p className="text-[10px] text-stone-500 uppercase font-sans tracking-widest">
+              TÁC GIẢ: <span className="font-serif font-bold italic text-ink ml-1 capitalize">{book.author}</span>
             </p>
 
             {/* Price Box */}
-            <div className="bg-[#faf8f5] border border-stone-200/60 px-6 py-4 flex items-center justify-between max-w-2xl shadow-xs">
-              <span className="text-[9px] font-sans font-bold text-[#c5a880] uppercase tracking-widest">GIÁ BÁN ĐẶC QUYỀN:</span>
-              <p className="text-xl md:text-2xl font-serif font-bold text-stone-900 tracking-wide">
+            <div className="bg-[#faf8f5] border border-divider px-5 py-3.5 flex items-center justify-between max-w-xl shadow-none">
+              <span className="text-[9px] font-sans font-bold text-stone-400 uppercase tracking-widest">Đơn giá sở hữu:</span>
+              <p className="text-xl font-serif font-bold text-[#2C4A3B] font-mono">
                 {Number(book.price).toLocaleString('vi-VN')} đ
               </p>
             </div>
 
             {/* Giới thiệu tác phẩm */}
-            <div className="space-y-3.5 max-w-3xl">
-              <h3 className="font-serif text-xs font-bold text-stone-850 uppercase tracking-widest flex items-center gap-2">
-                — Giới thiệu tác phẩm
+            <div className="space-y-2 max-w-3xl">
+              <h3 className="font-serif text-[11px] font-bold text-ink uppercase tracking-widest flex items-center gap-1.5 select-none">
+                — Tóm tắt tác phẩm
               </h3>
-              <div 
-                className="text-stone-750 leading-relaxed text-xs md:text-sm text-justify font-sans font-normal"
-              >
+              <p className="text-stone-600 leading-relaxed text-xs md:text-sm text-justify font-sans">
                 {book.description || 
-                  `Cuốn sách "${book.title}" là một trong những tác phẩm xuất sắc của tác giả ${book.author}. Tác phẩm mang đến cho độc giả góc nhìn sâu sắc và những thông điệp giá trị. Phù hợp cho những ai muốn nghiên cứu sâu, học tập hoặc đơn giản là tìm kiếm nguồn tri thức mới mẻ.`
+                  `Tác phẩm "${book.title}" là một trong những cuốn sách chọn lọc tiêu biểu của tác giả ${book.author}. Với nội dung giá trị và cốt truyện lôi cuốn, tác phẩm mở rộng tầm tri thức và mang đến những góc nhìn nhân sinh đầy chiều sâu cho độc giả.`
                 }
+              </p>
+            </div>
+
+            {/* Technical Specifications Grid (New & Professional) */}
+            <div className="pt-2 max-w-3xl">
+              <h3 className="font-serif text-[11px] font-bold text-ink uppercase tracking-widest flex items-center gap-1.5 select-none mb-3">
+                — Thông số kỹ thuật
+              </h3>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 border border-divider p-4 bg-[#faf8f5]/40 text-xs font-sans">
+                <div className="flex justify-between border-b border-stone-200/50 pb-1.5">
+                  <span className="text-stone-400 uppercase tracking-wider text-[9px] font-bold">Mã ISBN</span>
+                  <span className="font-mono text-ink font-semibold">{book.isbn || '978-604-x-xxxx'}</span>
+                </div>
+                <div className="flex justify-between border-b border-stone-200/50 pb-1.5">
+                  <span className="text-stone-400 uppercase tracking-wider text-[9px] font-bold">Ngôn ngữ</span>
+                  <span className="text-ink font-semibold">Tiếng Việt</span>
+                </div>
+                <div className="flex justify-between border-b border-stone-200/50 pb-1.5">
+                  <span className="text-stone-400 uppercase tracking-wider text-[9px] font-bold">Định dạng</span>
+                  <span className="text-ink font-semibold">Bản điện tử (PDF)</span>
+                </div>
+                <div className="flex justify-between border-b border-stone-200/50 pb-1.5">
+                  <span className="text-stone-400 uppercase tracking-wider text-[9px] font-bold">Hỗ trợ AI</span>
+                  <span className="text-green-700 font-bold flex items-center gap-0.5 uppercase tracking-wide text-[10px]">
+                    {book.rag_indexed_at ? (
+                      <><Sparkles size={10} /> Trợ lý RAG 24/7</>
+                    ) : 'Không'}
+                  </span>
+                </div>
               </div>
             </div>
+
           </div>
 
-          {/* Cụm nút hành động */}
-          <div className="space-y-4 mt-8">
+          {/* Action buttons */}
+          <div className="space-y-4 mt-6">
             <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center max-w-3xl">
               <button
                 onClick={() => addToCart(book.id, book.title)}
-                className="flex-grow h-[52px] bg-stone-900 hover:bg-[#2C4A3B] active:bg-stone-950 text-white font-sans text-xs font-bold rounded-none transition-all duration-300 uppercase tracking-[0.2em] shadow-sm hover:shadow cursor-pointer flex items-center justify-center gap-2"
+                className="flex-grow h-[48px] bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-sans text-xs font-bold rounded-none transition-all duration-300 uppercase tracking-[0.2em] shadow-sm hover:shadow cursor-pointer flex items-center justify-center gap-2"
               >
-                <ShoppingCart size={14} /> Thêm vào giỏ hàng
+                <ShoppingCart size={13} /> Thêm vào giỏ hàng
               </button>
 
               <button
                 onClick={handleToggleWishlist}
-                className="w-[52px] h-[52px] border border-stone-200 hover:border-stone-950 hover:bg-stone-50 transition-all flex items-center justify-center cursor-pointer bg-white shrink-0"
-                title={isLiked ? "Xóa khỏi danh sách yêu thích" : "Thêm vào danh sách yêu thích"}
+                className="w-[48px] h-[48px] border border-stone-200 hover:border-stone-900 hover:bg-stone-50 transition-all flex items-center justify-center cursor-pointer bg-white shrink-0"
+                title={isLiked ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
               >
-                <Heart size={18} fill={isLiked ? "#2C4A3B" : "none"} stroke={isLiked ? "#2C4A3B" : "currentColor"} className="transition-transform duration-300 active:scale-125" />
+                <Heart size={16} fill={isLiked ? "#2C4A3B" : "none"} stroke={isLiked ? "#2C4A3B" : "currentColor"} className="transition-transform duration-300 active:scale-125" />
               </button>
 
               {hasAccess ? (
                 <button
                   onClick={handleChat}
-                  className="flex-grow sm:flex-initial h-[52px] bg-[#faf8f5] hover:bg-[#2C4A3B] border border-[#2C4A3B]/30 hover:border-[#2C4A3B] text-[#2C4A3B] hover:text-white font-sans text-xs font-bold px-6 rounded-none transition-all duration-300 uppercase tracking-[0.15em] flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:shadow"
+                  className="flex-grow sm:flex-initial h-[48px] bg-white hover:bg-stone-50 border border-[#2C4A3B] text-[#2C4A3B] font-sans text-xs font-bold px-6 rounded-none transition-all duration-300 uppercase tracking-[0.15em] flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                 >
-                  🤖 Hỏi đáp AI (RAG)
+                  <MessageSquare size={13} /> Hỏi đáp AI (RAG)
                 </button>
               ) : (
                 <button
                   disabled
                   title="Tính năng hỏi đáp AI chỉ mở khóa sau khi bạn mua sách và nhận giao hàng thành công"
-                  className="flex-grow sm:flex-initial h-[52px] bg-[#faf8f5] border border-[#c5a880]/30 text-[#c5a880] font-sans text-[10px] font-bold px-6 rounded-none uppercase tracking-[0.15em] flex items-center justify-center gap-1.5 cursor-not-allowed"
+                  className="flex-grow sm:flex-initial h-[48px] bg-stone-100 border border-stone-200 text-stone-400 font-sans text-[9px] font-bold px-6 rounded-none uppercase tracking-[0.15em] flex items-center justify-center gap-1.5 cursor-not-allowed"
                 >
-                  🤖 AI Chat (Chưa mua)
+                  <Lock size={12} /> AI Chat (Chưa mua)
                 </button>
               )}
             </div>
 
             {/* Blue Info Alert Box */}
-            <div className="flex items-start gap-2.5 bg-[#f0f9ff] border border-[#bae6fd] p-3.5 max-w-3xl rounded-none shadow-xs">
-              <svg className="w-4 h-4 text-[#0284c7] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 111.063.852l-.708 2.836a.75.75 0 001.063.852l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-              </svg>
-              <p className="text-[10px] text-[#0369a1] font-sans leading-normal font-bold tracking-wide uppercase">
-                TÍNH NĂNG HỎI ĐÁP THÔNG MINH (RAG) SẼ ĐƯỢC TỰ ĐỘNG KÍCH HOẠT SAU KHI BẠN MUA VÀ NHẬN SÁCH THÀNH CÔNG
+            <div className="flex items-start gap-2.5 bg-blue-50/50 border border-blue-200 p-3.5 max-w-3xl rounded-none text-xs">
+              <Info size={14} className="text-blue-700 shrink-0 mt-0.5" />
+              <p className="text-[9px] text-blue-700 font-sans leading-relaxed font-bold tracking-wide uppercase">
+                GỢI Ý: Sở hữu tác phẩm số giúp bạn kích hoạt trợ lý AI của sách để tóm tắt, giải nghĩa và hỏi đáp chương chi tiết.
               </p>
             </div>
           </div>
+
         </div>
       </div>
 
-      {/* Khối đánh giá độc giả (Reviews Section) */}
+      {/* Nhận xét độc giả (Reviews Section) */}
       <div className="mt-16 border-t border-divider pt-12">
-        <span className="text-[10px] font-sans font-bold tracking-[0.25em] text-[#2C4A3B] uppercase block mb-3">
+        <span className="text-[9px] font-sans font-bold tracking-[0.25em] text-[#2C4A3B] uppercase block mb-2">
           Phản hồi từ độc giả
         </span>
         <h2 className="font-serif text-3xl font-bold uppercase tracking-wider text-ink mb-10">
@@ -462,17 +487,18 @@ export default function BookDetailPage() {
         </h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          
           {/* Cột 1: Thống kê số sao */}
-          <div className="bg-white border border-stone-200/80 p-8 rounded-2xl shadow-sm space-y-6">
+          <div className="bg-white border border-divider p-8 rounded-none space-y-6">
             <div className="text-center">
-              <span className="text-6xl font-serif font-black text-stone-900 leading-none block mb-2">
+              <span className="text-6xl font-serif font-black text-ink leading-none block mb-2">
                 {reviewsData?.stats ? Number(reviewsData.stats.avg_rating).toFixed(1) : '0.0'}
               </span>
               <div className="flex justify-center mb-1.5">
-                {renderStars(reviewsData?.stats?.avg_rating || 0)}
+                {renderStars(reviewsData?.stats?.avg_rating || 0, 'text-sm')}
               </div>
-              <p className="text-[10px] uppercase tracking-widest font-sans font-bold text-stone-400">
-                Có tất cả {reviewsData?.stats?.review_count || 0} đánh giá
+              <p className="text-[9px] uppercase tracking-widest font-sans font-bold text-stone-400">
+                Có tổng cộng {reviewsData?.stats?.review_count || 0} nhận xét
               </p>
             </div>
 
@@ -493,13 +519,13 @@ export default function BookDetailPage() {
                   return (
                     <div key={star} className="flex items-center gap-3 text-xs font-sans">
                       <span className="w-12 text-stone-500 font-bold whitespace-nowrap text-left">{star} sao</span>
-                      <div className="flex-grow bg-stone-100 h-2 rounded-full overflow-hidden">
+                      <div className="flex-grow bg-stone-100 h-1.5 rounded-none overflow-hidden">
                         <div 
-                          className="bg-[#2C4A3B] h-full rounded-full transition-all duration-500" 
+                          className="bg-[#2C4A3B] h-full transition-all duration-500" 
                           style={{ width: `${percent}%` }}
                         ></div>
                       </div>
-                      <span className="w-6 text-stone-400 font-medium text-right">{count}</span>
+                      <span className="w-6 text-stone-400 font-bold text-right">{count}</span>
                     </div>
                   );
                 });
@@ -509,48 +535,47 @@ export default function BookDetailPage() {
 
           {/* Cột 2 & 3: Form gửi nhận xét */}
           <div className="lg:col-span-2">
-            {/* Form gửi nhận xét (Chỉ cho user đã mua sách thành công) */}
             {user ? (
               hasAccess ? (
-                <form onSubmit={handleSubmitReview} className="border border-stone-200/80 p-8 bg-[#faf8f5]/60 rounded-2xl shadow-xs space-y-5">
-                  <h3 className="font-serif text-lg font-bold uppercase tracking-wider text-ink">
+                <form onSubmit={handleSubmitReview} className="border border-divider p-8 bg-[#faf8f5]/60 rounded-none space-y-5">
+                  <h3 className="font-serif text-base font-bold uppercase tracking-wider text-ink">
                     Viết nhận xét của bạn
                   </h3>
                   
                   <div className="flex flex-col gap-2">
-                    <span className="text-xs font-sans uppercase font-bold tracking-wider text-[#2C4A3B]">Đánh giá của bạn:</span>
-                    <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-sans uppercase font-bold tracking-wider text-[#2C4A3B]">Đánh giá số sao:</span>
+                    <div className="flex items-center gap-1.5">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
                           key={star}
                           type="button"
                           onClick={() => setRating(star)}
-                          className={`text-2xl transition-all duration-200 hover:scale-125 focus:outline-none cursor-pointer bg-transparent border-none ${
-                            star <= rating ? 'text-amber-500 transform scale-110' : 'text-stone-300 hover:text-amber-400'
+                          className={`text-2xl transition-transform duration-150 hover:scale-125 focus:outline-none cursor-pointer bg-transparent border-none ${
+                            star <= rating ? 'text-amber-500' : 'text-stone-300'
                           }`}
                         >
                           ★
                         </button>
                       ))}
-                      <span className="text-xs font-sans font-bold text-stone-500 ml-3 uppercase tracking-wider">
+                      <span className="text-[10px] font-sans font-bold text-stone-400 ml-3 uppercase tracking-wider">
                         {rating === 5 && '🌟 Tuyệt vời'}
                         {rating === 4 && '✨ Rất tốt'}
                         {rating === 3 && '👍 Bình thường'}
-                        {rating === 2 && '👎 Chưa hài lòng'}
-                        {rating === 1 && '😢 Tệ'}
+                        {rating === 2 && '👎 Chưa tốt'}
+                        {rating === 1 && '😢 Kém'}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label htmlFor="comment" className="text-xs font-sans uppercase font-bold tracking-wider text-[#2C4A3B]">Bình luận nhận xét:</label>
+                    <label htmlFor="comment" className="text-[10px] font-sans uppercase font-bold tracking-wider text-[#2C4A3B]">Bình luận chi tiết:</label>
                     <textarea
                       id="comment"
                       rows="3"
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
-                      placeholder="Chia sẻ cảm nghĩ chi tiết của bạn về nội dung cuốn sách này để giúp những độc giả khác nhé..."
-                      className="border border-stone-300 rounded-none p-3.5 text-sm focus:border-[#2C4A3B] focus:ring-1 focus:ring-[#2C4A3B] outline-none transition-all w-full resize-none font-sans bg-white"
+                      placeholder="Chia sẻ nhận xét thực tế về sách (độ dài ít nhất 10 ký tự)..."
+                      className="border border-stone-200 rounded-none p-3.5 text-xs focus:border-[#2C4A3B] focus:ring-1 focus:ring-[#2C4A3B] outline-none transition-all w-full resize-none font-sans bg-white"
                       required
                     />
                   </div>
@@ -558,66 +583,66 @@ export default function BookDetailPage() {
                   <button
                     type="submit"
                     disabled={createReviewMutation.isPending}
-                    className="bg-ink hover:bg-[#2C4A3B] active:bg-[#1e3529] disabled:opacity-50 text-white font-sans text-xs font-bold uppercase tracking-widest px-8 py-3.5 transition-colors cursor-pointer rounded-none animate-none"
+                    className="bg-ink hover:bg-[#2C4A3B] active:bg-[#1e3529] disabled:opacity-50 text-white font-sans text-xs font-bold uppercase tracking-widest px-6 py-3 transition-colors cursor-pointer rounded-none"
                   >
-                    {createReviewMutation.isPending ? 'Đang gửi...' : 'Gửi nhận xét ngay'}
+                    {createReviewMutation.isPending ? 'Đang gửi...' : 'Gửi nhận xét của tôi'}
                   </button>
                 </form>
               ) : (
-                <div className="border border-dashed border-stone-300 p-8 bg-stone-50 text-center rounded-xl">
-                  <p className="text-xs uppercase tracking-widest font-sans font-bold text-stone-500">
-                    Bạn chỉ có thể đánh giá cuốn sách này sau khi đã mua và nhận giao hàng thành công.
+                <div className="border border-dashed border-stone-300 p-8 bg-stone-50/50 text-center rounded-none text-xs">
+                  <p className="uppercase tracking-widest font-sans font-bold text-stone-400">
+                    Bạn cần mua và nhận giao hàng thành công cuốn sách này để có thể tham gia viết nhận xét.
                   </p>
                 </div>
               )
             ) : (
-              <div className="border border-dashed border-stone-300 p-8 bg-stone-50 text-center rounded-xl">
-                <p className="text-xs uppercase tracking-widest font-sans font-bold text-stone-500">
-                  Vui lòng <span className="text-[#2C4A3B] cursor-pointer hover:underline font-extrabold" onClick={() => navigate('/login')}>đăng nhập</span> để viết đánh giá cho cuốn sách này.
+              <div className="border border-dashed border-stone-300 p-8 bg-stone-50/50 text-center rounded-none text-xs">
+                <p className="uppercase tracking-widest font-sans font-bold text-stone-400">
+                  Vui lòng <span className="text-[#2C4A3B] cursor-pointer hover:underline font-extrabold" onClick={() => navigate('/login')}>đăng nhập</span> để bắt đầu viết nhận xét.
                 </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Danh sách nhận xét - Moved outside of the grid, spanning full width */}
-        <div className="space-y-6 pt-10 mt-10 border-t border-stone-200/60">
-          <h3 className="font-serif text-xl font-bold uppercase tracking-wider text-ink">
-            Nhận xét chi tiết
+        {/* Danh sách nhận xét */}
+        <div className="space-y-6 pt-10 mt-10 border-t border-divider">
+          <h3 className="font-serif text-lg font-bold uppercase tracking-wider text-ink">
+            Ý kiến phản hồi cụ thể
           </h3>
 
           {paginatedReviews.length > 0 ? (
-            <div className="divide-y divide-stone-100 border border-stone-200/80 bg-white rounded-2xl px-6 shadow-sm">
+            <div className="divide-y divide-stone-100 border border-divider bg-white rounded-none px-6 shadow-none">
               {paginatedReviews.map((rev) => {
                 const initials = getInitials(rev.user_name);
                 const avatarBg = getAvatarBgColor(rev.user_name);
                 return (
                   <div key={rev.id} className="py-6 flex gap-4 items-start">
                     {/* Avatar */}
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-sans text-xs font-bold shrink-0 ${avatarBg}`}>
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-sans text-[11px] font-bold shrink-0 ${avatarBg}`}>
                       {initials}
                     </div>
-                    <div className="flex-grow space-y-2 min-w-0">
+                    <div className="flex-grow space-y-1.5 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-sans text-xs font-bold text-stone-900 uppercase tracking-wide truncate max-w-[200px]">
+                          <span className="font-sans text-xs font-bold text-stone-800 uppercase tracking-wide truncate max-w-[200px]">
                             {rev.user_name}
                           </span>
                           {rev.is_verified_purchase && (
-                            <span className="inline-flex items-center text-[8px] font-sans font-bold text-[#2C4A3B] bg-green-50 border border-green-200/60 px-1.5 py-0.5 uppercase tracking-widest rounded-none">
-                              ✓ Đã mua hàng
+                            <span className="inline-flex items-center text-[7px] font-sans font-bold text-[#2C4A3B] bg-green-50 border border-green-200 px-1.5 py-0.5 uppercase tracking-widest rounded-none">
+                              ✓ Đã mua
                             </span>
                           )}
-                          <div className="flex text-amber-500 text-xs mt-0.5">
+                          <div className="flex text-amber-500 text-[10px] mt-0.5">
                             {renderStars(rev.rating)}
                           </div>
                         </div>
-                        <span className="font-sans text-[10px] text-stone-400 uppercase tracking-widest whitespace-nowrap">
+                        <span className="font-sans text-[9px] text-stone-400 uppercase tracking-widest">
                           {formatReviewDate(rev.created_at)}
                         </span>
                       </div>
-                      <p className="text-sm font-sans text-stone-600 leading-relaxed text-justify whitespace-pre-wrap break-words pr-2">
-                        {rev.comment || 'Không có bình luận.'}
+                      <p className="text-xs font-sans text-stone-600 leading-relaxed text-justify whitespace-pre-wrap break-words pr-2">
+                        {rev.comment || 'Không có nội dung bình luận.'}
                       </p>
                     </div>
                   </div>
@@ -625,8 +650,8 @@ export default function BookDetailPage() {
               })}
             </div>
           ) : (
-            <p className="text-xs italic font-sans text-ink-60 uppercase tracking-wider py-8 text-center bg-stone-50 border border-dashed border-stone-200 rounded-xl">
-              Chưa có nhận xét nào. Hãy là người đầu tiên viết đánh giá cho cuốn sách này!
+            <p className="text-[10px] italic font-sans text-stone-400 uppercase tracking-wider py-8 text-center bg-stone-50/50 border border-dashed border-stone-200 rounded-none">
+              Chưa có nhận xét nào cho cuốn sách này. Hãy là người đầu tiên đóng góp ý kiến!
             </p>
           )}
 
@@ -637,13 +662,13 @@ export default function BookDetailPage() {
                 type="button"
                 onClick={() => setReviewPage(p => Math.max(1, p - 1))}
                 disabled={reviewPage === 1}
-                className="w-8 h-8 flex items-center justify-center rounded-full border border-stone-200 text-stone-600 hover:border-[#2C4A3B] hover:text-[#2C4A3B] hover:bg-[#2C4A3B]/5 disabled:opacity-30 disabled:pointer-events-none transition-all duration-300 cursor-pointer bg-white"
+                className="w-7 h-7 flex items-center justify-center rounded-full border border-stone-200 text-stone-600 hover:border-[#2C4A3B] hover:text-[#2C4A3B] hover:bg-[#2C4A3B]/5 disabled:opacity-30 disabled:pointer-events-none transition-all duration-300 cursor-pointer bg-white"
                 aria-label="Trang trước"
               >
-                <ChevronLeft size={14} />
+                <ChevronLeft size={12} />
               </button>
 
-              <span className="text-xs font-sans font-bold text-stone-500 uppercase tracking-widest">
+              <span className="text-[10px] font-sans font-bold text-stone-500 uppercase tracking-widest">
                 Trang {reviewPage} / {totalReviewPages}
               </span>
 
@@ -651,15 +676,16 @@ export default function BookDetailPage() {
                 type="button"
                 onClick={() => setReviewPage(p => Math.min(totalReviewPages, p + 1))}
                 disabled={reviewPage === totalReviewPages}
-                className="w-8 h-8 flex items-center justify-center rounded-full border border-stone-200 text-stone-600 hover:border-[#2C4A3B] hover:text-[#2C4A3B] hover:bg-[#2C4A3B]/5 disabled:opacity-30 disabled:pointer-events-none transition-all duration-300 cursor-pointer bg-white"
+                className="w-7 h-7 flex items-center justify-center rounded-full border border-stone-200 text-stone-600 hover:border-[#2C4A3B] hover:text-[#2C4A3B] hover:bg-[#2C4A3B]/5 disabled:opacity-30 disabled:pointer-events-none transition-all duration-300 cursor-pointer bg-white"
                 aria-label="Trang sau"
               >
-                <ChevronRight size={14} />
+                <ChevronRight size={12} />
               </button>
             </div>
           )}
         </div>
       </div>
+
       <ConfirmDialog
         isOpen={showLoginConfirm}
         title="Yêu cầu đăng nhập"
