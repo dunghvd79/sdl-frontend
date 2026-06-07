@@ -176,10 +176,10 @@ export default function Navbar() {
           </div>
 
           {/* Center Logo */}
-          <Link to="/" className="text-2xl md:text-3xl font-serif text-ink lg:absolute lg:left-1/2 lg:-translate-x-1/2 whitespace-nowrap flex items-center justify-center gap-2 md:gap-3">
-            <img src={pigeonImg} alt="Pigeon Left" className="w-8 h-8 md:w-10 md:h-10 object-contain opacity-85 -scale-x-100" />
+          <Link to="/" className="text-base sm:text-2xl md:text-3xl font-serif text-ink lg:absolute lg:left-1/2 lg:-translate-x-1/2 whitespace-nowrap flex items-center justify-center gap-2 md:gap-3">
+            <img src={pigeonImg} alt="Pigeon Left" className="w-8 h-8 md:w-10 md:h-10 object-contain opacity-85 -scale-x-100 hidden sm:block" />
             <span className="italic uppercase tracking-wide">Pigeon Bookstore</span>
-            <img src={pigeonImg} alt="Pigeon Right" className="w-8 h-8 md:w-10 md:h-10 object-contain opacity-85" />
+            <img src={pigeonImg} alt="Pigeon Right" className="w-8 h-8 md:w-10 md:h-10 object-contain opacity-85 hidden sm:block" />
           </Link>
 
           {/* Right Actions */}
@@ -318,7 +318,7 @@ export default function Navbar() {
             </Link>
 
             {user ? (
-              <div className="flex items-center gap-3">
+              <div className="hidden lg:flex items-center gap-3">
                 {/* User Dropdown */}
                 <div className="relative group" ref={dropdownRef}>
                   <button 
@@ -454,7 +454,7 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="hidden lg:flex items-center gap-3">
                 <Link to="/login" className="text-xs font-sans font-bold uppercase tracking-widest hover:text-ink transition-colors">
                   Đăng Nhập
                 </Link>
