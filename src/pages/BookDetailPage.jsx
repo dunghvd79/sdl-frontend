@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { getImageUrl } from '../services/image';
 import { 
   Heart, 
@@ -26,6 +27,7 @@ export default function BookDetailPage() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { user } = useAuth();
+  const toast = useToast();
   const queryClient = useQueryClient();
 
   // Fetch wishlist to see if this book is liked
@@ -130,18 +132,18 @@ export default function BookDetailPage() {
       setReviewPage(1);
     },
     onError: (err) => {
-      alert(err.response?.data?.error || 'Không thể gửi đánh giá. Vui lòng thử lại.');
+      toast.error(err.response?.data?.error || 'Không thể gửi đánh giá. Vui lòng thử lại.');
     }
   });
 
   const handleSubmitReview = (e) => {
     e.preventDefault();
     if (!rating) {
-      alert('Vui lòng chọn số sao đánh giá!');
+      toast.warning('Vui lòng chọn số sao đánh giá!');
       return;
     }
     if (!comment || comment.trim().length < 10) {
-      alert('Nội dung nhận xét phải có ít nhất 10 ký tự!');
+      toast.warning('Nội dung nhận xét phải có ít nhất 10 ký tự!');
       return;
     }
     createReviewMutation.mutate({ rating, comment });
