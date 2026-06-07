@@ -7,6 +7,20 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { getImageUrl } from '../services/image';
+import { 
+  Trash2, 
+  Heart, 
+  ShoppingBag, 
+  Plus, 
+  Minus, 
+  Tag, 
+  ArrowLeft, 
+  Info, 
+  Percent, 
+  AlertTriangle, 
+  ShieldCheck, 
+  Check 
+} from 'lucide-react';
 
 // Key để lưu trạng thái selection vào sessionStorage
 const SELECTION_STORAGE_KEY = 'selected_cart_book_ids';
@@ -52,8 +66,6 @@ export default function CartPage() {
   const getBookId = (item) => String(item.hashId || item.book?.hashId || item.bookId || item.book?.id);
 
   // Đồng bộ selectedItems khi cartItems được tải lần đầu
-  // Nếu có dữ liệu trong sessionStorage → khôi phục selection cũ
-  // Nếu không có → chọn tất cả (lần đầu vào giỏ hàng)
   useEffect(() => {
     if (cartItems.length > 0 && !hasInitializedSelection) {
       const currentIds = cartItems.map(getBookId);
@@ -335,23 +347,25 @@ export default function CartPage() {
 
   if (!user) {
     return (
-      <div className="max-w-5xl mx-auto py-20 px-4 text-center flex-grow w-full">
-        <div className="bg-white border border-divider p-12 text-center rounded-none max-w-lg mx-auto">
-          <div className="text-5xl mb-4 opacity-80">🛒</div>
+      <div className="max-w-6xl mx-auto py-20 px-4 text-center flex-grow w-full bg-[#fdfcfa]">
+        <div className="bg-white border border-divider p-12 text-center rounded-none max-w-lg mx-auto shadow-none">
+          <div className="w-16 h-16 bg-[#2C4A3B]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <ShoppingBag className="text-[#2C4A3B] w-8 h-8" />
+          </div>
           <h2 className="text-2xl font-serif font-bold text-ink uppercase tracking-wider mb-3">Bạn chưa đăng nhập</h2>
-          <p className="text-ink-60 text-sm font-sans tracking-wide mb-8 leading-relaxed">
+          <p className="text-stone-500 text-sm font-sans tracking-wide mb-8 leading-relaxed">
             Vui lòng đăng nhập hoặc đăng ký tài khoản để xem giỏ hàng cá nhân, thêm sách yêu thích và thực hiện thanh toán mua sách tại Pigeon Bookstore.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link
               to="/login"
-              className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-sans text-xs font-bold py-3.5 px-8 uppercase tracking-[0.2em] transition-colors rounded-none"
+              className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-sans text-xs font-bold py-3.5 px-8 uppercase tracking-[0.2em] transition-colors rounded-none shadow-[0_4px_12px_rgba(44,74,59,0.15)]"
             >
               Đăng nhập ngay
             </Link>
             <Link
               to="/register"
-              className="border border-divider hover:border-ink hover:bg-surface-warm text-ink font-sans text-xs font-bold py-3.5 px-8 uppercase tracking-[0.2em] transition-colors rounded-none bg-white"
+              className="border border-divider hover:border-ink hover:bg-stone-50 text-ink font-sans text-xs font-bold py-3.5 px-8 uppercase tracking-[0.2em] transition-colors rounded-none bg-white"
             >
               Đăng ký tài khoản
             </Link>
@@ -363,12 +377,18 @@ export default function CartPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto py-16 px-4 flex-grow w-full">
-        <h1 className="text-3xl font-serif font-bold text-ink uppercase tracking-widest mb-8">🛒 Giỏ Hàng</h1>
-        <div className="space-y-4 animate-pulse">
-          <div className="h-20 bg-surface-subtle rounded-none"></div>
-          <div className="h-20 bg-surface-subtle rounded-none"></div>
-          <div className="h-20 bg-surface-subtle rounded-none"></div>
+      <div className="max-w-6xl mx-auto py-12 px-4 flex-grow w-full bg-[#fdfcfa]">
+        <div className="animate-pulse space-y-6">
+          <div className="h-6 w-32 bg-[#f0ece7] mx-auto md:mx-0"></div>
+          <div className="h-10 w-64 bg-[#f0ece7] mx-auto md:mx-0"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-8 space-y-4">
+              <div className="h-16 bg-[#f0ece7]"></div>
+              <div className="h-32 bg-[#f0ece7]"></div>
+              <div className="h-32 bg-[#f0ece7]"></div>
+            </div>
+            <div className="lg:col-span-4 h-60 bg-[#f0ece7]"></div>
+          </div>
         </div>
       </div>
     );
@@ -376,14 +396,14 @@ export default function CartPage() {
 
   if (isError) {
     return (
-      <div className="max-w-5xl mx-auto py-20 px-4 text-center flex-grow w-full">
-        <div className="bg-white border border-divider p-8 inline-block rounded-none max-w-md">
-          <p className="text-lg font-serif font-bold text-ink mb-4">❌ Không thể tải thông tin giỏ hàng.</p>
+      <div className="max-w-6xl mx-auto py-20 px-4 text-center flex-grow w-full bg-[#fdfcfa]">
+        <div className="bg-white border border-divider p-10 inline-block rounded-none max-w-md">
+          <p className="text-sm font-serif font-bold text-ink mb-6">❌ Không thể kết nối và tải thông tin giỏ hàng.</p>
           <button 
             onClick={() => refetch()} 
-            className="bg-ink hover:bg-[#2C4A3B] text-white text-xs font-bold uppercase tracking-widest px-6 py-3 rounded-none transition-colors"
+            className="bg-ink hover:bg-[#2C4A3B] text-white text-[10px] font-bold uppercase tracking-widest px-8 py-3.5 rounded-none transition-colors cursor-pointer"
           >
-            Thử lại
+            Thử tải lại
           </button>
         </div>
       </div>
@@ -391,35 +411,61 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-4 flex-grow w-full">
-      <h1 className="text-3xl font-serif font-bold text-ink uppercase tracking-widest mb-8">🛒 Giỏ Hàng</h1>
+    <div className="max-w-6xl mx-auto py-12 px-4 flex-grow w-full bg-[#fdfcfa]">
+      
+      {/* Checkout Steps Stepper (Progress Bar) */}
+      <div className="flex justify-center items-center gap-2 mb-10 text-xs font-sans uppercase tracking-widest font-semibold max-w-md mx-auto">
+        <span className="text-[#2C4A3B] border-b-2 border-[#2C4A3B] pb-1 font-bold">1. Giỏ hàng</span>
+        <span className="text-stone-300">/</span>
+        <span className="text-stone-400">2. Thanh toán</span>
+        <span className="text-stone-300">/</span>
+        <span className="text-stone-400">3. Hoàn tất</span>
+      </div>
+
+      {/* Header */}
+      <div className="mb-10 border-b border-divider pb-6 text-center md:text-left flex flex-col md:flex-row md:items-baseline justify-between gap-4">
+        <div>
+          <span className="text-[10px] text-stone-500 font-sans tracking-[0.2em] uppercase font-bold">Xem giỏ hàng của bạn</span>
+          <h1 className="text-3xl font-serif font-bold text-ink mt-1 flex items-center justify-center md:justify-start gap-2.5">
+            <ShoppingBag className="text-[#2C4A3B] w-7 h-7" /> GIỎ HÀNG
+          </h1>
+        </div>
+        {cartItems.length > 0 && (
+          <span className="text-xs text-stone-500 font-sans">
+            Bạn đang có <strong className="text-ink">{cartItems.length}</strong> tác phẩm trong giỏ
+          </span>
+        )}
+      </div>
 
       {cartItems.length === 0 ? (
-        <div className="bg-white border border-divider p-12 text-center rounded-none">
-          <div className="text-5xl mb-4 opacity-80">🛒</div>
+        <div className="bg-white border border-divider p-16 text-center rounded-none shadow-none max-w-xl mx-auto">
+          <div className="w-16 h-16 bg-[#2C4A3B]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <ShoppingBag className="text-[#2C4A3B] w-8 h-8" />
+          </div>
           <h2 className="text-2xl font-serif font-bold text-ink uppercase tracking-wider mb-2">Giỏ hàng của bạn đang trống</h2>
-          <p className="text-ink-60 text-sm font-sans tracking-wide mb-8">Hãy khám phá thêm hàng ngàn cuốn sách hấp dẫn khác tại thư viện nhé!</p>
+          <p className="text-stone-500 text-sm font-sans tracking-wide mb-8">Hãy tiếp tục khám phá kho tàng tri thức với hàng ngàn cuốn sách hấp dẫn của chúng tôi nhé!</p>
           <Link
             to="/"
             state={{ scrollTo: 'explore' }}
-            className="inline-block bg-ink hover:bg-[#2C4A3B] text-white font-sans text-xs font-bold py-3.5 px-8 uppercase tracking-[0.2em] transition-colors rounded-none"
+            className="inline-block bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-sans text-xs font-bold py-3.5 px-8 uppercase tracking-[0.2em] transition-colors rounded-none shadow-[0_4px_12px_rgba(44,74,59,0.15)]"
           >
             Quay lại Cửa hàng
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Danh sách sản phẩm */}
-          <div className="flex-1 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Cột trái (7 cột): Danh sách sản phẩm */}
+          <div className="lg:col-span-8 space-y-5">
             
             {/* Header Chọn tất cả & Xóa bulk */}
-            <div className="flex items-center justify-between bg-[#fcfbf9] border border-divider p-4 rounded-none">
-              <label className="flex items-center gap-3 cursor-pointer group">
+            <div className="flex items-center justify-between bg-[#faf8f5] border border-divider p-4 rounded-none">
+              <label className="flex items-center gap-3 cursor-pointer group select-none">
                 <input
                   type="checkbox"
                   checked={isAllSelected}
                   onChange={handleSelectAll}
-                  className="w-5 h-5 border-divider rounded-none text-[#2C4A3B] focus:ring-[#2C4A3B] cursor-pointer"
+                  className="w-4 h-4 accent-[#2C4A3B] cursor-pointer"
                 />
                 <span className="text-xs font-sans font-bold text-ink uppercase tracking-wider group-hover:text-[#2C4A3B] transition-colors">
                   Chọn tất cả ({cartItems.length} sản phẩm)
@@ -428,9 +474,9 @@ export default function CartPage() {
               {selectedItems.size > 0 && (
                 <button
                   onClick={handleBulkRemove}
-                  className="text-xs text-red-600 hover:text-red-700 font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="text-[10px] text-red-600 hover:text-red-700 font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer bg-transparent border-0"
                 >
-                  🗑️ Xóa đã chọn ({selectedItems.size})
+                  <Trash2 size={13} /> Xóa đã chọn ({selectedItems.size})
                 </button>
               )}
             </div>
@@ -444,98 +490,109 @@ export default function CartPage() {
                 const bookPrice = Number(item.price || item.book?.price || 0);
                 const defaultImage = item.book?.cover_url 
                   ? getImageUrl(item.book.cover_url) 
-                  : `https://picsum.photos/seed/${bookId + 10}/150/200`;
+                  : `https://picsum.photos/seed/${bookId}/150/200`;
                 const maxStock = item.book?.stock || 0;
+                const isSelected = selectedItems.has(bookId);
 
                 return (
                   <div
                     key={item.id}
-                    className={`bg-white border p-4 flex gap-4 items-center rounded-none transition-colors hover:border-ink ${
-                      selectedItems.has(bookId) ? 'border-ink bg-white' : 'border-divider'
+                    className={`bg-white border p-4 flex gap-4 items-center rounded-none transition-all hover:shadow-[0_4px_15px_rgba(44,74,59,0.03)] group/item ${
+                      isSelected ? 'border-[#2C4A3B] bg-[#fdfbf9]/30' : 'border-divider'
                     }`}
                   >
                     {/* Checkbox chọn sản phẩm */}
-                    <div className="flex-shrink-0 flex items-center justify-center pr-2">
+                    <div className="flex-shrink-0 flex items-center justify-center pr-1 select-none">
                       <input
                         type="checkbox"
-                        checked={selectedItems.has(bookId)}
+                        checked={isSelected}
                         onChange={() => handleSelectItem(bookId)}
-                        className="w-5 h-5 border-divider rounded-none text-[#2C4A3B] focus:ring-[#2C4A3B] cursor-pointer"
+                        className="w-4.5 h-4.5 accent-[#2C4A3B] cursor-pointer"
                       />
                     </div>
 
-                    <img
-                      src={defaultImage}
-                      alt={bookTitle}
-                      className="w-16 h-22 object-cover border border-divider-lt rounded-none flex-shrink-0 aspect-[3/4]"
-                    />
+                    {/* Book Cover Image */}
+                    <div className="w-16 h-22 bg-[#faf8f5] border border-divider-lt rounded-none flex-shrink-0 overflow-hidden shadow-sm relative">
+                      <img
+                        src={defaultImage}
+                        alt={bookTitle}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover/item:scale-105"
+                      />
+                    </div>
                     
+                    {/* Book Text Info */}
                     <div className="flex-grow min-w-0">
                       <Link
                         to={`/books/${bookId}`}
-                        className="font-serif font-bold text-base text-ink hover:text-[#2C4A3B] transition-colors line-clamp-1"
+                        className="font-serif font-bold text-base text-ink hover:text-[#2C4A3B] transition-colors line-clamp-1 leading-snug"
                       >
                         {bookTitle}
                       </Link>
-                      <p className="text-ink-60 text-xs font-sans uppercase tracking-widest mt-1 line-clamp-1">{bookAuthor}</p>
-                      <p className="text-[#2C4A3B] font-serif font-bold text-sm mt-2">
-                        {bookPrice.toLocaleString('vi-VN')} đ
-                      </p>
-
-                      {/* Lưu mua sau */}
+                      <p className="text-[9px] text-stone-500 font-sans uppercase tracking-widest mt-0.5 font-bold line-clamp-1">{bookAuthor}</p>
+                      
                       <div className="flex items-center gap-4 mt-2">
+                        {/* Lưu mua sau */}
                         <button
                           onClick={() => handleSaveForLater(bookId)}
-                          className="text-[10px] text-[#2C4A3B] hover:text-[#1e3529] font-sans font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-colors"
-                          title="Lưu vào Wishlist để mua sau"
+                          className="text-[10px] text-stone-400 hover:text-rose-600 font-sans font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-colors bg-transparent border-0"
+                          title="Lưu vào Wishlist để mua sau và gỡ khỏi giỏ hàng"
                         >
-                          ❤️ Lưu lại mua sau
+                          <Heart size={11} className="fill-none" /> Lưu lại mua sau
                         </button>
                       </div>
 
                       {/* Hiển thị cảnh báo tồn kho */}
                       {item.quantity > maxStock ? (
-                        <p className="text-red-600 text-xs font-semibold mt-2 font-sans">
-                          ⚠️ Chỉ còn {maxStock} sản phẩm khả dụng trong kho!
-                        </p>
+                        <div className="bg-red-50 text-red-800 border border-red-200/50 p-2 text-[10px] font-sans font-semibold mt-2.5 flex items-center gap-1.5 leading-none">
+                          <AlertTriangle size={12} /> Chỉ còn {maxStock} sản phẩm khả dụng trong kho!
+                        </div>
                       ) : item.quantity === maxStock ? (
-                        <p className="text-amber-600 text-[11px] font-medium mt-2 font-sans">
-                          ⚠️ Đã đạt giới hạn tồn kho khả dụng ({maxStock} cuốn)
-                        </p>
+                        <div className="bg-amber-50/50 text-amber-800 border border-amber-200/50 p-2 text-[10px] font-sans font-semibold mt-2.5 flex items-center gap-1.5 leading-none">
+                          <AlertTriangle size={12} /> Đã đạt giới hạn tồn kho khả dụng ({maxStock} cuốn)
+                        </div>
                       ) : null}
                     </div>
 
-                    {/* Cụm tăng/giảm số lượng */}
-                    <div className="flex items-center border border-divider bg-[#fcfbf9] p-0.5 flex-shrink-0 rounded-none">
+                    {/* Cụm giá tiền & Tăng/giảm số lượng */}
+                    <div className="flex flex-col items-end gap-3.5 flex-shrink-0">
+                      <p className="text-[#2C4A3B] font-serif font-bold text-base font-mono">
+                        {(bookPrice * item.quantity).toLocaleString('vi-VN')} đ
+                      </p>
+                      
+                      <div className="flex items-center border border-divider bg-[#faf8f5] p-0.5 rounded-none">
+                        <button
+                          onClick={() => handleQuantityChange(bookId, item.quantity, -1)}
+                          disabled={updateQuantityMutation.isPending}
+                          className="w-7 h-7 flex items-center justify-center text-ink hover:text-[#2C4A3B] hover:bg-stone-100 font-bold text-xs disabled:opacity-30 cursor-pointer transition-colors"
+                        >
+                          <Minus size={10} strokeWidth={2.5} />
+                        </button>
+                        <span className="w-8 text-center font-mono text-ink text-xs font-bold">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => handleQuantityChange(bookId, item.quantity, 1)}
+                          disabled={updateQuantityMutation.isPending || item.quantity >= maxStock}
+                          className="w-7 h-7 flex items-center justify-center text-ink hover:text-[#2C4A3B] hover:bg-stone-100 font-bold text-xs disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                          title={item.quantity >= maxStock ? 'Số lượng đạt giới hạn tồn kho khả dụng' : ''}
+                        >
+                          <Plus size={10} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Nút Xóa riêng biệt */}
+                    <div className="flex-shrink-0 pl-1 border-l border-divider-lt self-stretch flex items-center justify-center">
                       <button
-                        onClick={() => handleQuantityChange(bookId, item.quantity, -1)}
-                        disabled={updateQuantityMutation.isPending}
-                        className="px-2.5 py-1 text-ink hover:text-[#2C4A3B] font-bold text-xs disabled:opacity-30 cursor-pointer"
+                        onClick={() => handleRemoveItem(bookId)}
+                        disabled={removeItemMutation.isPending}
+                        className="p-2 text-stone-400 hover:text-red-600 transition-colors cursor-pointer bg-transparent border-0"
+                        title="Xóa tác phẩm khỏi giỏ hàng"
                       >
-                        -
-                      </button>
-                      <span className="px-2 font-mono text-ink text-xs w-8 text-center">
-                        {item.quantity}
-                      </span>
-                      <button
-                        onClick={() => handleQuantityChange(bookId, item.quantity, 1)}
-                        disabled={updateQuantityMutation.isPending || item.quantity >= maxStock}
-                        className="px-2.5 py-1 text-ink hover:text-[#2C4A3B] font-bold text-xs disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                        title={item.quantity >= maxStock ? 'Số lượng đạt giới hạn tồn kho khả dụng' : ''}
-                      >
-                        +
+                        <Trash2 size={15} />
                       </button>
                     </div>
 
-                    {/* Nút Xóa */}
-                    <button
-                      onClick={() => handleRemoveItem(bookId)}
-                      disabled={removeItemMutation.isPending}
-                      className="p-2 text-ink-60 hover:text-red-600 transition-colors cursor-pointer"
-                      title="Xóa sản phẩm"
-                    >
-                      🗑️
-                    </button>
                   </div>
                 );
               })}
@@ -546,78 +603,83 @@ export default function CartPage() {
               <Link
                 to="/"
                 state={{ scrollTo: 'explore' }}
-                className="inline-flex items-center gap-2 border border-[#2C4A3B]/30 hover:border-[#2C4A3B] hover:bg-[#faf8f5] text-[#2C4A3B] font-sans text-xs font-bold py-3 px-6 uppercase tracking-[0.15em] transition-all rounded-none bg-white cursor-pointer"
+                className="inline-flex items-center gap-1.5 border border-divider hover:border-ink hover:bg-stone-50 text-stone-700 hover:text-ink font-sans text-xs font-bold py-3.5 px-6 uppercase tracking-[0.15em] transition-all rounded-none bg-white cursor-pointer"
               >
-                ← Tiếp tục chọn sách khác
+                <ArrowLeft size={13} /> Tiếp tục mua thêm sách
               </Link>
             </div>
+
           </div>
 
-          {/* Cột Tóm tắt Đơn hàng & Thanh toán */}
-          <div className="w-full lg:w-80 flex-shrink-0">
-            <div className="bg-white border border-divider p-6 rounded-none sticky top-24">
-              <h3 className="font-serif text-lg font-bold text-ink uppercase tracking-wider mb-4 pb-4 border-b border-divider-lt">
+          {/* Cột phải (4 cột): Tóm tắt Đơn hàng & Thanh toán */}
+          <div className="lg:col-span-4 w-full sticky top-24 space-y-6">
+            
+            {/* Tóm tắt */}
+            <div className="bg-[#faf8f5] border border-divider p-6 rounded-none space-y-5">
+              <h3 className="font-serif text-sm font-bold text-ink uppercase tracking-widest pb-3.5 border-b border-divider">
                 Tóm tắt đơn hàng
               </h3>
               
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between text-xs text-ink-60 uppercase tracking-widest font-sans">
-                  <span>Số lượng sản phẩm chọn</span>
-                  <span className="font-semibold text-ink">{selectedTotalQuantity} cuốn</span>
+              <div className="space-y-3.5 text-xs">
+                <div className="flex justify-between text-stone-500 uppercase tracking-wider">
+                  <span>Số lượng sách chọn</span>
+                  <span className="font-bold text-ink font-mono">{selectedTotalQuantity} cuốn</span>
                 </div>
-                <div className="flex justify-between text-xs text-ink-60 uppercase tracking-widest font-sans">
+                <div className="flex justify-between text-stone-500 uppercase tracking-wider">
                   <span>Tạm tính</span>
-                  <span className="font-semibold text-ink">{selectedTotalAmount.toLocaleString('vi-VN')} đ</span>
+                  <span className="font-bold text-ink font-mono">{selectedTotalAmount.toLocaleString('vi-VN')} đ</span>
                 </div>
                 
                 {appliedCoupon && (
-                  <div className="flex justify-between text-xs text-[#2C4A3B] font-semibold uppercase tracking-widest font-sans">
+                  <div className="flex justify-between text-[#2C4A3B] font-bold uppercase tracking-wider bg-green-50 p-2 border border-green-200">
                     <span>Mã giảm giá ({appliedCoupon.code})</span>
-                    <span>-{discountAmount.toLocaleString('vi-VN')} đ</span>
+                    <span className="font-mono">-{discountAmount.toLocaleString('vi-VN')} đ</span>
                   </div>
                 )}
                 
-                <div className="flex justify-between text-xs text-ink-60 uppercase tracking-widest font-sans">
+                <div className="flex justify-between text-stone-500 uppercase tracking-wider">
                   <span>Phí vận chuyển</span>
-                  <span className="text-[#2C4A3B] font-bold">Miễn phí</span>
+                  <span className="text-[#2C4A3B] font-bold uppercase tracking-wider text-[10px]">Miễn phí</span>
                 </div>
                 
-                <div className="border-t border-divider-lt pt-4 flex justify-between font-serif font-bold text-base text-ink uppercase tracking-wide">
-                  <span>Tổng cộng</span>
-                  <span className="text-[#2C4A3B]">
+                <div className="border-t border-divider pt-4 flex justify-between items-baseline font-serif font-bold text-base text-ink uppercase tracking-wide">
+                  <span>Tổng thanh toán</span>
+                  <span className="text-[#2C4A3B] font-mono text-lg">
                     {finalTotalAmount.toLocaleString('vi-VN')} đ
                   </span>
                 </div>
               </div>
 
               {/* Nhập mã giảm giá trực tiếp */}
-              <div className="border-t border-divider-lt pt-4 mb-6">
-                <h4 className="text-xs font-sans font-bold text-ink uppercase tracking-wider mb-2">Mã giảm giá</h4>
+              <div className="border-t border-divider pt-4 space-y-2.5">
+                <label className="text-[10px] font-sans font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Tag size={13} /> Mã giảm giá (Voucher)
+                </label>
                 {!appliedCoupon ? (
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Nhập mã giảm giá..."
+                      placeholder="Ví dụ: GIAM20K"
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      className="flex-grow border border-divider px-3 py-2 text-xs font-sans tracking-wide rounded-none focus:outline-none focus:border-ink bg-white uppercase"
+                      className="flex-grow border border-divider px-3.5 py-2 text-xs font-sans tracking-wide rounded-none focus:outline-none focus:border-[#2C4A3B] bg-white uppercase font-mono placeholder-stone-400"
                     />
                     <button
                       onClick={handleValidateCoupon}
-                      className="bg-ink hover:bg-[#2C4A3B] text-white text-[10px] font-sans font-bold uppercase tracking-wider px-4 py-2 transition-colors rounded-none cursor-pointer"
+                      className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white text-[10px] font-sans font-bold uppercase tracking-widest px-4 py-2 transition-colors rounded-none cursor-pointer"
                     >
                       Áp dụng
                     </button>
                   </div>
                 ) : (
-                  <div className="bg-[#f2faf5] border border-[#d1ebd9] p-3 flex justify-between items-center rounded-none">
+                  <div className="bg-green-50/50 border border-green-200 p-3 flex justify-between items-center rounded-none text-xs">
                     <div>
-                      <p className="text-[10px] text-[#2C4A3B] font-sans font-bold uppercase tracking-widest">Đang áp dụng</p>
-                      <p className="text-xs font-serif font-bold text-ink uppercase tracking-wide">{appliedCoupon.code}</p>
+                      <p className="text-[9px] text-[#2C4A3B] font-sans font-bold uppercase tracking-widest">Đang áp dụng</p>
+                      <p className="font-serif font-bold text-ink uppercase tracking-wide">{appliedCoupon.code}</p>
                     </div>
                     <button
                       onClick={handleRemoveCoupon}
-                      className="text-[10px] text-red-600 hover:text-red-700 font-sans font-bold uppercase tracking-wider cursor-pointer"
+                      className="text-[10px] text-red-600 hover:text-red-700 font-sans font-bold uppercase tracking-wider cursor-pointer bg-transparent border-0"
                     >
                       Gỡ bỏ
                     </button>
@@ -625,15 +687,33 @@ export default function CartPage() {
                 )}
               </div>
 
+              {/* Bảo mật thông tin */}
+              <div className="p-3 bg-stone-50 border border-divider-lt rounded-none flex gap-2 text-[10px] text-stone-500 leading-relaxed">
+                <ShieldCheck size={14} className="text-[#2C4A3B] flex-shrink-0" />
+                <p>
+                  Sản phẩm được chọn sẽ được giữ kho tạm thời cho bạn trong quá trình thực hiện thủ tục thanh toán.
+                </p>
+              </div>
+
+              {/* Nút hành động */}
               <button
                 onClick={handleCheckout}
                 disabled={checkoutMutation.isPending || selectedItems.size === 0}
-                className="w-full bg-ink hover:bg-[#2C4A3B] active:bg-[#1e3529] text-white font-sans text-xs font-bold py-3.5 px-4 uppercase tracking-[0.2em] transition-colors rounded-none disabled:bg-stone-300 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full bg-[#2C4A3B] hover:bg-[#1e3529] active:bg-[#1e3529] text-white font-sans text-xs font-bold py-3.5 px-4 uppercase tracking-[0.2em] transition-colors rounded-none disabled:bg-stone-300 disabled:cursor-not-allowed cursor-pointer shadow-[0_3px_12px_rgba(44,74,59,0.15)] flex items-center justify-center gap-1.5"
               >
-                {checkoutMutation.isPending ? '⏳ Đang xử lý...' : '💳 Tiến hành Thanh toán'}
+                {checkoutMutation.isPending ? (
+                  <>
+                    <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent"></span>
+                    Đang xử lý khóa kho...
+                  </>
+                ) : (
+                  <>💳 Tiến hành Thanh toán</>
+                )}
               </button>
             </div>
+            
           </div>
+          
         </div>
       )}
 
@@ -645,3 +725,4 @@ export default function CartPage() {
     </div>
   );
 }
+
