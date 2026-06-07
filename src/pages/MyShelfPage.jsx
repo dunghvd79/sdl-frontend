@@ -5,6 +5,23 @@ import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../services/image';
+import { 
+  Search, 
+  Sparkles, 
+  BookOpen, 
+  Star, 
+  Heart, 
+  ChevronLeft, 
+  ChevronRight, 
+  X, 
+  Type, 
+  Sun, 
+  Moon, 
+  Coffee,
+  MessageSquare,
+  ShieldCheck,
+  BookMarked
+} from 'lucide-react';
 
 export default function MyShelfPage() {
   const navigate = useNavigate();
@@ -65,40 +82,46 @@ export default function MyShelfPage() {
   const isLoading = ordersLoading || booksLoading;
 
   return (
-    <div className="max-w-6xl mx-auto py-12 px-4 flex-grow w-full">
+    <div className="max-w-6xl mx-auto py-12 px-4 flex-grow w-full bg-[#fdfcfa]">
+      
       {/* Header section with bookish theme */}
-      <div className="mb-10 text-center relative">
-        <h1 className="text-3xl font-serif font-semibold text-ink uppercase tracking-widest relative inline-block mb-3">
-          Tủ Sách Số Của Tôi
-          <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-16 h-[2px] bg-[#2C4A3B]"></span>
+      <div className="mb-10 text-center relative max-w-xl mx-auto">
+        <span className="text-[10px] text-stone-500 font-sans tracking-[0.25em] uppercase font-bold">Thư viện số cá nhân</span>
+        <h1 className="text-3xl font-serif font-bold text-ink uppercase tracking-widest mt-1.5 mb-3 relative inline-block">
+          Tủ Sách Của Tôi
         </h1>
-        <p className="text-xs text-ink-light font-serif italic mt-3">
-          Không gian tri thức cá nhân — Đọc sách và thảo luận học thuật cùng Trợ lý AI
+        <p className="text-xs text-stone-500 font-serif italic leading-relaxed">
+          Không gian lưu trữ các tác phẩm số đã mua — Đọc sách trực tuyến và trao đổi tri thức cùng Trợ lý AI thông minh.
         </p>
+        <div className="w-16 h-[2px] bg-[#2C4A3B] mx-auto mt-4"></div>
       </div>
 
       {/* Toolbar for search & filter */}
-      <div className="bg-white border border-divider p-5 mb-8 flex flex-col md:flex-row justify-between items-center gap-4 rounded-none shadow-sm">
+      <div className="bg-[#faf8f5] border border-divider p-4 mb-10 flex flex-col md:flex-row justify-between items-center gap-4 rounded-none shadow-none">
+        
+        {/* Search Input */}
         <div className="w-full md:w-96 relative">
           <input
             type="text"
-            placeholder="Tìm kiếm sách trên kệ của bạn..."
+            placeholder="Tìm kiếm sách trên kệ..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full border border-divider rounded-none py-2.5 px-4 text-sm focus:outline-none focus:border-ink bg-transparent text-ink placeholder:text-stone-400"
+            className="w-full border border-stone-200 bg-white rounded-none py-2.5 pl-10 pr-4 text-xs font-sans focus:outline-none focus:border-[#2C4A3B] focus:ring-1 focus:ring-[#2C4A3B] transition-all text-ink placeholder:text-stone-400"
           />
+          <Search size={15} className="absolute left-3.5 top-3 text-stone-400" />
         </div>
 
+        {/* Filter Toggle */}
         <div className="flex items-center gap-4 w-full md:w-auto justify-end">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={aiOnlyFilter}
               onChange={(e) => setAiOnlyFilter(e.target.checked)}
-              className="rounded-none border-divider text-[#2C4A3B] focus:ring-0 cursor-pointer"
+              className="w-4 h-4 accent-[#2C4A3B] rounded-none cursor-pointer"
             />
-            <span className="text-xs font-semibold text-ink-light uppercase tracking-wider">
-              Chỉ sách sẵn sàng AI
+            <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest flex items-center gap-1.5">
+              <Sparkles size={12} className="text-[#2C4A3B]" /> Chỉ sách có hỗ trợ AI
             </span>
           </label>
         </div>
@@ -108,28 +131,30 @@ export default function MyShelfPage() {
         /* Loading Skeleton */
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="animate-pulse space-y-3">
-              <div className="aspect-[3/4] bg-[#f0ece7] rounded-none border border-divider-lt"></div>
-              <div className="h-4 bg-[#f0ece7] rounded-none w-3/4"></div>
-              <div className="h-3 bg-[#f0ece7] rounded-none w-1/2"></div>
+            <div key={i} className="animate-pulse space-y-4">
+              <div className="aspect-[3/4] bg-[#f0ece7] border border-divider-lt"></div>
+              <div className="h-4 bg-[#f0ece7] w-3/4 mx-auto"></div>
+              <div className="h-3 bg-[#f0ece7] w-1/2 mx-auto"></div>
             </div>
           ))}
         </div>
       ) : filteredBooks.length > 0 ? (
-        /* Virtual Wooden Bookshelf layout */
+        /* Bookshelf grid layout */
         <div className="space-y-12">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10 relative">
+          
+          {/* Books Shelf Line Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-8 gap-y-12 relative">
             {filteredBooks.map(book => {
               const hasAi = !!book.rag_indexed_at;
-              const bookCover = book.cover_url ? getImageUrl(book.cover_url) : `https://picsum.photos/seed/${book.id + 10}/300/450`;
+              const bookCover = book.cover_url ? getImageUrl(book.cover_url) : `https://picsum.photos/seed/${book.id}/300/450`;
               
               return (
                 <div 
                   key={book.id} 
-                  className="flex flex-col group transition-all duration-300 relative"
+                  className="flex flex-col group transition-all duration-300 relative text-center"
                 >
-                  {/* Aspect book cover frame with shadow and scale effect */}
-                  <div className="w-full aspect-[3/4] border border-divider bg-[#faf8f5] flex items-center justify-center overflow-hidden mb-3 relative group-hover:-translate-y-2.5 transition-transform duration-300 shadow-md group-hover:shadow-xl">
+                  {/* Book cover frame with 3D spine and shadow */}
+                  <div className="w-full aspect-[3/4] border border-divider bg-white flex items-center justify-center overflow-hidden mb-4 relative group-hover:-translate-y-2.5 transition-all duration-300 shadow-[0_8px_20px_rgba(0,0,0,0.06)] group-hover:shadow-[0_16px_30px_rgba(44,74,59,0.12)] rounded-sm">
                     <img 
                       src={bookCover} 
                       alt={book.title} 
@@ -137,77 +162,87 @@ export default function MyShelfPage() {
                       onError={(e) => { e.target.src = `https://picsum.photos/seed/${book.id}/300/450`; }}
                     />
                     
+                    {/* Premium 3D Book Spine Shadow */}
+                    <div className="absolute top-0 left-0 w-2.5 h-full bg-gradient-to-r from-black/20 via-black/5 to-transparent z-10" />
+
                     {/* Action Overlay */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col justify-center items-center gap-2.5 transition-opacity duration-300 p-3">
+                    <div className="absolute inset-0 bg-[#1e2e25]/85 opacity-0 group-hover:opacity-100 flex flex-col justify-center items-center gap-3 transition-opacity duration-300 p-4 z-20">
+                      
                       <button
                         onClick={() => setSelectedReaderBook(book)}
-                        className="w-full bg-[#2C4A3B] hover:bg-[#1e3529] text-white py-2 rounded-none font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer text-center"
+                        className="w-full bg-[#2C4A3B] hover:bg-[#1e3529] text-white py-2.5 rounded-none font-bold text-xs uppercase tracking-widest transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 border border-transparent"
                       >
-                        Đọc Sách
+                        <BookOpen size={13} /> Đọc Sách
                       </button>
                       
                       {hasAi ? (
                         <button
                           onClick={() => navigate(`/books/${book.hashId || book.id}/chat`)}
-                          className="w-full bg-white hover:bg-[#f0ece7] text-ink py-2 rounded-none font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer text-center border border-divider"
+                          className="w-full bg-white hover:bg-[#faf8f5] text-ink py-2.5 rounded-none font-bold text-xs uppercase tracking-widest transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 border border-stone-200"
                         >
-                          Tư Vấn AI
+                          <Sparkles size={13} className="text-[#2C4A3B]" /> Hỏi Đáp AI
                         </button>
                       ) : (
-                        <span className="w-full bg-stone-300/80 text-stone-600 text-center py-2 text-[10px] uppercase font-bold tracking-wider cursor-not-allowed">
-                          Chưa có AI
+                        <span className="w-full bg-stone-300/70 text-stone-600 text-center py-2.5 text-[9px] uppercase font-bold tracking-wider cursor-not-allowed select-none">
+                          Chưa tích hợp AI
                         </span>
                       )}
                       
                       <button
                         onClick={() => setSelectedReviewBook(book)}
-                        className="w-full bg-transparent hover:bg-white/10 text-white border border-white/60 py-2 rounded-none font-bold text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center"
+                        className="w-full bg-transparent hover:bg-white/10 text-white border border-white/40 py-2 rounded-none font-bold text-[9px] uppercase tracking-widest transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
                       >
-                        Đánh Giá
+                        <Star size={11} className="fill-white" /> Viết Đánh Giá
                       </button>
                     </div>
                   </div>
 
                   {/* Book Details */}
-                  <div className="flex-1 flex flex-col text-center">
-                    <h3 className="font-serif font-bold text-sm text-ink group-hover:text-[#2C4A3B] transition-colors line-clamp-2 uppercase tracking-wide leading-snug">
-                      {book.title}
-                    </h3>
-                    <p className="text-[10px] text-ink-light font-sans uppercase tracking-widest mt-1 mb-2">
-                      {book.author || 'Khuyết Danh'}
-                    </p>
+                  <div className="flex-grow flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-serif font-bold text-sm text-ink group-hover:text-[#2C4A3B] transition-colors line-clamp-2 uppercase tracking-wider leading-snug">
+                        {book.title}
+                      </h3>
+                      <p className="text-[9px] text-stone-400 font-sans uppercase tracking-widest mt-1 mb-2 font-bold">
+                        {book.author || 'Khuyết Danh'}
+                      </p>
+                    </div>
                     
-                    <div className="mt-auto flex justify-center gap-1.5">
+                    <div className="mt-1 flex justify-center">
                       {hasAi ? (
-                        <span className="inline-flex items-center text-[9px] font-bold px-2 py-0.5 border border-green-200 text-green-700 bg-green-50 uppercase tracking-wider">
-                          Sẵn sàng AI
+                        <span className="inline-flex items-center text-[8px] font-bold px-2 py-0.5 border border-green-200 text-green-700 bg-green-50 uppercase tracking-widest gap-1">
+                          <Sparkles size={8} /> Sẵn sàng AI
                         </span>
                       ) : (
-                        <span className="inline-flex items-center text-[9px] font-bold px-2 py-0.5 border border-divider text-stone-400 bg-stone-50 uppercase tracking-wider">
+                        <span className="inline-flex items-center text-[8px] font-bold px-2 py-0.5 border border-stone-200 text-stone-400 bg-stone-50 uppercase tracking-widest">
                           Sách Thường
                         </span>
                       )}
                     </div>
                   </div>
+
                 </div>
               );
             })}
           </div>
+
         </div>
       ) : (
         /* Empty Bookshelf view */
-        <div className="text-center py-20 bg-white border border-divider rounded-none max-w-lg mx-auto">
-          <div className="text-4xl mb-4">📚</div>
-          <h3 className="font-serif font-semibold text-lg text-ink uppercase tracking-wider mb-2">Tủ sách trống</h3>
-          <p className="text-sm text-stone-400 max-w-sm mx-auto leading-relaxed mb-8">
+        <div className="text-center py-16 bg-white border border-divider rounded-none max-w-lg mx-auto shadow-none">
+          <div className="w-16 h-16 bg-[#2C4A3B]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <BookMarked className="text-[#2C4A3B] w-8 h-8" />
+          </div>
+          <h3 className="font-serif font-bold text-lg text-ink uppercase tracking-wider mb-2">Tủ sách của bạn trống</h3>
+          <p className="text-xs text-stone-500 max-w-xs mx-auto leading-relaxed mb-8 font-sans">
             {searchTerm || aiOnlyFilter 
-              ? 'Không tìm thấy ấn phẩm nào phù hợp với điều kiện tìm kiếm của bạn.' 
-              : 'Bạn chưa mua cuốn sách điện tử hoặc sách giấy nào thành công. Hãy đặt mua ngay để mở khóa tủ sách!'}
+              ? 'Không tìm thấy ấn phẩm nào phù hợp với điều kiện lọc trên kệ sách.' 
+              : 'Bạn chưa sở hữu tác phẩm số nào. Hãy đặt mua sách và đợi giao thành công để mở khóa tủ sách!'}
           </p>
           {!searchTerm && !aiOnlyFilter && (
             <button
               onClick={() => navigate('/')}
-              className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-semibold py-3 px-8 rounded-none text-xs uppercase tracking-wider transition-colors cursor-pointer"
+              className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-bold py-3.5 px-8 rounded-none text-xs uppercase tracking-widest transition-colors cursor-pointer shadow-[0_4px_12px_rgba(44,74,59,0.15)]"
             >
               Khám Phá Sách Ngay
             </button>
@@ -239,9 +274,9 @@ export default function MyShelfPage() {
   );
 }
 
-// ─── Sub-component: Giao diện giả lập đọc sách E-book cao cấp ─────────────────
+// ─── Sub-component: Giao diện giả lập đọc sách E-book cao cấp (Kindle Style) ─────
 function BookReaderModal({ book, onClose, onAiConsult }) {
-  const [fontSize, setFontSize] = useState(14); // default 14px
+  const [fontSize, setFontSize] = useState(15); // default 15px
   const [theme, setTheme] = useState('warm'); // warm | dark | white
   const [activeChapter, setActiveChapter] = useState(1);
   const [progress, setProgress] = useState(20);
@@ -254,25 +289,25 @@ function BookReaderModal({ book, onClose, onAiConsult }) {
   // Color schemes for book themes
   const themeStyles = {
     warm: {
-      bg: 'bg-[#faf8f5] text-stone-800 border-stone-200',
-      panel: 'bg-[#f4effa] text-stone-700 border-stone-200',
-      menuBg: 'bg-[#faf8f5]',
-      activeTab: 'bg-[#e9e3d5] border-[#2C4A3B] text-stone-900',
-      tab: 'hover:bg-[#f0ece7] text-stone-600',
+      bg: 'bg-[#fdf9f3] text-stone-900 border-stone-200/60',
+      panel: 'bg-[#faf3e8] text-stone-700 border-stone-200/60',
+      menuBg: 'bg-[#fdf9f3]',
+      activeTab: 'bg-[#efe5d3] border-[#2C4A3B] text-stone-900 font-bold',
+      tab: 'hover:bg-[#f3ead7] text-stone-600',
     },
     dark: {
-      bg: 'bg-[#181818] text-stone-300 border-stone-800',
-      panel: 'bg-[#222222] text-stone-400 border-stone-800',
-      menuBg: 'bg-[#181818]',
-      activeTab: 'bg-[#333333] border-[#2C4A3B] text-white',
-      tab: 'hover:bg-[#282828] text-stone-500',
+      bg: 'bg-[#151515] text-stone-300 border-stone-800/80',
+      panel: 'bg-[#1d1d1d] text-stone-400 border-stone-800/80',
+      menuBg: 'bg-[#151515]',
+      activeTab: 'bg-[#2b2b2b] border-[#2C4A3B] text-white font-bold',
+      tab: 'hover:bg-[#222] text-stone-500',
     },
     white: {
       bg: 'bg-white text-stone-900 border-stone-100',
-      panel: 'bg-[#f8f9fa] text-stone-600 border-stone-100',
+      panel: 'bg-[#fafafa] text-stone-600 border-stone-100',
       menuBg: 'bg-white',
-      activeTab: 'bg-[#f1f3f5] border-[#2C4A3B] text-stone-900',
-      tab: 'hover:bg-[#f8f9fa] text-stone-500',
+      activeTab: 'bg-[#f0f0f0] border-[#2C4A3B] text-stone-900 font-bold',
+      tab: 'hover:bg-[#f6f6f6] text-stone-500',
     }
   }[theme];
 
@@ -311,68 +346,74 @@ Cuốn sách "${book.title}" của tác giả ${book.author || 'Khuyết Danh'} 
   }[activeChapter];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-hidden font-sans">
       <div className="bg-white border border-divider w-full max-w-5xl h-[90vh] shadow-2xl flex flex-col overflow-hidden rounded-none animate-fadeIn">
         
         {/* Header Toolbar */}
         <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-3 border-b border-divider bg-[#faf8f5] flex-shrink-0 gap-3 w-full">
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-bold border border-divider px-2 py-0.5 bg-white uppercase tracking-wider text-ink-light">E-Reader</span>
-            <h4 className="text-sm font-serif font-semibold text-ink line-clamp-1">
-              {book.title} — {book.author || 'Tác giả'}
+            <span className="text-[9px] font-bold border border-stone-200 px-2 py-0.5 bg-white uppercase tracking-widest text-[#2C4A3B] flex items-center gap-1">
+              <BookMarked size={10} /> Đọc sách số
+            </span>
+            <h4 className="text-xs font-serif font-bold text-ink line-clamp-1 uppercase tracking-wide">
+              {book.title} <span className="font-sans font-normal text-stone-400 text-[10px]">({book.author || 'Tác giả'})</span>
             </h4>
           </div>
 
           {/* Reader Preferences Bar */}
           <div className="flex flex-wrap items-center gap-4 text-xs">
             {/* Font size control */}
-            <div className="flex items-center border border-divider bg-white">
+            <div className="flex items-center border border-stone-200 bg-white">
               <button 
                 onClick={() => setFontSize(Math.max(12, fontSize - 1))}
-                className="px-2.5 py-1 border-r border-divider hover:bg-[#f0ece7] font-bold text-ink cursor-pointer"
+                className="px-2.5 py-1 border-r border-stone-200 hover:bg-stone-50 font-bold text-ink cursor-pointer flex items-center gap-0.5 text-[10px]"
                 title="Giảm cỡ chữ"
               >
-                A-
+                <Type size={11} /> -
               </button>
-              <span className="px-2 py-1 font-mono text-[10px] text-ink-light bg-stone-50 select-none">
+              <span className="px-2 py-1 font-mono text-[9px] text-stone-500 bg-stone-50 select-none font-bold">
                 {fontSize}px
               </span>
               <button 
-                onClick={() => setFontSize(Math.min(22, fontSize + 1))}
-                className="px-2.5 py-1 border-l border-divider hover:bg-[#f0ece7] font-bold text-ink cursor-pointer"
+                onClick={() => setFontSize(Math.min(24, fontSize + 1))}
+                className="px-2.5 py-1 border-l border-stone-200 hover:bg-stone-50 font-bold text-ink cursor-pointer flex items-center gap-0.5 text-[10px]"
                 title="Tăng cỡ chữ"
               >
-                A+
+                <Type size={11} /> +
               </button>
             </div>
 
             {/* Theme switcher */}
-            <div className="flex border border-divider bg-white p-0.5 gap-0.5">
+            <div className="flex border border-stone-200 bg-white p-0.5 gap-0.5">
               <button 
                 onClick={() => setTheme('warm')}
-                className={`w-6 h-6 rounded-none bg-[#faf8f5] border ${theme === 'warm' ? 'border-[#2C4A3B]' : 'border-transparent'} cursor-pointer`}
-                title="Nền giấy ấm"
-              />
+                className={`w-6 h-6 rounded-none bg-[#fdf9f3] border ${theme === 'warm' ? 'border-[#2C4A3B]' : 'border-transparent'} cursor-pointer flex items-center justify-center`}
+                title="Nền ấm áp"
+              >
+                <Coffee size={10} className="text-amber-800" />
+              </button>
               <button 
                 onClick={() => setTheme('white')}
-                className={`w-6 h-6 rounded-none bg-white border ${theme === 'white' ? 'border-[#2C4A3B]' : 'border-stone-200'} cursor-pointer`}
+                className={`w-6 h-6 rounded-none bg-white border ${theme === 'white' ? 'border-[#2C4A3B]' : 'border-stone-200'} cursor-pointer flex items-center justify-center`}
                 title="Nền sáng"
-              />
+              >
+                <Sun size={11} className="text-orange-500" />
+              </button>
               <button 
                 onClick={() => setTheme('dark')}
-                className={`w-6 h-6 rounded-none bg-[#181818] border ${theme === 'dark' ? 'border-[#2C4A3B]' : 'border-transparent'} cursor-pointer`}
+                className={`w-6 h-6 rounded-none bg-[#151515] border ${theme === 'dark' ? 'border-[#2C4A3B]' : 'border-transparent'} cursor-pointer flex items-center justify-center`}
                 title="Nền tối"
-              />
+              >
+                <Moon size={11} className="text-stone-400" />
+              </button>
             </div>
 
             <button 
               onClick={onClose} 
-              className="text-ink-light hover:text-ink transition-colors p-1 cursor-pointer ml-3 bg-transparent border-0"
+              className="text-stone-400 hover:text-ink transition-colors p-1 cursor-pointer ml-2 bg-transparent border-0"
               title="Đóng trình đọc"
             >
-              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                <path d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X size={18} />
             </button>
           </div>
         </div>
@@ -380,14 +421,14 @@ Cuốn sách "${book.title}" của tác giả ${book.author || 'Khuyết Danh'} 
         {/* Reader Layout Splitter */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Sidebar: Table of Contents */}
-          <div className={`w-60 flex-shrink-0 border-r ${themeStyles.bg} overflow-y-auto hidden md:flex flex-col p-4 space-y-4`}>
-            <h5 className="text-[10px] uppercase tracking-wider font-bold opacity-60 mb-2">Mục lục sách</h5>
-            <div className="space-y-1.5">
+          <div className={`w-56 flex-shrink-0 border-r ${themeStyles.bg} overflow-y-auto hidden md:flex flex-col p-4 space-y-4`}>
+            <h5 className="text-[9px] uppercase tracking-widest font-bold opacity-60 mb-2">Mục lục tác phẩm</h5>
+            <div className="space-y-1">
               {[1, 2, 3, 4, 5].map(ch => (
                 <button
                   key={ch}
                   onClick={() => setActiveChapter(ch)}
-                  className={`w-full text-left py-2 px-3 text-xs font-medium border-l-2 transition-all cursor-pointer whitespace-nowrap overflow-hidden text-ellipsis ${
+                  className={`w-full text-left py-2.5 px-3 text-xs font-semibold border-l-2 transition-all cursor-pointer whitespace-nowrap overflow-hidden text-ellipsis rounded-none ${
                     activeChapter === ch 
                       ? themeStyles.activeTab
                       : themeStyles.tab + ' border-transparent'
@@ -402,26 +443,26 @@ Cuốn sách "${book.title}" của tác giả ${book.author || 'Khuyết Danh'} 
           {/* Center Immersive Page Screen */}
           <div className={`flex-1 flex flex-col overflow-hidden ${themeStyles.bg} transition-colors duration-200`}>
             {/* Reading progress header */}
-            <div className="px-8 py-3 border-b border-divider/20 flex justify-between items-center text-[10px] uppercase font-mono tracking-wider opacity-60">
+            <div className="px-8 py-3.5 border-b border-divider/10 flex justify-between items-center text-[9px] uppercase font-mono tracking-widest opacity-60 font-bold select-none">
               <span>{mockChaptersContent.title}</span>
               <span>Đã hoàn thành {progress}%</span>
             </div>
 
             {/* Simulated Paper Book Page Content (Scrollable) */}
-            <div className="flex-1 overflow-y-auto p-8 md:p-14 font-serif leading-relaxed max-w-3xl mx-auto w-full transition-all duration-150">
-              <h2 className="text-xl md:text-2xl font-bold mb-6 border-b border-divider/10 pb-4">
+            <div className="flex-1 overflow-y-auto p-8 md:p-14 font-serif leading-relaxed max-w-2xl mx-auto w-full transition-all duration-150">
+              <h2 className="text-xl md:text-2xl font-bold mb-6 border-b border-divider/10 pb-4 tracking-wide font-serif">
                 {mockChaptersContent.title}
               </h2>
               <div 
                 style={{ fontSize: `${fontSize}px` }}
-                className="space-y-6 text-justify whitespace-pre-line"
+                className="space-y-6 text-justify whitespace-pre-line leading-relaxed font-serif text-stone-800"
               >
                 {mockChaptersContent.content}
               </div>
             </div>
 
             {/* Reading progress bar */}
-            <div className="h-1 w-full bg-stone-200/30 flex-shrink-0">
+            <div className="h-1 w-full bg-stone-200/20 flex-shrink-0">
               <div 
                 className="h-full bg-[#2C4A3B] transition-all duration-300"
                 style={{ width: `${progress}%` }}
@@ -432,24 +473,21 @@ Cuốn sách "${book.title}" của tác giả ${book.author || 'Khuyết Danh'} 
 
         {/* Footer actions with RAG AI Consulting trigger */}
         <div className="bg-[#faf8f5] px-6 py-4 border-t border-divider flex flex-col sm:flex-row justify-between items-center flex-shrink-0 gap-3">
-          <div className="text-xs text-ink-light italic">
-            Phiên đọc sách điện tử được bảo mật và phân phối bởi thư viện số thông minh.
+          <div className="text-xs text-stone-500 italic flex items-center gap-1 font-serif">
+            <ShieldCheck size={14} className="text-[#2C4A3B]" /> Tác phẩm bản quyền thuộc sở hữu cá nhân của bạn.
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2.5">
             {book.rag_indexed_at && (
               <button
                 onClick={onAiConsult}
-                className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-semibold py-2 px-5 rounded-none text-xs uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5"
+                className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-bold py-2 px-5 rounded-none text-xs uppercase tracking-widest transition-colors cursor-pointer flex items-center gap-1.5 shadow-[0_3px_10px_rgba(44,74,59,0.15)]"
               >
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M8.5 12h7m-7 3h4m3.5-9a9 9 0 11-12.2 12.2L3 21l4.8-1.3A9 9 0 0118.5 6z" />
-                </svg>
-                Hỏi đáp trợ lý AI
+                <MessageSquare size={13} /> Hỏi đáp trợ lý AI
               </button>
             )}
             <button
               onClick={onClose}
-              className="border border-divider hover:bg-[#f0ece7] text-ink font-semibold py-2 px-5 rounded-none text-xs uppercase tracking-wider transition-colors cursor-pointer bg-white"
+              className="border border-stone-200 hover:bg-[#f0ece7] text-ink font-bold py-2 px-5 rounded-none text-xs uppercase tracking-widest transition-colors cursor-pointer bg-white"
             >
               Đóng lại
             </button>
@@ -499,18 +537,18 @@ function ShelfReviewModal({ book, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto font-sans">
       <div className="bg-white border border-divider w-full max-w-md shadow-2xl flex flex-col rounded-none animate-fadeIn">
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-divider bg-[#faf8f5]">
           <div>
             <p className="text-[9px] uppercase tracking-[0.2em] text-[#2C4A3B] font-semibold mb-0.5">Đánh giá tác phẩm</p>
-            <h4 className="text-sm font-serif font-semibold text-ink leading-tight">
+            <h4 className="text-xs font-serif font-bold text-ink leading-tight uppercase tracking-wide">
               {book.title}
             </h4>
           </div>
-          <button onClick={onClose} className="text-ink-light hover:text-ink transition-colors p-1 cursor-pointer bg-transparent border-0">
+          <button onClick={onClose} className="text-stone-400 hover:text-ink transition-colors p-1 cursor-pointer bg-transparent border-0">
             ✕
           </button>
         </div>
@@ -519,7 +557,7 @@ function ShelfReviewModal({ book, onClose }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-sm">
           {/* Star selector */}
           <div className="text-center space-y-2">
-            <span className="block text-xs uppercase tracking-wider text-ink-light font-bold">
+            <span className="block text-[10px] uppercase tracking-wider text-stone-500 font-bold">
               Chọn mức độ hài lòng *
             </span>
             <div className="flex justify-center gap-1">
@@ -545,7 +583,7 @@ function ShelfReviewModal({ book, onClose }) {
                 );
               })}
             </div>
-            <p className="text-xs text-[#2C4A3B] font-semibold tracking-wider uppercase pt-1">
+            <p className="text-xs text-[#2C4A3B] font-bold tracking-wider uppercase pt-1">
               {
                 {
                   1: 'Rất tệ',
@@ -560,7 +598,7 @@ function ShelfReviewModal({ book, onClose }) {
 
           {/* Comment text area */}
           <div className="space-y-1.5">
-            <label className="block text-xs uppercase tracking-wider text-ink-light font-bold">
+            <label className="block text-[10px] uppercase tracking-wider text-stone-500 font-bold">
               Nội dung nhận xét *
             </label>
             <textarea
@@ -578,14 +616,14 @@ function ShelfReviewModal({ book, onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="border border-divider hover:bg-[#f0ece7] text-ink font-semibold py-2 px-4 rounded-none text-xs uppercase tracking-wider transition-colors cursor-pointer bg-white"
+              className="border border-divider hover:bg-[#f0ece7] text-stone-600 font-bold py-2 px-4 rounded-none text-xs uppercase tracking-widest transition-colors cursor-pointer bg-white"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={reviewMutation.isPending}
-              className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-semibold py-2 px-5 rounded-none text-xs uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
+              className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-bold py-2 px-5 rounded-none text-xs uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50"
             >
               {reviewMutation.isPending ? 'Đang gửi...' : 'Gửi đánh giá'}
             </button>
