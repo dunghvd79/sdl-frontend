@@ -18,7 +18,8 @@ import {
   Award, 
   MessageSquare,
   FileText,
-  Bookmark
+  Bookmark,
+  Info
 } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 
