@@ -2869,7 +2869,7 @@ function DashboardOverviewTab() {
       {/* Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Doanh thu */}
-        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-[#2C4A3B] p-6 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex flex-col justify-between group">
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-[#2C4A3B] p-6 transition-all duration-300 shadow-none flex flex-col justify-between group">
           <div>
             <div className="flex justify-between items-start">
               <span className="text-[10px] font-sans font-bold tracking-[0.2em] text-ink-light/80 uppercase">
@@ -2899,7 +2899,7 @@ function DashboardOverviewTab() {
         </div>
 
         {/* Card 2: Đơn đặt */}
-        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-ink/80 p-6 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex flex-col justify-between group">
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-ink/80 p-6 transition-all duration-300 shadow-none flex flex-col justify-between group">
           <div>
             <div className="flex justify-between items-start">
               <span className="text-[10px] font-sans font-bold tracking-[0.2em] text-ink-light/80 uppercase">
@@ -2931,7 +2931,7 @@ function DashboardOverviewTab() {
         </div>
 
         {/* Card 3: Thành viên */}
-        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-[#3D4E5B] p-6 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex flex-col justify-between group">
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-[#3D4E5B] p-6 transition-all duration-300 shadow-none flex flex-col justify-between group">
           <div>
             <div className="flex justify-between items-start">
               <span className="text-[10px] font-sans font-bold tracking-[0.2em] text-ink-light/80 uppercase">
@@ -2965,7 +2965,7 @@ function DashboardOverviewTab() {
         </div>
 
         {/* Card 4: Tiến độ RAG */}
-        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-green-700 p-6 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex flex-col justify-between group">
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-green-700 p-6 transition-all duration-300 shadow-none flex flex-col justify-between group">
           <div>
             <div className="flex justify-between items-start">
               <span className="text-[10px] font-sans font-bold tracking-[0.2em] text-ink-light/80 uppercase">
@@ -4175,7 +4175,7 @@ function CategoryManagerTab() {
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-[#2C4A3B] p-5 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex items-center justify-between group">
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-[#2C4A3B] p-5 transition-all duration-300 shadow-none flex items-center justify-between group">
           <div>
             <div className="text-[10px] uppercase tracking-[0.2em] text-ink-light/80 font-bold font-sans">Tổng số thể loại</div>
             <div className="text-2xl font-serif font-bold text-ink mt-2">
@@ -4190,7 +4190,7 @@ function CategoryManagerTab() {
           </div>
         </div>
 
-        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-green-700 p-5 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex items-center justify-between group">
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-green-700 p-5 transition-all duration-300 shadow-none flex items-center justify-between group">
           <div>
             <div className="text-[10px] uppercase tracking-[0.2em] text-ink-light/80 font-bold font-sans">Thể loại đang có sách</div>
             <div className="text-2xl font-serif font-bold text-green-700 mt-2">
@@ -4206,7 +4206,7 @@ function CategoryManagerTab() {
           </div>
         </div>
 
-        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-amber-600 p-5 transition-all duration-300 hover:shadow-lg hover:shadow-ink/5 flex items-center justify-between group">
+        <div className="bg-white border border-divider border-t-2 border-t-transparent hover:border-t-amber-600 p-5 transition-all duration-300 shadow-none flex items-center justify-between group">
           <div>
             <div className="text-[10px] uppercase tracking-[0.2em] text-ink-light/80 font-bold font-sans">Thể loại rỗng (0 sách)</div>
             <div className="text-2xl font-serif font-bold text-amber-600 mt-2">
@@ -5532,22 +5532,25 @@ export default function AdminDashboardPage() {
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 flex-grow w-full">
       {/* Header */}
-      <div className="mb-10 border-b border-divider pb-6 text-center">
-        <h1 className="text-2xl md:text-3xl font-serif font-semibold text-[#1C1C1C] uppercase tracking-widest relative inline-block">
-          BẢNG QUẢN TRỊ
-        </h1>
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b border-divider pb-6 mb-10">
+        <div>
+          <h1 className="text-3xl font-serif font-medium text-ink tracking-wide uppercase">Bảng Quản Trị</h1>
+          <p className="text-ink-light text-xs mt-2 max-w-xl font-sans tracking-wide leading-relaxed">
+            Hệ thống quản lý sách, thể loại, đơn hàng, tồn kho và các thiết lập nâng cao dành cho Ban quản trị và Thủ thư.
+          </p>
+        </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex justify-center mb-8 border-b border-divider pb-0 overflow-x-auto hide-scrollbar relative z-0">
+      <div className="flex justify-start mb-8 border-b border-divider pb-0 overflow-x-auto hide-scrollbar relative z-0 gap-2">
         {visibleTabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`py-3.5 px-5 font-semibold text-[10px] uppercase tracking-widest transition-all rounded-none -mb-[1px] relative cursor-pointer border-t border-l border-r ${
+            className={`py-3.5 px-4 font-semibold text-[10px] uppercase tracking-widest transition-all rounded-none -mb-[2px] relative cursor-pointer border-b-2 ${
               activeTab === tab.id
-                ? 'bg-white text-[#2C4A3B] border-t-2 border-t-[#2C4A3B] border-x-divider border-b-transparent z-10 shadow-[0_-2px_4px_rgba(0,0,0,0.02)] font-bold'
-                : 'bg-[#faf8f5] text-stone-500 hover:text-stone-900 border-transparent border-b-divider hover:bg-stone-50'
+                ? 'border-b-[#2C4A3B] text-[#2C4A3B] font-bold z-10'
+                : 'border-b-transparent text-stone-500 hover:text-stone-900'
             }`}
           >
             {tab.label}
