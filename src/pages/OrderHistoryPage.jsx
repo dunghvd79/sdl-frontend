@@ -68,6 +68,7 @@ export default function OrderHistoryPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['myOrders']);
+      fetchCartCount();
       toast.success('Đã chuyển sang phương thức thanh toán COD thành công!', { title: 'Đã cập nhật' });
     },
     onError: (err) => {

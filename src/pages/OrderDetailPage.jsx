@@ -64,6 +64,7 @@ export default function OrderDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['orderDetail', id]);
       queryClient.invalidateQueries(['myOrders']);
+      fetchCartCount();
       toast.success('Đã chuyển sang phương thức thanh toán COD thành công!', { title: 'Đã cập nhật' });
     },
     onError: (err) => {
