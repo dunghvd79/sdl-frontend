@@ -25,19 +25,41 @@ export function AuthProvider({ children }) {
     return null;
   });
 
-  // Lắng nghe tín hiệu đăng xuất từ các tab khác
+  // Lắng nghe tín hiệu đăng xuất và thay đổi session từ các tab khác
   useEffect(() => {
+    // 1. Dùng BroadcastChannel làm kênh truyền tin nhanh
     const handleAuthMessage = (event) => {
       if (event.data === 'logout') {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
-        window.location.href = '/login'; // Chuyển hướng tab hiện tại về trang login
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
       }
     };
     authChannel.addEventListener('message', handleAuthMessage);
+
+    // 2. Dùng window storage event để lắng nghe thay đổi trực tiếp của localStorage (hữu ích khi login/logout chéo)
+    const handleStorageChange = (e) => {
+      if (e.key === 'token') {
+        if (!e.newValue) {
+          // Token bị xóa ở tab khác -> Logout tab này
+          setUser(null);
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
+        } else if (e.newValue !== e.oldValue) {
+          // Token bị thay đổi ở tab khác (đăng nhập tài khoản mới) -> Reload để cập nhật
+          window.location.reload();
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
       authChannel.removeEventListener('message', handleAuthMessage);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
