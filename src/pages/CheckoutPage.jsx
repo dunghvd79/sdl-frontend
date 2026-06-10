@@ -41,7 +41,7 @@ export default function CheckoutPage() {
   const [companyAddress, setCompanyAddress] = useState('');
 
   const [paymentMethod, setPaymentMethod] = useState('COD'); // Mặc định là COD
-  const [saveAsDefault, setSaveAsDefault] = useState(false);
+  const [saveAsDefault, setSaveAsDefault] = useState(true); // Hợp lý hóa UX: Mặc định bật để người dùng tự động lưu địa chỉ cho lần sau
 
   // State cho mã giảm giá
   const [couponCode, setCouponCode] = useState('');
@@ -69,28 +69,53 @@ export default function CheckoutPage() {
     toast.info('Đã hủy áp dụng mã giảm giá');
   };
 
-  // Tự động pre-fill tên, số điện thoại, địa chỉ từ profile của user khi user đăng nhập
+  // Tự động pre-fill tên, số điện thoại, địa chỉ từ profile của user hoặc từ localStorage dự phòng
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
         const response = await api.get('/users/profile');
         const profile = response.data.data;
+        
+        let name = '';
+        let phone = '';
+        let email = '';
+        let addressStr = '';
+
         if (profile) {
-          setShippingName(profile.full_name || '');
-          setShippingPhone(profile.phone || '');
-          setShippingEmail(profile.email || '');
-          
-          if (profile.address) {
-            // Thử tự động tách địa chỉ nếu được phân cách bằng dấu phẩy
-            const parts = profile.address.split(',').map(p => p.trim());
-            if (parts.length >= 4) {
-              setStreetAddress(parts.slice(0, parts.length - 3).join(', '));
-              setWard(parts[parts.length - 3]);
-              setDistrict(parts[parts.length - 2]);
-              setProvince(parts[parts.length - 1]);
-            } else {
-              setStreetAddress(profile.address || '');
-            }
+          name = profile.full_name || '';
+          phone = profile.phone || '';
+          email = profile.email || '';
+          addressStr = profile.address || '';
+        }
+
+        // Nếu thông tin trong DB trống, tải thông tin từ localStorage của phiên checkout trước đó (fallback cache)
+        const localInfoStr = localStorage.getItem('last_shipping_info');
+        if (localInfoStr) {
+          try {
+            const localInfo = JSON.parse(localInfoStr);
+            if (!name) name = localInfo.name || '';
+            if (!phone) phone = localInfo.phone || '';
+            if (!email) email = localInfo.email || '';
+            if (!addressStr && localInfo.address) addressStr = localInfo.address || '';
+          } catch (e) {
+            console.error('Lỗi khi khôi phục thông tin giao hàng từ localStorage:', e);
+          }
+        }
+
+        setShippingName(name);
+        setShippingPhone(phone);
+        setShippingEmail(email);
+        
+        if (addressStr) {
+          // Thử tự động tách địa chỉ nếu được phân cách bằng dấu phẩy
+          const parts = addressStr.split(',').map(p => p.trim());
+          if (parts.length >= 4) {
+            setStreetAddress(parts.slice(0, parts.length - 3).join(', '));
+            setWard(parts[parts.length - 3]);
+            setDistrict(parts[parts.length - 2]);
+            setProvince(parts[parts.length - 1]);
+          } else {
+            setStreetAddress(addressStr);
           }
         }
       } catch (err) {
@@ -166,7 +191,7 @@ export default function CheckoutPage() {
       });
       const order = orderRes.data.data;
 
-      // BƯỚC 2: Nếu người dùng check lưu làm mặc định, cập nhật profile
+      // BƯỚC 2: Nếu người dùng check lưu làm mặc định, cập nhật profile trong DB
       if (shippingInfo.saveAsDefault) {
         try {
           await api.put('/users/profile', {
@@ -177,6 +202,18 @@ export default function CheckoutPage() {
         } catch (err) {
           console.error('Lỗi khi lưu thông tin mặc định:', err);
         }
+      }
+
+      // Luôn lưu lại thông tin giao nhận vào localStorage của trình duyệt làm fallback dự phòng
+      try {
+        localStorage.setItem('last_shipping_info', JSON.stringify({
+          name: shippingInfo.shippingName,
+          phone: shippingInfo.shippingPhone,
+          email: shippingInfo.shippingEmail,
+          address: shippingInfo.shippingAddress
+        }));
+      } catch (err) {
+        console.error('Lỗi khi lưu last_shipping_info vào localStorage:', err);
       }
 
       if (shippingInfo.paymentMethod === 'COD') {
@@ -269,6 +306,7 @@ export default function CheckoutPage() {
     orderMutation.mutate({
       shippingName: shippingName.trim(),
       shippingPhone: shippingPhone.trim(),
+      shippingEmail: shippingEmail.trim(),
       shippingAddress: combinedAddress,
       shippingNotes: combinedNotes,
       paymentMethod,
