@@ -5532,17 +5532,16 @@ export default function AdminDashboardPage() {
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 flex-grow w-full">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b border-divider pb-6 mb-10">
-        <div>
-          <h1 className="text-3xl font-serif font-medium text-ink tracking-wide uppercase">Bảng Quản Trị</h1>
-          <p className="text-ink-light text-xs mt-2 max-w-xl font-sans tracking-wide leading-relaxed">
-            Hệ thống quản lý sách, thể loại, đơn hàng, tồn kho và các thiết lập nâng cao dành cho Ban quản trị và Thủ thư.
-          </p>
-        </div>
+      <div className="text-center max-w-2xl mx-auto mb-10">
+        <h1 className="text-3xl font-serif font-medium text-ink tracking-wide uppercase">Bảng Quản Trị</h1>
+        <p className="text-ink-light text-xs mt-2 font-sans tracking-wide leading-relaxed mx-auto">
+          Hệ thống quản lý sách, thể loại, đơn hàng, tồn kho và các thiết lập nâng cao dành cho Ban quản trị và Thủ thư.
+        </p>
+        <div className="w-16 h-[1.5px] bg-[#2C4A3B] mx-auto mt-4" />
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex justify-start mb-8 border-b border-divider pb-0 overflow-x-auto hide-scrollbar relative z-0 gap-2">
+      <div className="flex justify-center mb-8 border-b border-divider pb-0 overflow-x-auto hide-scrollbar relative z-0 gap-2">
         {visibleTabs.map(tab => (
           <button
             key={tab.id}
