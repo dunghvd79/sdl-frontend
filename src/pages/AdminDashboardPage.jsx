@@ -1639,7 +1639,7 @@ function OrderManagerTab() {
   };
 
   const handleCancel = (order) => {
-    const reason = window.prompt(`Nhập lý do hủy đơn hàng #${order.id} (Tùy chọn):`);
+    const reason = window.prompt(`Nhập lý do hủy đơn hàng #${order.hashId || order.id} (Tùy chọn):`);
     if (reason === null) return;
     updateStatusMutation.mutate({ 
       orderId: order.id, 
@@ -1756,7 +1756,7 @@ function OrderManagerTab() {
     const printContent = `
       <html>
         <head>
-          <title>Hóa đơn Pigeon Bookstore #${selectedOrder.id}</title>
+          <title>Hóa đơn Pigeon Bookstore #${selectedOrder.hashId || selectedOrder.id}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap');
             body { 
@@ -1882,7 +1882,7 @@ function OrderManagerTab() {
           <div class="header">
             <div class="logo">PIGEON BOOKSTORE</div>
             <div class="slogan">"Khơi nguồn tri thức, chắp cánh tương lai"</div>
-            <div class="title">Hóa đơn bán lẻ #${selectedOrder.id}</div>
+            <div class="title">Hóa đơn bán lẻ #${selectedOrder.hashId || selectedOrder.id}</div>
             <div style="font-size: 11px; color: #666; margin-top: 5px; font-family: monospace;">NGÀY ĐẶT: ${new Date(selectedOrder.created_at).toLocaleString('vi-VN')}</div>
           </div>
 
@@ -2221,7 +2221,7 @@ function OrderManagerTab() {
 
                     {/* ID */}
                     <td className="py-4 px-4">
-                      <span className="font-mono text-xs text-ink-light font-semibold">#{order.id}</span>
+                      <span className="font-mono text-xs text-ink-light font-semibold">#{order.hashId || order.id}</span>
                     </td>
 
                     {/* Khách hàng */}
@@ -2396,7 +2396,7 @@ function OrderManagerTab() {
             <div className="flex justify-between items-start px-8 pt-7 pb-4 border-b border-divider">
               <div>
                 <div className="flex items-center gap-3">
-                  <h3 className="text-xl font-serif font-medium text-ink uppercase tracking-wider">CHI TIẾT ĐƠN HÀNG #{selectedOrder.id}</h3>
+                  <h3 className="text-xl font-serif font-medium text-ink uppercase tracking-wider">CHI TIẾT ĐƠN HÀNG #{selectedOrder.hashId || selectedOrder.id}</h3>
                   {selectedOrder.payment_method === 'ONLINE' ? (
                     <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 border border-green-200 bg-green-50 text-green-700 rounded-none uppercase tracking-wider">
                       ONLINE (PAYOS)
@@ -2491,7 +2491,7 @@ function OrderManagerTab() {
                         )}
                         <button
                           onClick={() => {
-                            const reason = window.prompt(`Nhập lý do hủy đơn hàng #${selectedOrder.id} (Tùy chọn):`);
+                            const reason = window.prompt(`Nhập lý do hủy đơn hàng #${selectedOrder.hashId || selectedOrder.id} (Tùy chọn):`);
                             if (reason === null) return;
                             updateStatusMutation.mutate({ 
                               orderId: selectedOrder.id, 
@@ -2787,7 +2787,7 @@ function DashboardOverviewTab() {
     const rows = allOrders.map(order => {
       const itemsStr = order.items?.map(i => `${i.title} (SL: ${i.quantity})`).join('; ') || '';
       return [
-        order.id,
+        order.hashId || order.id,
         order.full_name || '',
         order.email || '',
         order.total_amount,
@@ -3098,7 +3098,7 @@ function DashboardOverviewTab() {
               <tbody className="divide-y divide-divider-lt">
                 {dynamicRecentOrders.map(order => (
                   <tr key={order.id} className="hover:bg-[#fcfbf9] transition-colors">
-                    <td className="py-2.5 px-3 font-mono font-semibold">#{order.id}</td>
+                    <td className="py-2.5 px-3 font-mono font-semibold">#{order.hashId || order.id}</td>
                     <td className="py-2.5 px-3 font-medium text-ink">{order.full_name || 'N/A'}</td>
                     <td className="py-2.5 px-3 font-semibold text-[#2C4A3B] whitespace-nowrap">
                       {Number(order.total_amount).toLocaleString('vi-VN')} đ
@@ -3133,7 +3133,7 @@ function DashboardOverviewTab() {
           <div className="bg-white rounded-none border border-divider shadow-none w-full max-w-2xl overflow-y-auto max-h-[92vh] text-ink">
             <div className="flex justify-between items-start px-8 pt-7 pb-4 border-b border-divider">
               <div>
-                <h3 className="text-xl font-serif font-medium text-ink">CHI TIẾT ĐƠN HÀNG #{selectedOrder.id}</h3>
+                <h3 className="text-xl font-serif font-medium text-ink">CHI TIẾT ĐƠN HÀNG #{selectedOrder.hashId || selectedOrder.id}</h3>
                 <p className="text-xs text-ink-light mt-1">{new Date(selectedOrder.created_at).toLocaleString('vi-VN')}</p>
               </div>
               <button
