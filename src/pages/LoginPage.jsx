@@ -82,6 +82,14 @@ export default function LoginPage() {
               required 
             />
           </div>
+          <div className="flex justify-end">
+            <Link 
+              to="/forgot-password" 
+              className="text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase hover:text-[#2C4A3B] transition-colors"
+            >
+              Quên mật khẩu?
+            </Link>
+          </div>
           
           <button 
             type="submit" 
