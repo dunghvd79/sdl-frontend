@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { Search, Heart, ShoppingCart, Gift, Settings, Bell, Menu, X } from 'lucide-react';
+import { Search, Heart, ShoppingCart, Gift, Settings, Bell, Menu, X, ChevronRight } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import pigeonImg from '../../picture/bo_Cau.png';
@@ -518,32 +518,44 @@ export default function Navbar() {
             </form>
 
             {/* Nav Links */}
-            <div className="flex flex-col gap-4 text-xs font-bold uppercase tracking-[0.15em] text-stone-500">
+            <div className="flex flex-col gap-1 text-base font-serif">
               <Link 
                 to="/" 
                 onClick={() => { setIsMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className="hover:text-stone-900 transition-colors py-1.5 border-b border-stone-200/50"
+                className={`flex items-center justify-between py-2.5 px-3 transition-colors rounded-none ${
+                  location.pathname === '/' 
+                    ? 'bg-[#2C4A3B]/5 text-[#2C4A3B] font-bold border-l-2 border-[#2C4A3B]' 
+                    : 'text-stone-700 hover:text-stone-900 hover:bg-stone-50'
+                }`}
               >
-                Trang chủ
+                <span>Trang chủ</span>
+                <ChevronRight size={14} className={location.pathname === '/' ? 'text-[#2C4A3B]' : 'text-stone-300'} />
               </Link>
               <button 
                 onClick={() => { setIsMobileMenuOpen(false); handleScrollToSection('explore'); }}
-                className="text-left hover:text-stone-900 transition-colors py-1.5 border-b border-stone-200/50 bg-transparent border-none p-0 cursor-pointer uppercase font-bold text-stone-500 tracking-[0.15em]"
+                className="w-full flex items-center justify-between py-2.5 px-3 transition-colors rounded-none bg-transparent border-0 text-left cursor-pointer font-serif font-bold text-stone-700 hover:text-stone-900 hover:bg-stone-50"
               >
-                Danh mục sách
+                <span>Danh mục sách</span>
+                <ChevronRight size={14} className="text-stone-300" />
               </button>
               <Link 
                 to="/blog" 
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="hover:text-stone-900 transition-colors py-1.5 border-b border-stone-200/50"
+                className={`flex items-center justify-between py-2.5 px-3 transition-colors rounded-none ${
+                  location.pathname === '/blog' 
+                    ? 'bg-[#2C4A3B]/5 text-[#2C4A3B] font-bold border-l-2 border-[#2C4A3B]' 
+                    : 'text-stone-700 hover:text-stone-900 hover:bg-stone-50'
+                }`}
               >
-                Bài viết
+                <span>Bài viết</span>
+                <ChevronRight size={14} className={location.pathname === '/blog' ? 'text-[#2C4A3B]' : 'text-stone-300'} />
               </Link>
               <button 
                 onClick={() => { setIsMobileMenuOpen(false); handleScrollToSection('about'); }}
-                className="text-left hover:text-stone-900 transition-colors py-1.5 border-b border-stone-200/50 bg-transparent border-none p-0 cursor-pointer uppercase font-bold text-stone-500 tracking-[0.15em]"
+                className="w-full flex items-center justify-between py-2.5 px-3 transition-colors rounded-none bg-transparent border-0 text-left cursor-pointer font-serif font-bold text-stone-700 hover:text-stone-900 hover:bg-stone-50"
               >
-                Về chúng tôi
+                <span>Về chúng tôi</span>
+                <ChevronRight size={14} className="text-stone-300" />
               </button>
             </div>
 
@@ -611,21 +623,22 @@ export default function Navbar() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 border-t border-divider pt-4 mt-2">
+                <div className="bg-white border border-stone-200 divide-y divide-stone-100 overflow-hidden shadow-xs mt-2">
                   {/* Trang quản trị (Chỉ dành cho ADMIN / CURATOR) */}
                   {(user.role === 'ADMIN' || user.role === 'CURATOR') && (
                     <Link 
                       to="/admin" 
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3.5 py-2 hover:bg-surface-warm transition-colors group/item border border-divider-lt bg-[#2C4A3B]/5"
+                      className="flex items-center justify-between p-3.5 hover:bg-[#2C4A3B]/5 active:bg-[#2C4A3B]/10 transition-colors"
                     >
-                      <div className="w-6 h-6 border border-divider flex items-center justify-center text-[#2C4A3B] transition-colors bg-white">
-                        <Settings size={12} className="group-hover/item:rotate-45 transition-transform duration-300" />
+                      <div className="flex items-center gap-3">
+                        <Settings size={15} className="text-[#2C4A3B] flex-shrink-0" />
+                        <div className="text-left">
+                          <p className="text-xs font-bold text-[#2C4A3B]">Trang quản trị</p>
+                          <p className="text-[9px] text-[#2C4A3B]/70">Quản lý sách & đơn hàng</p>
+                        </div>
                       </div>
-                      <div className="text-left">
-                        <p className="text-[11px] font-bold text-[#2C4A3B]">Trang quản trị</p>
-                        <p className="text-[9px] text-[#2C4A3B]/70">Quản lý sách & đơn hàng</p>
-                      </div>
+                      <ChevronRight size={14} className="text-[#2C4A3B]/50" />
                     </Link>
                   )}
 
@@ -633,51 +646,54 @@ export default function Navbar() {
                   <Link
                     to="/profile"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3.5 py-2 hover:bg-surface-warm transition-colors group/item border border-divider-lt bg-white"
+                    className="flex items-center justify-between p-3.5 hover:bg-stone-50 active:bg-stone-100 transition-colors"
                   >
-                    <div className="w-6 h-6 border border-divider flex items-center justify-center text-stone-500 transition-colors bg-stone-50">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    <div className="flex items-center gap-3">
+                      <svg className="w-4 h-4 text-stone-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
+                      <div className="text-left">
+                        <p className="text-xs font-bold text-stone-850">Hồ sơ cá nhân</p>
+                        <p className="text-[9px] text-stone-400">Thông tin & mật khẩu</p>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <p className="text-[11px] font-semibold text-stone-850 group-hover/item:text-[#2C4A3B] transition-colors">Hồ sơ cá nhân</p>
-                      <p className="text-[9px] text-stone-500">Thông tin & mật khẩu</p>
-                    </div>
+                    <ChevronRight size={14} className="text-stone-300" />
                   </Link>
 
                   {/* Đơn hàng của tôi */}
                   <Link
                     to="/orders"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3.5 py-2 hover:bg-surface-warm transition-colors group/item border border-divider-lt bg-white"
+                    className="flex items-center justify-between p-3.5 hover:bg-stone-50 active:bg-stone-100 transition-colors"
                   >
-                    <div className="w-6 h-6 border border-divider flex items-center justify-center text-stone-500 transition-colors bg-stone-50">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    <div className="flex items-center gap-3">
+                      <svg className="w-4 h-4 text-stone-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
+                      <div className="text-left">
+                        <p className="text-xs font-bold text-stone-850">Đơn hàng của tôi</p>
+                        <p className="text-[9px] text-stone-400">Lịch sử & theo dõi đơn</p>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <p className="text-[11px] font-semibold text-stone-850 group-hover/item:text-[#2C4A3B] transition-colors">Đơn hàng của tôi</p>
-                      <p className="text-[9px] text-stone-500">Lịch sử & theo dõi đơn</p>
-                    </div>
+                    <ChevronRight size={14} className="text-stone-300" />
                   </Link>
 
                   {/* Tủ sách của tôi */}
                   <Link
                     to="/shelf"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3.5 py-2 hover:bg-surface-warm transition-colors group/item border border-[#2C4A3B]/20 bg-[#2C4A3B]/5"
+                    className="flex items-center justify-between p-3.5 hover:bg-stone-50 active:bg-stone-100 transition-colors"
                   >
-                    <div className="w-6 h-6 border border-[#2C4A3B]/30 flex items-center justify-center text-[#2C4A3B] transition-colors bg-white">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    <div className="flex items-center gap-3">
+                      <svg className="w-4 h-4 text-stone-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                       </svg>
+                      <div className="text-left">
+                        <p className="text-xs font-bold text-stone-850">Tủ sách của tôi</p>
+                        <p className="text-[9px] text-stone-400">Đọc sách & Tư vấn AI</p>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <p className="text-[11px] font-bold text-[#2C4A3B] group-hover/item:text-[#1e3529] transition-colors">Tủ sách của tôi</p>
-                      <p className="text-[9px] text-stone-500">Đọc sách & Tư vấn AI</p>
-                    </div>
+                    <ChevronRight size={14} className="text-stone-300" />
                   </Link>
                 </div>
 
