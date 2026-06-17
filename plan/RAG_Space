@@ -1,0 +1,66 @@
+# 📋 Kế hoạch thiết kế lại Tủ sách & Phòng đọc AI (RAG Space)
+
+Kế hoạch này vạch ra các giai đoạn và nội dung chi tiết nhằm thiết kế lại trang **Tủ Sách Cá Nhân** và **Trang Trò Chuyện Trợ Lý AI (RAG)** theo bộ nhận diện cao cấp (Olive & Cream) với trải nghiệm người dùng tối ưu nhất.
+
+---
+
+## 🎯 Mục tiêu
+1. **Đồng bộ Aesthetics:** Thay đổi toàn bộ phong cách thô cũ sang concept tối giản sang trọng (Nền kem nhạt `#fdfcfa`, viền đá mỏng, và điểm nhấn xanh Olive `#2C4A3B`).
+2. **Nâng cấp Tủ Sách [MyShelfPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/MyShelfPage.jsx):** Giả lập không gian thư viện thực tế với hiệu ứng kệ sách tinh tế, phân tách trạng thái sách có RAG và sách thường rõ ràng.
+3. **Nâng cấp Phòng Chat AI [ChatPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/ChatPage.jsx):** Tạo bố cục chia đôi màn hình đắm chìm (Immersive Screen), tích hợp bộ gợi ý câu hỏi (Prompt suggestions) và trích dẫn trang sách rõ ràng.
+
+---
+
+## 🛠️ Chi tiết các hạng mục thay đổi
+
+### 1. Trang Tủ Sách Cá Nhân (MyShelfPage)
+*   **Kệ Sách Thư Viện ảo (Virtual Bookshelf Grid):** 
+    *   Sắp xếp lưới sách với hiệu ứng đổ bóng sâu (`shadow-md hover:shadow-xl`) và hover trượt nhẹ lên trên.
+    *   Tách biệt nhãn trực quan bằng màu sắc sang trọng: sách có AI Chat (`Sẵn sàng AI` - màu xanh lá cây nhạt) và sách thường (`Sách thường` - màu xám nhạt).
+*   **Trình Đọc E-book Thử Nghiệm (`BookReaderModal`):**
+    *   Thiết kế giao diện đọc chuyên nghiệp như Kindle: Tùy chỉnh nhanh kích thước chữ, 3 chế độ màu nền (Warm - Dark - White).
+    *   Tích hợp Sidebar Mục Lục ở bên trái và thanh phần trăm tiến trình đọc mượt mà ở phía dưới.
+    *   Nút "Hỏi đáp AI" trực tiếp tích hợp ngay dưới chân trang đọc sách.
+
+### 2. Trang Trò Chuyện Trợ Lý AI (ChatPage)
+*   **Bố cục Chia Đôi Màn Hình Đắm Chìm (Immersive Split Screen):**
+    *   **Cột trái (Book Panel):** Thiết kế dạng sidebar cố định hiển thị ảnh bìa nổi bật, tác giả, thể loại và ghi chú giải thích cách AI RAG hoạt động.
+    *   **Cột phải (Chat Area):** Toàn bộ khung chat được bọc trong nền màu ấm nhẹ (`bg-surface-warm`). Khung nhập câu hỏi dán sát chân trang với nút Gửi dạng phẳng sang trọng.
+*   **Hộp Gợi Ý Câu Hỏi (Prompt Suggestions):**
+    *   Hiển thị 3-4 câu hỏi gợi ý dạng viên thuốc (Pills) ngay trên ô nhập liệu (ví dụ: *"Hãy tóm tắt nội dung cuốn sách"*, *"Nhân vật chính đối diện với thử thách gì?"*). Khi click sẽ tự động gửi câu hỏi đi, giúp kích thích tương tác.
+*   **Khung Trích Dẫn Nguồn RAG (Citations):**
+    *   Hiển thị các nguồn trích dẫn từ trang sách thật dưới dạng các thẻ nhỏ dễ nhìn. Khi rê chuột vào sẽ hiện đoạn văn bản nguồn trích dẫn tương ứng (Tooltip/Popover).
+
+---
+
+## 📅 Kế hoạch triển khai (Các bước thực hiện)
+
+```mermaid
+graph TD
+    A[BƯỚC 1: Redesign MyShelfPage.jsx] --> B[BƯỚC 2: Redesign ChatPage.jsx]
+    B --> C[BƯỚC 3: Test Biên Dịch & Sửa Lỗi]
+    C --> D[BƯỚC 4: Git Push & Tự Động Deploy]
+```
+
+### Bước 1: Thiết kế lại MyShelfPage.jsx
+*   Tái cấu trúc giao diện CSS, đổi các nút thô sang nút phẳng phong cách serif.
+*   Làm đẹp thanh tìm kiếm và bộ lọc nhanh.
+*   Nâng cấp thiết kế của hai sub-component: `BookReaderModal` và `ShelfReviewModal`.
+
+### Bước 2: Thiết kế lại ChatPage.jsx
+*   Xây dựng bố cục hai cột responsive.
+*   Thiết kế bong bóng chat (Chat bubbles) cho User và AI đối xứng trực quan.
+*   Tích hợp danh sách Prompt suggestions động.
+*   Làm đẹp hộp trích dẫn nguồn trang sách.
+
+### Bước 3: Kiểm tra & Sửa lỗi
+*   Chạy biên dịch `npm run build` ở local để kiểm tra tính đúng đắn của code.
+*   Chạy script test local để đảm bảo các endpoint `/api/inventory` và `/api/ai` hoạt động thông suốt.
+
+### Bước 4: Push lên Git
+*   Thực hiện `git add`, `git commit` và `git push` để tự động hóa cập nhật giao diện trực tiếp trên Netlify.
+
+---
+
+> [!IMPORTANT]
+> Toàn bộ logic API và xử lý dữ liệu hiện có sẽ được giữ nguyên 100%, chỉ can thiệp vào cấu trúc JSX và CSS Class của Frontend để đảm bảo tính an toàn tối đa cho hệ thống.

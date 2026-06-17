@@ -1,0 +1,81 @@
+# 📋 Kế Hoạch Triển Khai: Đặt Hàng COD & Thanh Toán Nâng Cao
+
+Dưới đây là kế hoạch chi tiết tích hợp tính năng **Đặt hàng COD & Thanh toán nâng cao** cho Smart Digital Library (SDL), dựa trên các quyết định thiết kế đã thống nhất.
+
+---
+
+## 🔍 So Sánh Hiện Tại & Sau Khi Triển Khai
+
+| Quy Trình | Hiện Trạng (Current) | Sau Khi Triển Khai (Advanced) |
+| :--- | :--- | :--- |
+| **Phí Vận Chuyển** | Miễn phí giao hàng (Free Shipping) cho toàn bộ đơn hàng. | **Giữ nguyên Miễn phí giao hàng** cho toàn bộ đơn hàng. |
+| **Hết Hạn Thanh Toán ONLINE** | Đơn hàng ONLINE găm giữ sách trong kho ảo (`reserved_qty` tăng) vô thời hạn nếu khách không thanh toán. | **Tự động hủy đơn hàng sau 15 phút** chưa thanh toán, nhả chỗ sách trong kho về trạng thái sẵn bán. |
+| **Cơ Chế Quét Hết Hạn** | Không có cơ chế tự động quét. | Kết hợp **Lazy check** khi gọi API liên quan tới Orders/Checkout và **`setInterval` quét định kỳ mỗi 5 phút** ngầm trên Express backend. |
+| **Đổi Phương Thức Thanh Toán** | Khách hàng không thể đổi phương thức thanh toán. Phải hủy đơn cũ và tạo lại từ đầu. | Cho phép **chuyển đổi từ ONLINE sang COD** trực tiếp tại trang chi tiết đơn hàng PENDING. Tự động dọn sạch các sản phẩm tương ứng khỏi giỏ hàng. |
+| **Hoàn Tiền Đơn Đã Thanh Toán** | Khi hủy đơn ONLINE đã thanh toán thành công, hệ thống chỉ cập nhật trạng thái đơn thành `CANCELLED` và hoàn trả số lượng sách về kho, không lưu vết đối soát tiền. | Cập nhật đơn thành `CANCELLED`, hoàn trả kho, đồng thời **chuyển trạng thái giao dịch trong bảng `payments` sang `REFUND_PENDING` (Chờ hoàn tiền)** để Admin đối soát hoàn tiền thủ công. |
+
+---
+
+## 🛠️ Chi Tiết Các Bước Triển Khai Kỹ Thuật
+
+### 1. Cập Nhật Cấu Trúc Dữ Liệu (Database Migrations)
+- Không cần thêm bảng mới.
+- Đảm bảo bảng `payments` và `orders` hỗ trợ các trạng thái mới:
+  - Cập nhật check constraint của `payments.status` nếu cần thiết (để hỗ trợ trạng thái `'REFUND_PENDING'`).
+  - Đảm bảo cột `cancel_reason` và `payment_method` hoạt động ổn định trên bảng `orders`.
+
+### 2. Backend API (`sdl-project`)
+
+#### A. Viết Hàm Quét Tự Động Hủy Đơn Hàng Hết Hạn (`OrderService.js`)
+- Tạo hàm `checkAndCancelExpiredOrders()` thực hiện:
+  - Tìm tất cả đơn hàng có `payment_method = 'ONLINE'`, `status = 'PENDING'` và thời gian tạo `created_at` đã quá 15 phút trước.
+  - Sử dụng transaction:
+    - Cập nhật trạng thái các đơn hàng này thành `'CANCELLED'` với lý do `'Hết hạn thời gian thanh toán (15 phút)'`.
+    - Đối với mỗi đơn hàng hết hạn, duyệt qua các mặt hàng (`order_items`) và gọi `Inventory.cancelReservation(client, item.bookId, item.quantity, ...)` để nhả số lượng giữ chỗ trong kho.
+    - Cập nhật trạng thái giao dịch trong bảng `payments` tương ứng thành `'FAILED'`.
+
+#### B. Cấu Hình Tự Động Quét Trực Tiếp và Quét Ngầm Định Kỳ
+- **Lazy Check**: Gọi hàm `checkAndCancelExpiredOrders()` ở đầu các route:
+  - `GET /api/orders` (Danh sách đơn hàng của tôi)
+  - `GET /api/orders/:id` (Chi tiết đơn hàng)
+  - `POST /api/orders/checkout` (Đặt hàng mới)
+- **Background Interval**: Trong file khởi chạy server (`sdl-project/src/index.js` hoặc file start chính), thiết lập:
+  ```javascript
+  setInterval(() => {
+      OrderService.checkAndCancelExpiredOrders().catch(err => {
+          console.error('❌ Lỗi quét hủy đơn hàng hết hạn ngầm:', err.message);
+      });
+  }, 5 * 60 * 1000); // 5 phút một lần
+  ```
+
+#### C. Viết API Chuyển Đổi Phương Thức Thanh Toán sang COD (`orderController.js` & `orderService.js`)
+- Thêm endpoint `PUT /api/orders/:id/change-to-cod`
+- Chỉ cho phép chuyển đổi nếu:
+  - Đơn hàng thuộc sở hữu của người dùng đang đăng nhập.
+  - Trạng thái đơn hàng đang là `PENDING`.
+  - Phương thức thanh toán hiện tại là `ONLINE`.
+- Logic xử lý:
+  - Bắt đầu transaction.
+  - Cập nhật `payment_method` của đơn hàng thành `'COD'`.
+  - Dọn sạch các sản phẩm tương ứng trong đơn hàng khỏi giỏ hàng của user (`Cart.removeItems`).
+  - Hủy bỏ/cập nhật giao dịch PENDING trong bảng `payments` thành `'FAILED'`.
+  - Xác nhận (commit) transaction.
+
+#### D. Cập Nhật Logic Hủy Đơn Hàng ONLINE Đã Thanh Toán
+- Trong hàm `OrderService.cancelOrder()`, bổ sung kiểm tra:
+  - Nếu đơn hàng có `payment_method = 'ONLINE'` và đã có giao dịch thành công (`payments.status = 'SUCCESS'`), cập nhật trạng thái giao dịch trong bảng `payments` thành `'REFUND_PENDING'`.
+
+---
+
+### 3. Frontend UI (`sdl-frontend`)
+
+#### A. Cập Nhật `OrderDetailPage.jsx` và `OrderHistoryPage.jsx`
+- Đối với đơn hàng đang `PENDING` có phương thức thanh toán là `ONLINE`, bổ sung thêm nút **"Chuyển sang nhận hàng thanh toán (COD)"** bên cạnh nút "Thanh toán ngay".
+- Khi người dùng bấm nút:
+  - Hiển thị hộp thoại xác nhận (Confirm Dialog).
+  - Gọi API `PUT /api/orders/:id/change-to-cod`.
+  - Refresh lại trang chi tiết đơn hàng / danh sách đơn hàng và hiển thị Toast thông báo thành công.
+
+#### B. Cập Nhật Trạng Thái Giao Diện Trong `OrderDetailPage.jsx`
+- Hiển thị thông báo hoặc Badge đặc biệt khi đơn hàng ở trạng thái hủy nhưng có giao dịch ở trạng thái `'REFUND_PENDING'`:
+  - Thêm dòng thông tin: *"Yêu cầu hoàn tiền của bạn đang được hệ thống xử lý đối soát. Tiền sẽ được hoàn về trong vòng 2-3 ngày làm việc."*

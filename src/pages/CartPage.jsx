@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
@@ -53,7 +53,7 @@ export default function CartPage() {
     enabled: !!user
   });
 
-  const cartItems = cartData?.items || [];
+  const cartItems = useMemo(() => cartData?.items || [], [cartData?.items]);
 
   // Fetch danh sách yêu thích (Wishlist) phục vụ tính năng "Lưu lại mua sau"
   const { data: wishlist } = useQuery({
@@ -105,9 +105,11 @@ export default function CartPage() {
   // Đồng bộ selectedItems khi giỏ hàng có sự thay đổi (xóa bớt sản phẩm)
   useEffect(() => {
     if (cartItems.length === 0) {
-      setSelectedItems(new Set());
-      setHasInitializedSelection(false);
-      sessionStorage.removeItem(SELECTION_STORAGE_KEY);
+      if (selectedItems.size > 0 || hasInitializedSelection) {
+        setSelectedItems(new Set());
+        setHasInitializedSelection(false);
+        sessionStorage.removeItem(SELECTION_STORAGE_KEY);
+      }
     } else {
       const currentBookIds = new Set(cartItems.map(getBookId));
       setSelectedItems(prev => {
@@ -122,7 +124,7 @@ export default function CartPage() {
         return changed ? next : prev;
       });
     }
-  }, [cartItems]);
+  }, [cartItems, hasInitializedSelection, selectedItems.size]);
 
   // Lọc các item được chọn
   const selectedCartItems = cartItems.filter(item => {

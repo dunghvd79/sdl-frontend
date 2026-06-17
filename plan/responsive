@@ -1,0 +1,63 @@
+# 📱 Kế hoạch Tối ưu hóa Responsive Mobile (UI/UX Mobile Optimization Plan)
+
+Tài liệu này vạch ra kế hoạch chi tiết nhằm nâng cấp trải nghiệm người dùng trên thiết bị di động cho các trang: Giỏ hàng, Thanh toán, Tủ sách, Chi tiết sách và Thanh điều hướng (Navbar).
+
+---
+
+## 🛠️ Các cải tiến chi tiết từng thành phần
+
+### 1. Thanh điều hướng ([Navbar.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/components/Navbar.jsx))
+- **Vấn đề:** Trên mobile (màn hình dưới `lg`), thanh menu chính bị ẩn và các nút chức năng (Tìm kiếm, Khuyến mãi, Yêu thích, Thông báo) cũng bị ẩn hoàn toàn, không có cách nào điều hướng.
+- **Giải pháp:**
+  - Bổ sung nút Hamburger menu (sử dụng icon `Menu` của `lucide-react`) hiển thị ở phía bên trái trên màn hình nhỏ.
+  - Xây dựng một **Mobile Drawer (Menu trượt)** mượt mà từ cạnh trái màn hình sang:
+    - Chứa thanh tìm kiếm tích hợp nhanh.
+    - Danh sách liên kết điều hướng: Trang chủ, Danh mục, Bài viết, Về chúng tôi.
+    - Danh sách liên kết tiện ích kèm Badge động: Yêu thích (Wishlist), Trạm khuyến mãi, Trung tâm thông báo.
+    - Quản lý tài khoản: Hiển thị avatar, tên người dùng, vai trò và nút Đăng xuất (hoặc nút Đăng nhập / Đăng ký nếu chưa đăng nhập).
+
+### 2. Giỏ hàng ([CartPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/CartPage.jsx))
+- **Vấn đề:** Thẻ sản phẩm dùng `flex-row` cứng nhắc, dễ bị tràn chiều rộng hoặc ép chữ méo mó trên màn hình nhỏ.
+- **Giải pháp:**
+  - Chuyển cấu trúc card sản phẩm từ `flex-row` thành `flex-col sm:flex-row`.
+  - Nhóm Checkbox, ảnh bìa và tiêu đề vào một hàng riêng ở trên để đảm bảo bố cục dọc cân đối.
+  - Chuyển cụm Giá tiền và bộ tăng giảm số lượng xuống dưới dạng hàng ngang (`flex justify-between w-full sm:w-auto`) trên mobile, và giữ dạng cột trên desktop.
+  - Chuyển nút Xóa (Trash) thành vị trí tuyệt đối (`absolute top-2 right-2`) trên mobile để tránh chiếm không gian hiển thị của sách.
+
+### 3. Chi tiết sách ([BookDetailPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/BookDetailPage.jsx))
+- **Vấn đề:**
+  - Bảng thông số kỹ thuật `grid-cols-2` hiển thị quá hẹp và vỡ dòng chữ trên màn hình nhỏ.
+  - Cụm 3 nút hành động (Thêm vào giỏ, Yêu thích, Chat AI) xếp chồng và giãn rộng (`items-stretch`) nhìn rất thô kệch.
+- **Giải pháp:**
+  - Đổi bảng thông số kỹ thuật thành `grid-cols-1 sm:grid-cols-2`.
+  - Tối ưu lại cụm nút hành động trên mobile:
+    - Xếp nút **Thêm vào giỏ** và nút **Yêu thích (Tim)** nằm cạnh nhau trên cùng một hàng ngang.
+    - Đặt nút **Hỏi đáp AI / Chat RAG** xuống dưới chiếm toàn bộ chiều rộng hàng thứ hai để tạo điểm nhấn trực quan dễ bấm bằng một tay.
+    - Giữ bố cục 3 nút nằm ngang như cũ trên màn hình lớn (`sm:` trở lên).
+
+### 4. Tủ sách cá nhân & Trình đọc ([MyShelfPage.jsx](file:///e:/it-project/smart_digital_library/code_frontend/sdl-frontend/src/pages/MyShelfPage.jsx))
+- **Vấn đề:**
+  - Khoảng đệm trang đọc sách `p-8` quá lớn trên các thiết bị màn hình nhỏ (ví dụ iPhone SE 320px), khiến phần văn bản đọc sách bị bóp nghẹt diện tích hiển thị.
+- **Giải pháp:**
+  - Tối ưu hóa padding của khung giấy simulated paper thành `p-4 sm:p-8 md:p-14`.
+  - Tối ưu hóa kích thước font chữ và các thanh điều khiển (cỡ chữ, nền màu) cho thân thiện với màn hình cảm ứng di động.
+
+---
+
+## 📅 Kế hoạch triển khai
+
+```mermaid
+graph TD
+  A["Thiết lập Mobile Drawer & Hamburger trong Navbar.jsx"] --> B["Cập nhật bố cục responsive cho CartPage.jsx"]
+  B --> C["Cập nhật spec grid & button layout trong BookDetailPage.jsx"]
+  C --> D["Tối ưu hóa padding trình đọc sách trong MyShelfPage.jsx"]
+  D --> E["Chạy kiểm thử build & kiểm tra giao diện di động"]
+```
+
+---
+
+## 🧪 Kế hoạch Kiểm thử (Test Plan)
+1. **Kiểm tra Hamburger Menu:** Mở chế độ Responsive trên Chrome DevTools (chọn iPhone 12 Pro / SE), click mở/đóng Hamburger Menu, tìm kiếm thử và điều hướng đến các mục.
+2. **Kiểm tra Cart Page:** Đảm bảo giỏ hàng hiển thị đẹp mắt, nút tăng giảm dễ tương tác, nút xóa nằm ở vị trí hợp lý không bị đè chữ.
+3. **Kiểm tra Book Detail Page:** Đảm bảo nút Add to Cart và Yêu thích thẳng hàng, nút Hỏi đáp AI chiếm trọn hàng dưới rõ ràng trên mobile.
+4. **Kiểm tra Reader Modal:** Mở đọc thử một cuốn sách trên mobile, đảm bảo lề giấy mỏng và đọc chữ thoải mái.

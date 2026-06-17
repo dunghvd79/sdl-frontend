@@ -479,7 +479,7 @@ export default function Navbar() {
         onClick={() => setIsMobileMenuOpen(false)}
       >
         <div 
-          className={`fixed top-0 left-0 bottom-0 w-[80%] max-w-[340px] bg-[#faf8f5] z-[101] p-6 flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-out border-r border-divider ${
+          className={`fixed top-0 left-0 bottom-0 w-[80%] max-w-[340px] bg-[#faf8f5] z-[101] p-6 flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-out border-r border-divider overflow-y-auto ${
             isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
           onClick={(e) => e.stopPropagation()}
@@ -611,20 +611,73 @@ export default function Navbar() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-center text-[10px] font-bold uppercase tracking-wider">
-                  <Link 
-                    to="/profile" 
+                <div className="flex flex-col gap-2 border-t border-divider pt-4 mt-2">
+                  {/* Trang quản trị (Chỉ dành cho ADMIN / CURATOR) */}
+                  {(user.role === 'ADMIN' || user.role === 'CURATOR') && (
+                    <Link 
+                      to="/admin" 
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-3 px-3.5 py-2 hover:bg-surface-warm transition-colors group/item border border-divider-lt bg-[#2C4A3B]/5"
+                    >
+                      <div className="w-6 h-6 border border-divider flex items-center justify-center text-[#2C4A3B] transition-colors bg-white">
+                        <Settings size={12} className="group-hover/item:rotate-45 transition-transform duration-300" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[11px] font-bold text-[#2C4A3B]">Trang quản trị</p>
+                        <p className="text-[9px] text-[#2C4A3B]/70">Quản lý sách & đơn hàng</p>
+                      </div>
+                    </Link>
+                  )}
+
+                  {/* Hồ sơ */}
+                  <Link
+                    to="/profile"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="border border-divider py-2 hover:bg-stone-50 text-stone-700 bg-white"
+                    className="flex items-center gap-3 px-3.5 py-2 hover:bg-surface-warm transition-colors group/item border border-divider-lt bg-white"
                   >
-                    Hồ sơ
+                    <div className="w-6 h-6 border border-divider flex items-center justify-center text-stone-500 transition-colors bg-stone-50">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[11px] font-semibold text-stone-850 group-hover/item:text-[#2C4A3B] transition-colors">Hồ sơ cá nhân</p>
+                      <p className="text-[9px] text-stone-500">Thông tin & mật khẩu</p>
+                    </div>
                   </Link>
-                  <Link 
-                    to="/shelf" 
+
+                  {/* Đơn hàng của tôi */}
+                  <Link
+                    to="/orders"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="border border-[#2C4A3B] py-2 bg-[#2C4A3B] hover:bg-[#1e3529] text-white"
+                    className="flex items-center gap-3 px-3.5 py-2 hover:bg-surface-warm transition-colors group/item border border-divider-lt bg-white"
                   >
-                    Tủ sách
+                    <div className="w-6 h-6 border border-divider flex items-center justify-center text-stone-500 transition-colors bg-stone-50">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[11px] font-semibold text-stone-850 group-hover/item:text-[#2C4A3B] transition-colors">Đơn hàng của tôi</p>
+                      <p className="text-[9px] text-stone-500">Lịch sử & theo dõi đơn</p>
+                    </div>
+                  </Link>
+
+                  {/* Tủ sách của tôi */}
+                  <Link
+                    to="/shelf"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3.5 py-2 hover:bg-surface-warm transition-colors group/item border border-[#2C4A3B]/20 bg-[#2C4A3B]/5"
+                  >
+                    <div className="w-6 h-6 border border-[#2C4A3B]/30 flex items-center justify-center text-[#2C4A3B] transition-colors bg-white">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[11px] font-bold text-[#2C4A3B] group-hover/item:text-[#1e3529] transition-colors">Tủ sách của tôi</p>
+                      <p className="text-[9px] text-stone-500">Đọc sách & Tư vấn AI</p>
+                    </div>
                   </Link>
                 </div>
 

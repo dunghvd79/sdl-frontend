@@ -90,10 +90,10 @@ export default function BookCard({ book }) {
   const reviews = (book.id * 17) % 500 + 40;
 
   return (
-    <div className="flex flex-col group relative bg-white border border-stone-200/60 rounded-[20px] p-4 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_28px_rgba(44,74,59,0.06)] hover:border-[#2C4A3B]/15 transition-all duration-300 select-none text-left h-full">
+    <div className="flex flex-col group relative bg-white border border-stone-200/60 rounded-[20px] p-3 sm:p-4 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_28px_rgba(44,74,59,0.06)] hover:border-[#2C4A3B]/15 transition-all duration-300 select-none text-left h-full">
       
       {/* Cover Image Wrapper inside container */}
-      <div className="w-full aspect-[4/5.2] overflow-hidden rounded-xl mb-4 relative bg-stone-50 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+      <div className="w-full aspect-[4/5.2] overflow-hidden rounded-xl mb-3 sm:mb-4 relative bg-stone-50 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
         <Link to={`/books/${book.hashId || book.id}`} className="block w-full h-full cursor-pointer">
           <img 
             src={defaultImage} 
@@ -166,7 +166,7 @@ export default function BookCard({ book }) {
 
         {/* Separator line and purchase controls */}
         <div>
-          <div className="border-t border-stone-100 pt-3.5 flex items-center justify-between gap-3 w-full">
+          <div className="border-t border-stone-100 pt-2.5 sm:pt-3.5 flex items-center justify-between gap-2.5 sm:gap-3 w-full">
             <div className="flex flex-col text-left">
               {/* Price */}
               <span className="text-sm font-serif font-bold text-stone-900 leading-none">

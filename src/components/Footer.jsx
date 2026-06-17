@@ -10,8 +10,19 @@ export default function Footer() {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('order_guide');
 
+  // State for Mobile Footer Accordions
+  const [expandedSections, setExpandedSections] = useState({
+    categories: false,
+    support: false,
+    account: false
+  });
 
-
+  const toggleSection = (section) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
   // Scroll to top helper
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -236,7 +247,7 @@ export default function Footer() {
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8">
           
           {/* Column 1: Branding */}
-          <div className="md:col-span-4 flex flex-col items-start text-left">
+          <div className="md:col-span-4 flex flex-col items-start text-left w-full border-b border-[#1a2f24] md:border-b-0 pb-6 md:pb-0">
             <h2 className="text-xl md:text-2xl font-serif text-white font-bold tracking-wide italic mb-4">
               Pigeon Bookstore
             </h2>
@@ -285,11 +296,19 @@ export default function Footer() {
           </div>
 
           {/* Column 2: THỂ LOẠI */}
-          <div className="md:col-span-2 flex flex-col items-start text-left md:pl-4">
-            <h4 className="text-[10px] font-sans font-bold uppercase tracking-[0.25em] text-[#e8e4db] mb-5">
-              Thể loại
-            </h4>
-            <div className="flex flex-col gap-3 text-xs text-[#a0b0a8] font-sans">
+          <div className="md:col-span-2 flex flex-col items-start text-left md:pl-4 w-full border-b border-[#1a2f24] md:border-b-0 pb-4 md:pb-0">
+            <button
+              onClick={() => toggleSection('categories')}
+              className="w-full flex items-center justify-between text-[10px] font-sans font-bold uppercase tracking-[0.25em] text-[#e8e4db] md:pointer-events-none mb-0 md:mb-5 cursor-pointer md:cursor-default py-2 md:py-0 bg-transparent border-0 text-left"
+            >
+              <span>Thể loại</span>
+              <span className="md:hidden text-[#72857a] text-sm font-normal">
+                {expandedSections.categories ? '−' : '+'}
+              </span>
+            </button>
+            <div className={`flex flex-col gap-3 text-xs text-[#a0b0a8] font-sans mt-3 md:mt-0 overflow-hidden transition-all duration-300 w-full ${
+              expandedSections.categories ? 'max-h-60 opacity-100' : 'max-h-0 md:max-h-none opacity-0 md:opacity-100 pointer-events-none md:pointer-events-auto'
+            }`}>
               <button onClick={() => handleCategoryClick('Văn học')} className="hover:text-white transition-colors bg-transparent border-0 p-0 cursor-pointer text-left font-sans">
                 Văn học
               </button>
@@ -312,11 +331,19 @@ export default function Footer() {
           </div>
 
           {/* Column 3: HỖ TRỢ */}
-          <div className="md:col-span-2 flex flex-col items-start text-left md:pl-4">
-            <h4 className="text-[10px] font-sans font-bold uppercase tracking-[0.25em] text-[#e8e4db] mb-5">
-              Hỗ trợ
-            </h4>
-            <div className="flex flex-col gap-3 text-xs text-[#a0b0a8] font-sans">
+          <div className="md:col-span-2 flex flex-col items-start text-left md:pl-4 w-full border-b border-[#1a2f24] md:border-b-0 pb-4 md:pb-0">
+            <button
+              onClick={() => toggleSection('support')}
+              className="w-full flex items-center justify-between text-[10px] font-sans font-bold uppercase tracking-[0.25em] text-[#e8e4db] md:pointer-events-none mb-0 md:mb-5 cursor-pointer md:cursor-default py-2 md:py-0 bg-transparent border-0 text-left"
+            >
+              <span>Hỗ trợ</span>
+              <span className="md:hidden text-[#72857a] text-sm font-normal">
+                {expandedSections.support ? '−' : '+'}
+              </span>
+            </button>
+            <div className={`flex flex-col gap-3 text-xs text-[#a0b0a8] font-sans mt-3 md:mt-0 overflow-hidden transition-all duration-300 w-full ${
+              expandedSections.support ? 'max-h-60 opacity-100' : 'max-h-0 md:max-h-none opacity-0 md:opacity-100 pointer-events-none md:pointer-events-auto'
+            }`}>
               <button onClick={() => openSupport('order_guide')} className="hover:text-white transition-colors bg-transparent border-0 p-0 cursor-pointer text-left font-sans">
                 Cách đặt hàng
               </button>
@@ -339,11 +366,19 @@ export default function Footer() {
           </div>
 
           {/* Column 4: TÀI KHOẢN */}
-          <div className="md:col-span-4 flex flex-col items-start text-left md:pl-4">
-            <h4 className="text-[10px] font-sans font-bold uppercase tracking-[0.25em] text-[#e8e4db] mb-5">
-              Tài khoản
-            </h4>
-            <div className="flex flex-col gap-3 text-xs text-[#a0b0a8] font-sans">
+          <div className="md:col-span-4 flex flex-col items-start text-left md:pl-4 w-full border-b border-[#1a2f24] md:border-b-0 pb-4 md:pb-0">
+            <button
+              onClick={() => toggleSection('account')}
+              className="w-full flex items-center justify-between text-[10px] font-sans font-bold uppercase tracking-[0.25em] text-[#e8e4db] md:pointer-events-none mb-0 md:mb-5 cursor-pointer md:cursor-default py-2 md:py-0 bg-transparent border-0 text-left"
+            >
+              <span>Tài khoản</span>
+              <span className="md:hidden text-[#72857a] text-sm font-normal">
+                {expandedSections.account ? '−' : '+'}
+              </span>
+            </button>
+            <div className={`flex flex-col gap-3 text-xs text-[#a0b0a8] font-sans mt-3 md:mt-0 overflow-hidden transition-all duration-300 w-full ${
+              expandedSections.account ? 'max-h-60 opacity-100' : 'max-h-0 md:max-h-none opacity-0 md:opacity-100 pointer-events-none md:pointer-events-auto'
+            }`}>
               <Link to="/login" className="hover:text-white transition-colors">
                 Đăng nhập
               </Link>
@@ -361,6 +396,7 @@ export default function Footer() {
               </Link>
             </div>
           </div>
+
 
         </div>
 
@@ -399,30 +435,30 @@ export default function Footer() {
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 select-none animate-fadeIn">
           {/* Modal Container */}
-          <div className="bg-white border border-[#2C4A3B]/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] w-full max-w-3xl h-[480px] flex flex-col relative animate-slideUp">
+          <div className="bg-white border border-[#2C4A3B]/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] w-full max-w-3xl h-[90vh] md:h-[480px] max-h-[90vh] md:max-h-none flex flex-col relative animate-slideUp">
             
             {/* Close Button */}
             <button
               onClick={() => setModalOpen(false)}
-              className="absolute right-4 top-4 text-stone-400 hover:text-stone-800 transition-colors bg-transparent border-0 cursor-pointer"
+              className="absolute right-4 top-4 text-stone-400 hover:text-stone-800 transition-colors bg-transparent border-0 cursor-pointer z-10"
               title="Đóng cửa sổ"
             >
               <X size={20} />
             </button>
 
             {/* Modal Body */}
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
               
               {/* Sidebar Tabs */}
-              <div className="w-1/3 bg-[#faf8f5] border-r border-stone-200 py-6 px-4 flex flex-col gap-1.5 overflow-y-auto">
-                <div className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-[#2C4A3B] px-3 mb-4">
+              <div className="w-full md:w-1/3 bg-[#faf8f5] border-b md:border-b-0 md:border-r border-stone-200 py-4 md:py-6 px-4 flex flex-row overflow-x-auto md:flex-col md:overflow-y-auto gap-1.5 flex-shrink-0 hide-scrollbar">
+                <div className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-[#2C4A3B] px-3 mb-0 md:mb-4 whitespace-nowrap self-center md:self-auto hidden md:block">
                   Trung tâm hỗ trợ
                 </div>
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-3 text-xs font-sans font-bold uppercase tracking-wider transition-all text-left border-0 cursor-pointer ${
+                    className={`w-auto md:w-full flex items-center gap-2.5 px-4 py-2.5 md:py-3 text-xs font-sans font-bold uppercase tracking-wider transition-all text-left border-0 cursor-pointer flex-shrink-0 whitespace-nowrap ${
                       activeTab === tab.id
                         ? 'bg-[#2C4A3B] text-white'
                         : 'bg-transparent text-stone-600 hover:bg-stone-100 hover:text-stone-900'
@@ -435,7 +471,7 @@ export default function Footer() {
               </div>
 
               {/* Rich Content Viewport */}
-              <div className="w-2/3 p-8 overflow-y-auto bg-white flex flex-col justify-between">
+              <div className="w-full md:w-2/3 p-4 md:p-8 overflow-y-visible md:overflow-y-auto bg-white flex flex-col justify-between flex-grow">
                 {renderTabContent()}
                 
                 {/* Modal Footer */}

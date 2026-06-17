@@ -479,11 +479,11 @@ export default function HomePage() {
       <div id="explore" className="scroll-mt-24"></div>
 
       {/* Categories Pills */}
-      <div className="mb-6 max-w-6xl mx-auto">
-        <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+      <div className="mb-6 max-w-6xl mx-auto w-full px-1">
+        <div className="flex flex-row overflow-x-auto md:flex-wrap gap-2 justify-start pb-3 md:pb-0 hide-scrollbar w-full">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 border cursor-pointer ${selectedCategory === null
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 border cursor-pointer shrink-0 ${selectedCategory === null
                 ? 'bg-[#2C4A3B] text-white border-[#2C4A3B] shadow-sm'
                 : 'bg-white text-stone-600 border-stone-200 hover:border-stone-400 hover:text-stone-900'
               }`}
@@ -494,7 +494,7 @@ export default function HomePage() {
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 border cursor-pointer ${selectedCategory === cat.id
+              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 border cursor-pointer shrink-0 ${selectedCategory === cat.id
                   ? 'bg-[#2C4A3B] text-white border-[#2C4A3B] shadow-sm'
                   : 'bg-white text-stone-600 border-stone-200 hover:border-stone-400 hover:text-stone-900'
                 }`}
@@ -571,7 +571,7 @@ export default function HomePage() {
 
       {/* Trạng thái tải dữ liệu lần đầu (Skeleton Loading) */}
       {isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 animate-pulse">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 sm:gap-x-8 gap-y-8 sm:gap-y-12 animate-pulse">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="flex flex-col space-y-5">
               <div className="w-full aspect-[4/5] bg-stone-200 animate-pulse"></div>
@@ -620,7 +620,7 @@ export default function HomePage() {
             </h4>
 
             {recommendedBooks && recommendedBooks.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 sm:gap-x-8 gap-y-8 sm:gap-y-12">
                 {recommendedBooks.map((book) => (
                   <BookCard key={book.id} book={book} />
                 ))}
@@ -637,7 +637,7 @@ export default function HomePage() {
       {/* Hiển thị danh sách sách */}
       {!isLoading && !isError && books?.length > 0 && (
         <>
-          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 transition-opacity duration-300 ${isFetching ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+          <div className={`grid grid-cols-2 lg:grid-cols-4 gap-x-4 sm:gap-x-8 gap-y-8 sm:gap-y-12 transition-opacity duration-300 ${isFetching ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
             {books.map((book) => (
               <BookCard key={book.id} book={book} />
             ))}

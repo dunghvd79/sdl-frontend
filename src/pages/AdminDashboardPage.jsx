@@ -443,10 +443,10 @@ function BookManagerTab() {
             </div>
 
             {/* Body: 2 cột */}
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
 
               {/* Cột Trái: Ảnh bìa + Trạng thái + Thể loại */}
-              <div className="w-60 flex-shrink-0 border-r border-divider bg-[#faf8f5] flex flex-col overflow-y-auto">
+              <div className="w-full md:w-60 flex-shrink-0 border-b md:border-b-0 md:border-r border-divider bg-[#faf8f5] flex flex-col overflow-y-visible md:overflow-y-auto">
 
                 {/* Cover Preview */}
                 <div className="p-5 border-b border-divider">
@@ -627,7 +627,7 @@ function BookManagerTab() {
               </div>
 
               {/* Cột Phải: Thông tin sách */}
-              <div className="flex-1 flex flex-col overflow-y-auto">
+              <div className="flex-1 flex flex-col overflow-y-visible md:overflow-y-auto">
                 <div className="p-8 flex-1 space-y-7">
 
                   {/* Nhóm 1: Thông tin cơ bản */}
@@ -1487,17 +1487,17 @@ function RAGIndexerTab() {
                   </div>
 
                   {/* Upload controls */}
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto flex-shrink-0">
                     <input
                       type="file"
                       accept=".pdf,application/pdf"
                       ref={el => fileRefs.current[book.id] = el}
-                      className="text-xs text-ink-light file:mr-2 file:py-1.5 file:px-3 file:rounded-none file:border file:border-divider file:text-xs file:font-medium file:bg-surface-warm file:text-ink hover:file:bg-surface-subtle cursor-pointer"
+                      className="w-full sm:w-auto text-xs text-ink-light file:mr-2 file:py-1.5 file:px-3 file:rounded-none file:border file:border-divider file:text-xs file:font-medium file:bg-surface-warm file:text-ink hover:file:bg-surface-subtle cursor-pointer"
                     />
                     <button
                       onClick={() => handleUpload(book.id)}
                       disabled={state?.status === 'loading'}
-                      className={`disabled:opacity-50 text-white font-medium py-2 px-4 rounded-none text-xs transition-colors uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 ${isIndexed ? 'bg-green-700 hover:bg-green-800' : 'bg-[#2C4A3B] hover:bg-[#1e3529]'}`}
+                      className={`w-full sm:w-auto justify-center disabled:opacity-50 text-white font-medium py-2 px-4 rounded-none text-xs transition-colors uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 ${isIndexed ? 'bg-green-700 hover:bg-green-800' : 'bg-[#2C4A3B] hover:bg-[#1e3529]'}`}
                     >
                       {state?.status === 'loading' ? (
                         <>
@@ -3608,9 +3608,9 @@ function UserDetailModal({ userId, onClose }) {
         </div>
 
         {/* Body content (Scrollable/Grid) */}
-        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
           {/* Cột trái: Thông tin cá nhân & KPIs */}
-          <div className="w-full md:w-80 flex-shrink-0 border-r border-divider bg-[#faf8f5] flex flex-col overflow-y-auto p-6 space-y-6">
+          <div className="w-full md:w-80 flex-shrink-0 border-b md:border-b-0 md:border-r border-divider bg-[#faf8f5] flex flex-col overflow-y-visible md:overflow-y-auto p-6 space-y-6">
             
             {/* Avatar block */}
             <div className="flex flex-col items-center text-center space-y-3 pb-6 border-b border-divider/60">
@@ -3692,7 +3692,7 @@ function UserDetailModal({ userId, onClose }) {
           </div>
 
           {/* Cột phải: Tabbed activity history details */}
-          <div className="flex-1 flex flex-col overflow-hidden bg-white">
+          <div className="flex-1 flex flex-col overflow-y-visible md:overflow-hidden bg-white">
             {/* Tab navigation */}
             <div className="flex border-b border-divider bg-[#faf8f5] px-6 flex-shrink-0 overflow-x-auto">
               <button
@@ -3728,7 +3728,7 @@ function UserDetailModal({ userId, onClose }) {
             </div>
 
             {/* Tab content wrapper (Scrollable) */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-visible md:overflow-y-auto p-4 md:p-6">
               
               {/* Active Tab content */}
               {activeTab === 'orders' && (
@@ -5541,7 +5541,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex justify-center mb-8 border-b border-divider pb-0 overflow-x-auto hide-scrollbar relative z-0 gap-2">
+      <div className="flex justify-start md:justify-center mb-8 border-b border-divider pb-0 overflow-x-auto hide-scrollbar relative z-0 gap-2">
         {visibleTabs.map(tab => (
           <button
             key={tab.id}
@@ -5558,7 +5558,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-white rounded-none border border-divider p-8 min-h-96 shadow-none">
+      <div className="bg-white rounded-none border border-divider p-4 md:p-8 min-h-96 shadow-none">
         {activeTab === 'overview'    && <DashboardOverviewTab />}
         {activeTab === 'books'       && <BookManagerTab />}
         {activeTab === 'articles'    && <ArticleManagerTab />}
