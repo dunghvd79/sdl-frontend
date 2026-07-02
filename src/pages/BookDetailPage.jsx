@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { useCart } from '../context/CartContext';
@@ -26,6 +26,8 @@ import ConfirmDialog from '../components/ConfirmDialog';
 export default function BookDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const fromAdmin = searchParams.get('from') === 'admin';
   const { addToCart } = useCart();
   const { user } = useAuth();
   const toast = useToast();
@@ -181,10 +183,21 @@ export default function BookDetailPage() {
   ));
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
+    if (fromAdmin) {
+      if (window.history.length === 1) {
+        window.close();
+        setTimeout(() => {
+          navigate('/admin');
+        }, 100);
+      } else {
+        navigate('/admin');
+      }
     } else {
-      navigate('/');
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        navigate('/');
+      }
     }
   };
 

@@ -389,7 +389,7 @@ function BookManagerTab() {
                   <td className="py-3 px-4 text-center">
                     <div className="flex justify-center gap-2">
                       <a
-                        href={`/books/${book.id}`}
+                        href={`/books/${book.hashId || book.id}?from=admin`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="border border-[#2C4A3B] hover:bg-[#2C4A3B]/5 text-[#2C4A3B] font-medium py-1 px-3 rounded-none text-xs transition-colors cursor-pointer inline-flex items-center"
