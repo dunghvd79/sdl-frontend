@@ -1,8 +1,8 @@
 # 🎨 Smart Digital Library (SDL) — Frontend Context
 
 > **Dự án:** Smart Digital Library (SDL) - Phân hệ Frontend  
-> **Cập nhật lần cuối:** 06/2026  
-> **URL Production:** [https://pigeon-bookstore.netlify.app](https://pigeon-bookstore.netlify.app)  
+> **Cập nhật lần cuối:** 07/2026  
+> **URL Production:** [https://pigeon-bookstore.pages.dev](https://pigeon-bookstore.pages.dev)  
 > **Backend API URL:** [https://sdl-backend.onrender.com](https://sdl-backend.onrender.com)  
 > **AI Service URL:** [https://sdl-ai-service.onrender.com](https://sdl-ai-service.onrender.com)
 
