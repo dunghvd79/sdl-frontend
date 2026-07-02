@@ -149,7 +149,7 @@ export default function OrderDetailPage() {
       case 'CONFIRMED': return 1;
       case 'PACKAGING': return 2;
       case 'DELIVERING': return 3;
-      case 'DELIVERED': return 4;
+      case 'DELIVERED': return 5; // Trả về 5 để đánh dấu hoàn thành cả 5 bước (0, 1, 2, 3, 4)
       default: return -1;
     }
   };
