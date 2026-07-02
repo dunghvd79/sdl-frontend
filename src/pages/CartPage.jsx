@@ -19,7 +19,9 @@ import {
   Percent, 
   AlertTriangle, 
   ShieldCheck, 
-  Check 
+  Check,
+  Ticket,
+  X
 } from 'lucide-react';
 
 // Key để lưu trạng thái selection vào sessionStorage
@@ -42,6 +44,7 @@ export default function CartPage() {
   // State quản lý coupon giảm giá trực tiếp
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
 
   // 1. Fetch chi tiết giỏ hàng
   const { data: cartData, isLoading, isError, refetch } = useQuery({
@@ -61,6 +64,16 @@ export default function CartPage() {
     queryFn: () => api.get('/wishlists').then(r => r.data.data),
     enabled: !!user
   });
+
+  // Fetch danh sách mã giảm giá đang hoạt động
+  const { data: couponsData } = useQuery({
+    queryKey: ['activeCoupons'],
+    queryFn: async () => {
+      const response = await api.get('/coupons/active');
+      return response.data?.data || [];
+    }
+  });
+  const activeCoupons = couponsData || [];
 
   // Helper: lấy bookId chuẩn hóa thành string
   const getBookId = (item) => String(item.hashId || item.book?.hashId || item.bookId || item.book?.id);
@@ -660,20 +673,30 @@ export default function CartPage() {
                   <Tag size={13} /> Mã giảm giá (Voucher)
                 </label>
                 {!appliedCoupon ? (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Ví dụ: GIAM20K"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      className="flex-grow border border-divider px-3.5 py-2 text-xs font-sans tracking-wide rounded-none focus:outline-none focus:border-[#2C4A3B] bg-white uppercase font-mono placeholder-stone-400"
-                    />
-                    <button
-                      onClick={handleValidateCoupon}
-                      className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white text-[10px] font-sans font-bold uppercase tracking-widest px-4 py-2 transition-colors rounded-none cursor-pointer"
-                    >
-                      Áp dụng
-                    </button>
+                  <div className="space-y-1.5">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Ví dụ: GIAM20K"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        className="flex-grow border border-divider px-3.5 py-2 text-xs font-sans tracking-wide rounded-none focus:outline-none focus:border-[#2C4A3B] bg-white uppercase font-mono placeholder-stone-400"
+                      />
+                      <button
+                        onClick={handleValidateCoupon}
+                        className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white text-[10px] font-sans font-bold uppercase tracking-widest px-4 py-2 transition-colors rounded-none cursor-pointer"
+                      >
+                        Áp dụng
+                      </button>
+                    </div>
+                    <div className="text-right">
+                      <button
+                        onClick={() => setIsVoucherModalOpen(true)}
+                        className="text-[9px] text-[#2C4A3B] hover:underline uppercase tracking-wider font-bold bg-transparent border-0 cursor-pointer p-0"
+                      >
+                        Chọn từ danh sách ưu đãi
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-green-50/50 border border-green-200 p-3 flex justify-between items-center rounded-none text-xs">
@@ -726,6 +749,206 @@ export default function CartPage() {
         {...dialog}
         onCancel={() => setDialog({ isOpen: false })}
       />
+
+      {/* Cửa sổ chọn mã giảm giá (Voucher Picker Modal) */}
+      {isVoucherModalOpen && (
+        <div className="fixed inset-0 bg-black/55 backdrop-blur-xs flex items-center justify-center z-50 p-4 transition-all duration-300">
+          <div 
+            className="bg-white border border-divider w-full max-w-lg shadow-2xl relative flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 border-b border-divider flex items-center justify-between bg-[#faf8f5]">
+              <div className="flex items-center gap-2">
+                <Ticket size={18} className="text-[#2C4A3B]" />
+                <h3 className="font-serif font-bold text-ink uppercase tracking-widest text-sm">
+                  Kho Voucher ưu đãi
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsVoucherModalOpen(false)}
+                className="text-stone-400 hover:text-stone-600 transition-colors p-1 cursor-pointer bg-transparent border-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto space-y-4 flex-grow max-h-[60vh] custom-scrollbar bg-stone-50/50">
+              {/* Nhập mã nhanh trong modal */}
+              <div className="bg-white border border-divider p-3.5 space-y-2 mb-2">
+                <p className="text-[9px] font-sans font-bold text-stone-500 uppercase tracking-widest">Nhập mã ưu đãi khác</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: PIGEON50K"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    className="flex-grow border border-divider px-3 py-1.5 text-xs font-sans tracking-wide rounded-none focus:outline-none focus:border-[#2C4A3B] uppercase font-mono bg-[#faf8f5] h-9"
+                  />
+                  <button
+                    onClick={() => {
+                      handleValidateCoupon();
+                      setIsVoucherModalOpen(false);
+                    }}
+                    className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white text-[9px] font-sans font-bold uppercase tracking-widest px-4.5 py-1.5 transition-colors rounded-none cursor-pointer border-0"
+                  >
+                    Áp dụng
+                  </button>
+                </div>
+              </div>
+
+              {/* Danh sách Voucher */}
+              {activeCoupons.length === 0 ? (
+                <div className="text-center py-10 text-stone-400 text-xs">
+                  Hiện không có mã giảm giá nào khả dụng trên hệ thống.
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  {/* Nhóm đủ điều kiện và không đủ điều kiện */}
+                  {(() => {
+                    const eligible = activeCoupons.filter(c => !c.is_used && selectedTotalAmount >= Number(c.min_order_amount));
+                    const ineligible = activeCoupons.filter(c => c.is_used || selectedTotalAmount < Number(c.min_order_amount));
+
+                    return (
+                      <>
+                        {eligible.length > 0 && (
+                          <div className="space-y-2.5">
+                            <h4 className="text-[10px] font-sans font-bold text-[#2C4A3B] uppercase tracking-wider">
+                              Voucher có thể áp dụng ({eligible.length})
+                            </h4>
+                            {eligible.map((coupon) => {
+                              const valueStr = coupon.discount_type === 'PERCENT' 
+                                ? `${coupon.discount_value}%` 
+                                : `${Number(coupon.discount_value).toLocaleString('vi-VN')} đ`;
+                              const maxStr = coupon.discount_type === 'PERCENT' && coupon.max_discount_amount
+                                ? ` (Tối đa ${Number(coupon.max_discount_amount).toLocaleString('vi-VN')} đ)`
+                                : '';
+
+                              return (
+                                <div 
+                                  key={coupon.id}
+                                  className="bg-white border-2 border-dashed border-green-200 p-4 flex items-center justify-between gap-4 transition-all hover:border-[#2C4A3B] hover:shadow-xs relative overflow-hidden group rounded-none"
+                                >
+                                  {/* Left visual representation */}
+                                  <div className="absolute top-0 bottom-0 left-0 w-2 bg-[#2C4A3B]"></div>
+                                  
+                                  <div className="pl-2 space-y-1 text-left flex-grow">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-bold text-ink text-[11px] bg-green-50 text-[#2C4A3B] px-2 py-0.5 border border-green-150 rounded-none">
+                                        {coupon.code}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs font-serif font-bold text-ink leading-tight">
+                                      Giảm {valueStr}{maxStr} cho đơn từ {Number(coupon.min_order_amount).toLocaleString('vi-VN')} đ
+                                    </p>
+                                    <p className="text-[9px] text-stone-400 font-sans">
+                                      Hạn sử dụng: {new Date(coupon.end_date).toLocaleDateString('vi-VN')}
+                                    </p>
+                                  </div>
+
+                                  <button
+                                    onClick={async () => {
+                                      setCouponCode(coupon.code);
+                                      try {
+                                        const response = await api.get(`/coupons/validate?code=${coupon.code}&orderAmount=${selectedTotalAmount}`);
+                                        setAppliedCoupon(response.data.data);
+                                        toast.success(response.data.message || 'Áp dụng mã giảm giá thành công!');
+                                      } catch (err) {
+                                        setAppliedCoupon(null);
+                                        toast.error(err.response?.data?.error || 'Mã giảm giá không hợp lệ', { title: 'Áp dụng mã thất bại' });
+                                      }
+                                      setIsVoucherModalOpen(false);
+                                    }}
+                                    className="bg-[#2C4A3B] hover:bg-[#1e3529] text-white text-[9px] font-sans font-bold uppercase tracking-widest px-4 py-2 transition-colors rounded-none cursor-pointer flex-shrink-0 border-0"
+                                  >
+                                    Áp dụng
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {ineligible.length > 0 && (
+                          <div className="space-y-2.5 pt-2">
+                            <h4 className="text-[10px] font-sans font-bold text-stone-400 uppercase tracking-wider">
+                              Voucher chưa đủ điều kiện ({ineligible.length})
+                            </h4>
+                            {ineligible.map((coupon) => {
+                              const valueStr = coupon.discount_type === 'PERCENT' 
+                                ? `${coupon.discount_value}%` 
+                                : `${Number(coupon.discount_value).toLocaleString('vi-VN')} đ`;
+                              const maxStr = coupon.discount_type === 'PERCENT' && coupon.max_discount_amount
+                                ? ` (Tối đa ${Number(coupon.max_discount_amount).toLocaleString('vi-VN')} đ)`
+                                : '';
+                              
+                              const minAmt = Number(coupon.min_order_amount);
+                              const diff = minAmt - selectedTotalAmount;
+
+                              return (
+                                <div 
+                                  key={coupon.id}
+                                  className="bg-stone-50 border border-divider p-4 flex items-center justify-between gap-4 opacity-75 relative overflow-hidden rounded-none"
+                                >
+                                  <div className="absolute top-0 bottom-0 left-0 w-2 bg-stone-300"></div>
+                                  
+                                  <div className="pl-2 space-y-1 text-left flex-grow">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-bold text-stone-500 text-[11px] bg-stone-100 px-2 py-0.5 border border-stone-200 rounded-none">
+                                        {coupon.code}
+                                      </span>
+                                      {coupon.is_used && (
+                                        <span className="text-[8px] bg-red-50 text-red-600 border border-red-100 font-sans font-bold uppercase tracking-wider px-1.5 py-0.5">
+                                          Đã sử dụng
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs font-serif font-bold text-stone-600 leading-tight">
+                                      Giảm {valueStr}{maxStr} cho đơn từ {minAmt.toLocaleString('vi-VN')} đ
+                                    </p>
+                                    
+                                    {!coupon.is_used && diff > 0 && (
+                                      <p className="text-[10px] text-amber-700 font-sans font-semibold flex items-center gap-1">
+                                        <AlertTriangle size={11} className="flex-shrink-0" /> Mua thêm {diff.toLocaleString('vi-VN')} đ để áp dụng
+                                      </p>
+                                    )}
+                                    
+                                    <p className="text-[9px] text-stone-400 font-sans">
+                                      Hạn sử dụng: {new Date(coupon.end_date).toLocaleDateString('vi-VN')}
+                                    </p>
+                                  </div>
+
+                                  <button
+                                    disabled
+                                    className="bg-stone-200 text-stone-400 text-[9px] font-sans font-bold uppercase tracking-widest px-4 py-2 rounded-none cursor-not-allowed flex-shrink-0 border-0"
+                                  >
+                                    Áp dụng
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-divider bg-[#faf8f5] text-right">
+              <button
+                onClick={() => setIsVoucherModalOpen(false)}
+                className="border border-divider hover:border-ink hover:bg-stone-150 text-stone-700 hover:text-ink text-[10px] font-sans font-bold uppercase tracking-widest px-5 py-2.5 transition-colors rounded-none cursor-pointer bg-white"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
