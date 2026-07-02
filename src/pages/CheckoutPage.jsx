@@ -828,7 +828,6 @@ export default function CheckoutPage() {
         </div>
 
       </div>
-    </div>
 
       {/* Cửa sổ chọn mã giảm giá (Voucher Picker Modal) */}
       {isVoucherModalOpen && (
