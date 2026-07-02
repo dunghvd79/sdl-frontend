@@ -80,6 +80,14 @@ export default function BlogPage() {
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 flex-grow w-full font-sans">
+      {/* Nút quay lại trang chủ */}
+      <Link
+        to="/"
+        className="mb-8 inline-flex items-center gap-1.5 text-[10px] text-stone-500 hover:text-[#2C4A3B] uppercase tracking-[0.2em] font-sans font-bold transition-colors"
+      >
+        <ChevronLeft size={14} /> Quay lại trang chủ
+      </Link>
+
       {/* Editorial Page Header */}
       <div className="text-center mb-12">
         <div className="flex items-center justify-center gap-2 mb-3">
