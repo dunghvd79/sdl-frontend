@@ -315,7 +315,6 @@ export default function ChatPage() {
                               <span 
                                 key={sIdx} 
                                 className="bg-stone-50 hover:bg-[#2C4A3B]/10 hover:text-[#2C4A3B] text-stone-700 font-bold px-2.5 py-1 border border-stone-200 rounded-md transition-colors text-[9px] uppercase tracking-widest cursor-help relative group shadow-sm"
-                                title={snippet}
                               >
                                 Trang {pageNum}
                                 
