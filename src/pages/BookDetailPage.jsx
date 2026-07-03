@@ -176,7 +176,8 @@ export default function BookDetailPage() {
     enabled: !!user
   });
 
-  const isEmployee = user && (user.role === 'ADMIN' || user.role === 'CURATOR');
+  // Chỉ duy nhất ADMIN được quyền bypass kiểm tra mua hàng để chẩn đoán hệ thống nhanh
+  const isEmployee = user && user.role === 'ADMIN';
   const hasAccess = isEmployee || (Array.isArray(orders) && orders.some(order =>
     order.status === 'DELIVERED' &&
     order.items.some(item => String(item.bookId) === String(book?.id) || String(item.hashId || item.bookId) === String(id))
@@ -367,9 +368,15 @@ export default function BookDetailPage() {
               <span className="border border-stone-300 text-stone-500 bg-white text-[8px] font-sans font-bold px-2.5 py-0.5 uppercase tracking-widest rounded-none">
                 {book.category || 'Văn học'}
               </span>
-              <span className="border border-[#2C4A3B]/30 text-[#2C4A3B] bg-[#2C4A3B]/5 text-[8px] font-sans font-bold px-2.5 py-0.5 uppercase tracking-widest rounded-none flex items-center gap-1">
-                <Sparkles size={8} /> Sách số hóa RAG AI
-              </span>
+              {book.rag_indexed_at ? (
+                <span className="border border-[#2C4A3B]/30 text-[#2C4A3B] bg-[#2C4A3B]/5 text-[8px] font-sans font-bold px-2.5 py-0.5 uppercase tracking-widest rounded-none flex items-center gap-1">
+                  <Sparkles size={8} /> Sách số hóa RAG AI
+                </span>
+              ) : (
+                <span className="border border-stone-300 text-stone-500 bg-white text-[8px] font-sans font-bold px-2.5 py-0.5 uppercase tracking-widest rounded-none">
+                  Sách thường
+                </span>
+              )}
             </div>
 
             {/* Title */}

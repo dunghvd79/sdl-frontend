@@ -63,7 +63,8 @@ export default function ChatPage() {
     enabled: !!user
   });
 
-  const isEmployee = user && (user.role === 'ADMIN' || user.role === 'CURATOR');
+  // Chỉ duy nhất ADMIN được quyền bypass kiểm tra mua hàng để chẩn đoán hệ thống nhanh
+  const isEmployee = user && user.role === 'ADMIN';
   const hasAccess = isEmployee || (Array.isArray(orders) && orders.some(order =>
     order.status === 'DELIVERED' &&
     order.items.some(item => String(item.bookId) === String(book?.id) || String(item.hashId || item.bookId) === String(id))
