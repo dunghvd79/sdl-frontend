@@ -1352,6 +1352,7 @@ function RAGIndexerTab() {
   const toast = useToast();
   const [uploadStates, setUploadStates] = useState({}); // { [bookId]: { status, message } }
   const [showOnlyIndexed, setShowOnlyIndexed] = useState(false); // Bộ lọc
+  const [resetConfirmBookId, setResetConfirmBookId] = useState(null); // ID sách cần reset
   const fileRefs = useRef({});
 
   // Fetch danh sách sách, bao gồm cả rag_indexed_at
@@ -1401,10 +1402,6 @@ function RAGIndexerTab() {
   };
 
   const handleReset = async (bookId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa dữ liệu vector hóa RAG của cuốn sách này? Việc này sẽ khôi phục trạng thái chưa xử lý.')) {
-      return;
-    }
-
     setUploadStates(prev => ({ ...prev, [bookId]: { status: 'loading', message: 'Đang xóa dữ liệu RAG...' } }));
 
     try {
@@ -1428,6 +1425,22 @@ function RAGIndexerTab() {
 
   return (
     <div>
+      <style>{`
+        @keyframes modalFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes modalSlideUp {
+          from { opacity: 0; transform: translateY(12px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-modal-fade {
+          animation: modalFadeIn 0.2s ease-out forwards;
+        }
+        .animate-modal-slide {
+          animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
       {/* Header + Thống kê */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
         <div>
@@ -1530,7 +1543,7 @@ function RAGIndexerTab() {
                     </button>
                     {isIndexed && (
                       <button
-                        onClick={() => handleReset(book.id)}
+                        onClick={() => setResetConfirmBookId(book.id)}
                         disabled={state?.status === 'loading'}
                         className="w-full sm:w-auto justify-center disabled:opacity-50 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-medium py-2 px-4 rounded-none text-xs transition-colors uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5"
                       >
@@ -1563,6 +1576,66 @@ function RAGIndexerTab() {
           )}
         </div>
       )}
+
+      {/* Custom Confirm Modal for RAG Reset */}
+      {resetConfirmBookId !== null && (() => {
+        const targetBook = allBooks.find(b => b.id === resetConfirmBookId);
+        return (
+          <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4 animate-modal-fade">
+            <div className="bg-[#fcfbf9] border border-divider shadow-2xl max-w-md w-full rounded-none overflow-hidden animate-modal-slide">
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-divider flex items-start gap-4 bg-[#fcfbf9]">
+                <div className="w-10 h-10 rounded-none bg-red-50 border border-red-200 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-red-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-serif font-bold text-[#8C2D19] text-base leading-snug">Xác nhận xóa dữ liệu RAG</h3>
+                  <p className="text-[10px] text-ink-light font-sans uppercase tracking-widest mt-0.5">Hành động không thể khôi phục</p>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 py-6 bg-[#fcfbf9] space-y-3.5">
+                <p className="text-xs text-ink leading-relaxed font-sans font-medium">
+                  Bạn có chắc chắn muốn xóa toàn bộ dữ liệu vector hóa RAG của cuốn sách <span className="font-serif font-bold text-stone-900">"{targetBook?.title}"</span> không?
+                </p>
+                <div className="bg-amber-50/50 border border-amber-200/60 p-3.5 rounded-none flex gap-2">
+                  <svg className="w-4.5 h-4.5 text-amber-700 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <p className="text-[11px] text-[#A66E2E] leading-relaxed font-sans font-medium">
+                    Tính năng hỏi đáp thông minh dựa trên nội dung cuốn sách này sẽ bị tạm ngưng cho đến khi bạn tiến hành vector hóa lại.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-divider-lt flex justify-end gap-3 bg-[#faf8f5]">
+                <button
+                  type="button"
+                  onClick={() => setResetConfirmBookId(null)}
+                  className="border border-divider hover:border-ink hover:bg-surface-warm text-ink font-sans text-xs font-bold py-2.5 px-6 uppercase tracking-wider transition-all rounded-none bg-white cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const id = resetConfirmBookId;
+                    setResetConfirmBookId(null);
+                    handleReset(id);
+                  }}
+                  className="bg-red-700 hover:bg-red-800 text-white font-sans text-xs font-bold py-2.5 px-6 uppercase tracking-wider transition-all rounded-none cursor-pointer"
+                >
+                  Xác nhận xóa
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
