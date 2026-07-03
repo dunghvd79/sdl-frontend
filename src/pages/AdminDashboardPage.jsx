@@ -1400,6 +1400,24 @@ function RAGIndexerTab() {
     }
   };
 
+  const handleReset = async (bookId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa dữ liệu vector hóa RAG của cuốn sách này? Việc này sẽ khôi phục trạng thái chưa xử lý.')) {
+      return;
+    }
+
+    setUploadStates(prev => ({ ...prev, [bookId]: { status: 'loading', message: 'Đang xóa dữ liệu RAG...' } }));
+
+    try {
+      await api.delete(`/ai/reset/${bookId}`);
+      setUploadStates(prev => ({ ...prev, [bookId]: { status: 'success', message: 'Đã xóa hoàn toàn dữ liệu RAG thành công!' } }));
+      // Invalidate queries to refresh counts and list
+      queryClient.invalidateQueries({ queryKey: ['adminBooksRAG'] });
+    } catch (err) {
+      const errMsg = err.response?.data?.error || err.message;
+      setUploadStates(prev => ({ ...prev, [bookId]: { status: 'error', message: 'Lỗi khi xóa: ' + errMsg } }));
+    }
+  };
+
   const formatDate = (isoStr) => {
     if (!isoStr) return null;
     return new Date(isoStr).toLocaleString('vi-VN', {
@@ -1499,7 +1517,7 @@ function RAGIndexerTab() {
                       disabled={state?.status === 'loading'}
                       className={`w-full sm:w-auto justify-center disabled:opacity-50 text-white font-medium py-2 px-4 rounded-none text-xs transition-colors uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 ${isIndexed ? 'bg-green-700 hover:bg-green-800' : 'bg-[#2C4A3B] hover:bg-[#1e3529]'}`}
                     >
-                      {state?.status === 'loading' ? (
+                      {state?.status === 'loading' && state.message.includes('tải lên') ? (
                         <>
                           <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                           Đang xử lý...
@@ -1510,6 +1528,15 @@ function RAGIndexerTab() {
                         'Vector hóa'
                       )}
                     </button>
+                    {isIndexed && (
+                      <button
+                        onClick={() => handleReset(book.id)}
+                        disabled={state?.status === 'loading'}
+                        className="w-full sm:w-auto justify-center disabled:opacity-50 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-medium py-2 px-4 rounded-none text-xs transition-colors uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5"
+                      >
+                        Xóa dữ liệu RAG
+                      </button>
+                    )}
                   </div>
                 </div>
 
