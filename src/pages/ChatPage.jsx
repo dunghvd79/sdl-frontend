@@ -298,9 +298,15 @@ export default function ChatPage() {
                         <Sparkles size={9} className="text-[#2C4A3B]" /> Trợ lý trí tuệ nhân tạo
                       </div>
                     )}
-                    <p className={`leading-relaxed whitespace-pre-line text-[13px] ${isUser ? 'font-sans text-stone-100' : 'font-serif text-stone-800'}`}>
-                      {msg.content}
-                    </p>
+                    {isUser ? (
+                      <p className="leading-relaxed whitespace-pre-line text-[14px] font-sans text-stone-100 font-medium">
+                        {msg.content}
+                      </p>
+                    ) : (
+                      <div className="space-y-1">
+                        {renderMarkdown(msg.content)}
+                      </div>
+                    )}
                     
                     {/* Hiển thị nguồn trích dẫn từ RAG */}
                     {!isUser && msg.sources && msg.sources.length > 0 && (
@@ -410,3 +416,80 @@ export default function ChatPage() {
     </div>
   );
 }
+
+// Helper function to render basic markdown in the chat assistant answers
+const renderMarkdown = (text) => {
+  if (!text) return null;
+
+  // Split text by lines
+  const blocks = text.split(/\n+/).filter(block => block.trim());
+
+  return blocks.map((block, idx) => {
+    let content = block.trim();
+    
+    // Check if it matches an ordered list (e.g. "1. **...")
+    const listMatch = content.match(/^(\d+)\.\s+(.*)/);
+    // Check if it matches a bullet list (e.g. "* ...")
+    const bulletMatch = content.match(/^([\*\-\+])\s+(.*)/);
+
+    let elementContent = content;
+    let isListItem = false;
+    let listNum = '';
+    let isBullet = false;
+
+    if (listMatch) {
+      isListItem = true;
+      listNum = listMatch[1];
+      elementContent = listMatch[2];
+    } else if (bulletMatch) {
+      isBullet = true;
+      elementContent = bulletMatch[2];
+    }
+
+    // Replace **text** with styled strong tags
+    const formatBold = (str) => {
+      const parts = str.split(/\*\*([^*]+)\*\*/g);
+      return parts.map((part, pIdx) => {
+        return pIdx % 2 === 1 ? (
+          <strong key={pIdx} className="font-bold text-stone-900 font-sans tracking-wide">
+            {part}
+          </strong>
+        ) : (
+          part
+        );
+      });
+    };
+
+    const formattedText = formatBold(elementContent);
+
+    if (isListItem) {
+      return (
+        <div key={idx} className="flex gap-2.5 mb-3 items-start pl-1 last:mb-0">
+          <span className="font-serif font-black text-[#2C4A3B] text-[15px] select-none mt-0.5 min-w-[18px]">
+            {listNum}.
+          </span>
+          <span className="font-serif text-[14px] md:text-[14.5px] leading-[1.75] text-stone-800 tracking-wide text-justify flex-1">
+            {formattedText}
+          </span>
+        </div>
+      );
+    }
+
+    if (isBullet) {
+      return (
+        <div key={idx} className="flex gap-2.5 mb-3 items-start pl-3 last:mb-0">
+          <span className="text-[#2C4A3B] text-base select-none mt-0.5">•</span>
+          <span className="font-serif text-[14px] md:text-[14.5px] leading-[1.75] text-stone-800 tracking-wide text-justify flex-1">
+            {formattedText}
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <p key={idx} className="mb-3 font-serif text-[14px] md:text-[14.5px] leading-[1.75] text-stone-800 tracking-wide last:mb-0 text-justify">
+        {formattedText}
+      </p>
+    );
+  });
+};
