@@ -40,19 +40,27 @@ export function AuthProvider({ children }) {
     };
     authChannel.addEventListener('message', handleAuthMessage);
 
-    // 2. Dùng window storage event để lắng nghe thay đổi trực tiếp của localStorage (hữu ích khi login/logout chéo)
+    // 2. Dùng window storage event để lắng nghe đăng nhập/đăng xuất chéo tab.
+    // Chỉ theo dõi khoá 'user': khoá 'token' đổi mỗi lần tự gia hạn (~15 phút) nên KHÔNG được tải lại trang theo nó.
     const handleStorageChange = (e) => {
-      if (e.key === 'token') {
-        if (!e.newValue) {
-          // Token bị xóa ở tab khác -> Logout tab này
-          setUser(null);
-          if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
-          }
-        } else if (e.newValue !== e.oldValue) {
-          // Token bị thay đổi ở tab khác (đăng nhập tài khoản mới) -> Reload để cập nhật
+      if (e.key !== 'user') return;
+      if (!e.newValue) {
+        // User bị xóa ở tab khác -> Logout tab này
+        setUser(null);
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+        return;
+      }
+      try {
+        const oldId = e.oldValue ? JSON.parse(e.oldValue).id : null;
+        const newId = JSON.parse(e.newValue).id;
+        if (oldId !== newId) {
+          // Tab khác đăng nhập tài khoản khác -> Reload để cập nhật
           window.location.reload();
         }
+      } catch {
+        // Dữ liệu hỏng: bỏ qua
       }
     };
     window.addEventListener('storage', handleStorageChange);
@@ -141,17 +149,39 @@ export function AuthProvider({ children }) {
     });
   };
 
-  // 4. XỬ LÝ ĐĂNG XUẤT (Xóa dấu vết)
-  const logout = () => {
+  // Lưu access token mới do máy chủ cấp (vd sau khi đổi mật khẩu, mọi phiên cũ bị huỷ)
+  const setAccessToken = (token) => {
+    if (token) localStorage.setItem('token', token);
+  };
+
+  // Xoá dữ liệu đăng nhập trên máy và báo các tab khác
+  const clearLocalSession = () => {
     localStorage.removeItem('token'); // Vứt chìa khóa đi
     localStorage.removeItem('user');  // Xóa thông tin cá nhân
     setUser(null); // Đưa app về trạng thái Khách (Guest)
     authChannel.postMessage('logout'); // Bắn tín hiệu cho các tab khác biết
   };
 
+  // 4. XỬ LÝ ĐĂNG XUẤT: huỷ phiên ở máy chủ (cookie sdl_rt) rồi xoá dấu vết trên máy.
+  // Lỗi mạng khi gọi API không chặn việc đăng xuất trên máy.
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (err) {
+      console.warn('Không huỷ được phiên trên máy chủ:', err.message);
+    }
+    clearLocalSession();
+  };
+
+  // 5. ĐĂNG XUẤT MỌI NƠI: huỷ mọi phiên của tài khoản trên mọi thiết bị
+  const logoutAll = async () => {
+    await api.post('/auth/logout-all');
+    clearLocalSession();
+  };
+
   return (
-    // Bọc toàn bộ App bằng Provider, cung cấp 'user', hàm 'login', hàm 'logout', 'updateUser' cho bất kỳ component con nào cần dùng
-    <AuthContext.Provider value={{ user, login, logout, updateUser }}>
+    // Bọc toàn bộ App bằng Provider, cung cấp thông tin đăng nhập và các hàm xử lý cho component con
+    <AuthContext.Provider value={{ user, login, logout, logoutAll, updateUser, setAccessToken }}>
       {children}
     </AuthContext.Provider>
   );

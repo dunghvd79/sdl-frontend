@@ -114,8 +114,8 @@ export default function Navbar() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout(); // chờ huỷ phiên trên máy chủ trước khi rời trang
     window.location.href = '/login';
   };
 

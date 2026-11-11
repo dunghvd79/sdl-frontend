@@ -32,8 +32,8 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError('❌ Mật khẩu phải chứa ít nhất 6 ký tự!');
+    if (newPassword.length < 8) {
+      setError('❌ Mật khẩu phải chứa ít nhất 8 ký tự!');
       setLoading(false);
       return;
     }
@@ -102,7 +102,7 @@ export default function ResetPasswordPage() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors"
-              placeholder="Tối thiểu 6 ký tự (gồm chữ và số)"
+              placeholder="Tối thiểu 8 ký tự (gồm chữ và số)"
               required
               disabled={!token}
             />

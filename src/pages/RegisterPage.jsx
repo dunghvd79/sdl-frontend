@@ -59,8 +59,8 @@ export default function RegisterPage() {
     }
 
     // 4. Kiểm tra Mật khẩu
-    if (password.length < 6) {
-      setError('❌ Mật khẩu phải chứa ít nhất 6 ký tự.');
+    if (password.length < 8) {
+      setError('❌ Mật khẩu phải chứa ít nhất 8 ký tự.');
       return;
     }
     const hasLetter = /[a-zA-Z]/.test(password);

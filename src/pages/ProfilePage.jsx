@@ -5,7 +5,8 @@ import { useToast } from '../context/ToastContext';
 import api from '../services/api';
 
 export default function ProfilePage() {
-  const { user, login, updateUser } = useAuth();
+  const { user, login, updateUser, logoutAll, setAccessToken } = useAuth();
+  const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -81,23 +82,37 @@ export default function ProfilePage() {
       toast.warning('Mật khẩu xác nhận không khớp');
       return;
     }
-    if (passwords.new.length < 6) {
-      toast.warning('Mật khẩu mới phải có ít nhất 6 ký tự');
+    if (passwords.new.length < 8 || !/[a-zA-Z]/.test(passwords.new) || !/[0-9]/.test(passwords.new)) {
+      toast.warning('Mật khẩu mới phải có ít nhất 8 ký tự, gồm cả chữ cái và chữ số');
       return;
     }
 
     setIsUpdatingPassword(true);
     try {
-      await api.put('/users/change-password', {
+      const response = await api.put('/users/change-password', {
         currentPassword: passwords.current,
         newPassword: passwords.new
       });
-      toast.success('Đã đổi mật khẩu thành công!');
+      // Máy chủ huỷ mọi phiên cũ và cấp phiên mới cho thiết bị này
+      setAccessToken(response.data.token);
+      toast.success('Đã đổi mật khẩu. Các thiết bị khác sẽ bị đăng xuất trong vòng 15 phút.');
       setPasswords({ current: '', new: '', confirm: '' });
     } catch (err) {
       toast.error(err.response?.data?.error || 'Lỗi đổi mật khẩu');
     } finally {
       setIsUpdatingPassword(false);
+    }
+  };
+
+  const handleLogoutAll = async () => {
+    if (!window.confirm('Đăng xuất tài khoản khỏi mọi thiết bị, kể cả thiết bị này?')) return;
+    setIsLoggingOutAll(true);
+    try {
+      await logoutAll();
+      window.location.href = '/login';
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Không đăng xuất được. Vui lòng thử lại.');
+      setIsLoggingOutAll(false);
     }
   };
 
@@ -269,7 +284,7 @@ export default function ProfilePage() {
                       onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                       className="w-full border border-divider rounded-none px-4 py-2.5 text-sm focus:outline-none focus:border-ink transition-colors bg-white text-ink"
                       required
-                      minLength={6}
+                      minLength={8}
                     />
                   </div>
                   <div>
@@ -298,6 +313,27 @@ export default function ProfilePage() {
                 </button>
               </div>
             </form>
+          </div>
+
+          {/* Card 3: Thiết bị đăng nhập */}
+          <div className="bg-white rounded-none border border-divider">
+            <div className="px-8 py-4 border-b border-divider bg-surface-warm">
+              <h3 className="font-serif font-medium text-ink">Thiết bị đăng nhập</h3>
+            </div>
+            <div className="p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+              <p className="text-sm text-ink-light max-w-md">
+                Đăng xuất tài khoản khỏi mọi thiết bị, kể cả thiết bị này. Dùng khi bạn nghi ngờ người khác
+                đang dùng tài khoản của mình. Các thiết bị khác sẽ bị đăng xuất trong vòng 15 phút.
+              </p>
+              <button
+                type="button"
+                onClick={handleLogoutAll}
+                disabled={isLoggingOutAll}
+                className="shrink-0 border border-ink text-ink hover:bg-ink hover:text-white disabled:opacity-50 font-medium py-2.5 px-6 rounded-none transition-colors text-sm uppercase tracking-wider"
+              >
+                {isLoggingOutAll ? 'Đang đăng xuất...' : 'Đăng xuất mọi thiết bị'}
+              </button>
+            </div>
           </div>
 
         </div>
