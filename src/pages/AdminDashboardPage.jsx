@@ -1005,17 +1005,10 @@ function InventoryManagerTab() {
 
     setIsSavingStock(true);
     try {
-      const currentQty = selectedBookForStock.available_qty;
-      let newQty = currentQty;
-
-      if (stockChangeType === 'STOCK_IN') {
-        newQty = currentQty + changeQty;
-      } else {
-        newQty = Math.max(0, currentQty - changeQty);
-      }
-
+      // Gửi LƯỢNG THAY ĐỔI, máy chủ tự cộng/trừ trên tồn kho hiện tại (có khoá dòng).
+      // Không tự tính số mới ở đây: số đang hiển thị có thể đã cũ nếu vừa có khách mua.
       await api.put(`/inventory/${selectedBookForStock.book_id}`, {
-        availableQty: newQty,
+        quantity: changeQty,
         type: stockChangeType,
         reason: stockChangeReason.trim() || undefined
       });
