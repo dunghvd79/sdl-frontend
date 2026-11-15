@@ -268,7 +268,8 @@ export default function CheckoutPage() {
       return;
     }
     // Kiểm tra định dạng số điện thoại Việt Nam đơn giản (10 chữ số)
-    const phoneRegex = /^(0|\+84)[3|5|7|8|9][0-9]{8}$/;
+    // [35789]: đầu số 3/5/7/8/9. (Bản cũ [3|5|7|8|9] coi "|" là ký tự hợp lệ.)
+    const phoneRegex = /^(0|\+84)[35789][0-9]{8}$/;
     if (!phoneRegex.test(shippingPhone.trim().replace(/\s+/g, ''))) {
       toast.warning('Số điện thoại không hợp lệ (VD: 0987654321)', { title: 'Thông tin không hợp lệ' });
       return;
