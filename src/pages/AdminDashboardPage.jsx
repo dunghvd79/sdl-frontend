@@ -1725,6 +1725,23 @@ function OrderManagerTab() {
 
   const getStepIndex = (status) => PIPELINE.indexOf(status);
 
+  // Bảng chuyển trạng thái — PHẢI khớp backend (sdl-project/src/utils/orderStatus.js, B46):
+  // tiến từng bước; lùi một bước khi bấm nhầm (không lùi về PENDING); không huỷ đơn đang giao / đã giao.
+  const ORDER_TRANSITIONS = {
+    PENDING: ['CONFIRMED', 'CANCELLED'],
+    CONFIRMED: ['PACKAGING', 'CANCELLED'],
+    PACKAGING: ['DELIVERING', 'CONFIRMED', 'CANCELLED'],
+    DELIVERING: ['DELIVERED', 'PACKAGING'],
+    DELIVERED: ['DELIVERING'],
+    CANCELLED: [],
+  };
+  const canTransition = (from, to) => (ORDER_TRANSITIONS[from] || []).includes(to);
+  const canCancel = (status) => canTransition(status, 'CANCELLED');
+  const getPrevStatus = (current) => {
+    const prev = PIPELINE[PIPELINE.indexOf(current) - 1];
+    return prev && canTransition(current, prev) ? prev : null;
+  };
+
   const handleAdvance = (order) => {
     const next = getNextStatus(order.status);
     if (!next) return;
@@ -1780,7 +1797,7 @@ function OrderManagerTab() {
   };
 
   const handleBulkCancel = async () => {
-    const cancellableOrders = filteredOrders.filter(o => selectedOrderIds.includes(o.id) && o.status !== 'DELIVERED' && o.status !== 'CANCELLED');
+    const cancellableOrders = filteredOrders.filter(o => selectedOrderIds.includes(o.id) && canCancel(o.status));
     if (cancellableOrders.length === 0) {
       toast.warning('Không có đơn hàng nào đủ điều kiện hủy trong danh sách đã chọn.', { title: 'Thông báo' });
       return;
@@ -2433,8 +2450,8 @@ function OrderManagerTab() {
                           </button>
                         )}
 
-                        {/* Cancel */}
-                        {isAdmin && !isCancelled && !isDelivered && (
+                        {/* Cancel — chỉ khi chưa giao (B46) */}
+                        {isAdmin && canCancel(order.status) && (
                           <button
                             onClick={() => handleCancel(order)}
                             disabled={isUpdating}
@@ -2561,9 +2578,23 @@ function OrderManagerTab() {
                       })}
                     </div>
 
-                    {/* Action buttons */}
-                    {isAdmin && selectedOrder.status !== 'DELIVERED' && (
-                      <div className="flex items-center justify-center gap-3 pt-1">
+                    {/* Action buttons — theo bảng chuyển trạng thái (B46) */}
+                    {isAdmin && selectedOrder.status !== 'CANCELLED' && (
+                      <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+                        {getPrevStatus(selectedOrder.status) && (
+                          <button
+                            onClick={() => {
+                              const prev = getPrevStatus(selectedOrder.status);
+                              if (!window.confirm(`Lùi đơn hàng #${selectedOrder.hashId || selectedOrder.id} về "${STEP_LABELS[prev]}"?`)) return;
+                              updateStatusMutation.mutate({ orderId: selectedOrder.id, status: prev });
+                            }}
+                            disabled={updateStatusMutation.isPending}
+                            title="Dùng khi bấm nhầm bước"
+                            className="flex items-center gap-1.5 border border-divider hover:bg-surface-subtle text-ink font-medium py-2.5 px-4 rounded-none text-[11px] transition-all uppercase tracking-widest disabled:opacity-50 cursor-pointer"
+                          >
+                            ← Lùi về: {STEP_LABELS[getPrevStatus(selectedOrder.status)]}
+                          </button>
+                        )}
                         {getNextStatus(selectedOrder.status) && (
                           <button
                             onClick={() => {
@@ -2582,6 +2613,7 @@ function OrderManagerTab() {
                             )}
                           </button>
                         )}
+                        {canCancel(selectedOrder.status) && (
                         <button
                           onClick={() => {
                             const reason = window.prompt(`Nhập lý do hủy đơn hàng #${selectedOrder.hashId || selectedOrder.id} (Tùy chọn):`);
@@ -2598,6 +2630,7 @@ function OrderManagerTab() {
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
                           Hủy đơn
                         </button>
+                        )}
                       </div>
                     )}
                     {selectedOrder.status === 'DELIVERED' && (
