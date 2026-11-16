@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import api from '../services/api';
+import { clearPersonalData, clearOtherUsersData } from '../utils/userStorage';
 
 // Tạo kênh giao tiếp giữa các tab trình duyệt
 const authChannel = new BroadcastChannel('auth_channel');
@@ -30,8 +31,7 @@ export function AuthProvider({ children }) {
     // 1. Dùng BroadcastChannel làm kênh truyền tin nhanh
     const handleAuthMessage = (event) => {
       if (event.data === 'logout') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        clearPersonalData(); // B54: xoá cả dữ liệu cá nhân, không chỉ token
         setUser(null);
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
@@ -84,8 +84,7 @@ export function AuthProvider({ children }) {
 
         // Kiểm tra xem tài khoản có bị khóa không
         if (serverUser.is_active === false) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          clearPersonalData();
           setUser(null);
           authChannel.postMessage('logout');
           window.location.href = '/login';
@@ -105,8 +104,7 @@ export function AuthProvider({ children }) {
       } catch (err) {
         // Token hết hạn hoặc bị revoke → đăng xuất
         if (err.response?.status === 401 || err.response?.status === 403) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          clearPersonalData();
           setUser(null);
           window.location.href = '/login';
         }
@@ -134,6 +132,9 @@ export function AuthProvider({ children }) {
     const response = await api.post('/auth/login', { email, password });
     const { token, user: userData } = response.data;
     
+    // Người trước tắt trình duyệt mà không đăng xuất: xoá dữ liệu cá nhân của tài khoản khác còn sót (B54)
+    clearOtherUsersData(userData?.id);
+
     // Lưu "chìa khóa" (token) và thông tin user vào Local Storage để tắt tab đi bật lại không bị mất
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
@@ -156,8 +157,7 @@ export function AuthProvider({ children }) {
 
   // Xoá dữ liệu đăng nhập trên máy và báo các tab khác
   const clearLocalSession = () => {
-    localStorage.removeItem('token'); // Vứt chìa khóa đi
-    localStorage.removeItem('user');  // Xóa thông tin cá nhân
+    clearPersonalData(); // Xoá token, user và mọi dữ liệu cá nhân trên máy (B54)
     setUser(null); // Đưa app về trạng thái Khách (Guest)
     authChannel.postMessage('logout'); // Bắn tín hiệu cho các tab khác biết
   };

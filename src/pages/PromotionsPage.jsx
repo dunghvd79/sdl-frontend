@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { ACTIVE_COUPON_KEY } from '../utils/userStorage';
 import { 
   ArrowLeft, 
   Gift, 
@@ -55,7 +56,7 @@ export default function PromotionsPage() {
 
   const handleUseNow = (code) => {
     if (code) {
-      localStorage.setItem('active_coupon_code', code);
+      localStorage.setItem(ACTIVE_COUPON_KEY, code); // xoá khi đăng xuất (B54)
       navigator.clipboard.writeText(code);
       toast.success(`Đã kích hoạt mã "${code}" thành công! Ưu đãi sẽ tự động áp dụng khi thanh toán.`, { title: 'Kích hoạt mã giảm giá' });
     }

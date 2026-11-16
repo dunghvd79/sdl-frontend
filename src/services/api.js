@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { withErrorId } from '../utils/errorMessage';
+import { clearPersonalData } from '../utils/userStorage';
 
 const baseURL = import.meta.env.VITE_API_URL || 'https://sdl-backend.onrender.com/api';
 
@@ -52,8 +53,7 @@ export function refreshAccessToken() {
 }
 
 function forceLogout() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
+  clearPersonalData(); // B54: xoá cả dữ liệu cá nhân khi phiên hết hẳn
   if (!window.location.pathname.includes('/login')) {
     window.location.href = '/login?expired=true';
   }

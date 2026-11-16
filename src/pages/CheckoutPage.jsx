@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../services/image';
+import { getUserItem, setUserItem, SHIPPING_INFO_KEY, ACTIVE_COUPON_KEY } from '../utils/userStorage';
 import { Check, CreditCard, DollarSign, ArrowLeft, ShieldCheck, Ticket, X, AlertTriangle } from 'lucide-react';
 
 export default function CheckoutPage() {
@@ -99,18 +100,14 @@ export default function CheckoutPage() {
           addressStr = profile.address || '';
         }
 
-        // Nếu thông tin trong DB trống, tải thông tin từ localStorage của phiên checkout trước đó (fallback cache)
-        const localInfoStr = localStorage.getItem('last_shipping_info');
-        if (localInfoStr) {
-          try {
-            const localInfo = JSON.parse(localInfoStr);
-            if (!name) name = localInfo.name || '';
-            if (!phone) phone = localInfo.phone || '';
-            if (!email) email = localInfo.email || '';
-            if (!addressStr && localInfo.address) addressStr = localInfo.address || '';
-          } catch (e) {
-            console.error('Lỗi khi khôi phục thông tin giao hàng từ localStorage:', e);
-          }
+        // Nếu thông tin trong DB trống, dùng thông tin giao hàng lần trước CỦA CHÍNH TÀI KHOẢN NÀY (B54:
+        // khoá gắn theo user id — không bao giờ tự điền thông tin của người dùng khác trên cùng máy)
+        const localInfo = getUserItem(SHIPPING_INFO_KEY);
+        if (localInfo) {
+          if (!name) name = localInfo.name || '';
+          if (!phone) phone = localInfo.phone || '';
+          if (!email) email = localInfo.email || '';
+          if (!addressStr && localInfo.address) addressStr = localInfo.address || '';
         }
 
         setShippingName(name);
@@ -165,7 +162,7 @@ export default function CheckoutPage() {
 
   // Tự động áp dụng mã giảm giá đã kích hoạt từ Trạm Khuyến Mãi hoặc truyền từ giỏ hàng sang
   useEffect(() => {
-    const couponToUse = passedCouponCode || localStorage.getItem('active_coupon_code');
+    const couponToUse = passedCouponCode || localStorage.getItem(ACTIVE_COUPON_KEY);
     if (couponToUse && totalAmount > 0 && !appliedCoupon) {
       const autoValidate = async () => {
         try {
@@ -176,7 +173,7 @@ export default function CheckoutPage() {
             toast.success(`Đã áp dụng mã giảm giá từ giỏ hàng: "${couponToUse}"!`);
           } else {
             toast.success(`Đã tự động áp dụng mã giảm giá "${couponToUse}"!`);
-            localStorage.removeItem('active_coupon_code');
+            localStorage.removeItem(ACTIVE_COUPON_KEY);
           }
         } catch (err) {
           setCouponCode(couponToUse);
@@ -215,17 +212,13 @@ export default function CheckoutPage() {
         }
       }
 
-      // Luôn lưu lại thông tin giao nhận vào localStorage của trình duyệt làm fallback dự phòng
-      try {
-        localStorage.setItem('last_shipping_info', JSON.stringify({
-          name: shippingInfo.shippingName,
-          phone: shippingInfo.shippingPhone,
-          email: shippingInfo.shippingEmail,
-          address: shippingInfo.shippingAddress
-        }));
-      } catch (err) {
-        console.error('Lỗi khi lưu last_shipping_info vào localStorage:', err);
-      }
+      // Lưu thông tin giao nhận làm dự phòng cho lần sau — gắn theo tài khoản, bị xoá khi đăng xuất (B54)
+      setUserItem(SHIPPING_INFO_KEY, {
+        name: shippingInfo.shippingName,
+        phone: shippingInfo.shippingPhone,
+        email: shippingInfo.shippingEmail,
+        address: shippingInfo.shippingAddress
+      });
 
       if (shippingInfo.paymentMethod === 'COD') {
         return { isCOD: true };
