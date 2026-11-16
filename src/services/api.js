@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { withErrorId } from '../utils/errorMessage';
 
 const baseURL = import.meta.env.VITE_API_URL || 'https://sdl-backend.onrender.com/api';
 
@@ -62,10 +63,15 @@ function forceLogout() {
 // - 401 TOKEN_EXPIRED → gia hạn rồi gửi lại request (khách không thấy gì)
 // - 401 TOKEN_INVALID / TOKEN_MISSING, hoặc gia hạn thất bại → đăng xuất về trang đăng nhập
 // - 401 không có `code` (vd sai mật khẩu hiện tại) → chỉ trả lỗi cho trang tự hiển thị, KHÔNG đăng xuất
+// - Có `errorId` (lỗi 500) → nối "(Mã lỗi: xxxxxxxx)" vào `error` cho mọi trang (B49)
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const { response, config } = error;
+    // Lỗi hệ thống: gắn mã tham chiếu vào câu báo để khách có mã gửi cho quản trị (B49)
+    if (response && response.data) {
+      response.data = withErrorId(response.data);
+    }
     if (!response || response.status !== 401 || !config) {
       return Promise.reject(error);
     }
