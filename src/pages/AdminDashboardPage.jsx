@@ -1775,25 +1775,59 @@ function OrderManagerTab() {
     }
   };
 
-  // Bulk operation handlers
+  // Bulk operation handlers (B48): MỘT request cho mỗi lô ≤ 100 đơn → không bị writeLimiter (30 / phút) chặn giữa chừng.
+  // Server xử lý từng đơn trong transaction riêng và trả kết quả từng đơn.
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const BULK_CHUNK = 100;
+
+  const runBulkStatus = async (orders, status, cancelReason, verb) => {
+    setIsBulkUpdating(true);
+    const succeeded = [];
+    const failed = [];
+    try {
+      for (let i = 0; i < orders.length; i += BULK_CHUNK) {
+        const chunk = orders.slice(i, i + BULK_CHUNK);
+        const res = await api.post('/admin/orders/bulk-status', {
+          orderIds: chunk.map(o => o.hashId),
+          status,
+          cancelReason
+        });
+        succeeded.push(...res.data.data.succeeded);
+        failed.push(...res.data.data.failed);
+      }
+    } catch (err) {
+      // Lỗi cả request (429, mất mạng...): các lô trước đó vẫn đã xong
+      const remaining = orders.length - succeeded.length - failed.length;
+      toast.error(`${err.response?.data?.error || err.message} (${remaining} đơn chưa được xử lý)`, { title: 'Lỗi' });
+    } finally {
+      setIsBulkUpdating(false);
+      queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['myOrders'] });
+    }
+
+    if (succeeded.length > 0) {
+      toast.success(`Đã ${verb} ${succeeded.length}/${orders.length} đơn hàng.`, { title: 'Thành công' });
+    }
+    if (failed.length > 0) {
+      const preview = failed.slice(0, 3).map(f => `#${f.id}: ${f.error}`).join(' · ');
+      const more = failed.length > 3 ? ` · ... và ${failed.length - 3} đơn khác` : '';
+      toast.warning(`${failed.length} đơn không ${verb} được: ${preview}${more}`, { title: 'Một số đơn lỗi' });
+    }
+    // Chỉ giữ lại các đơn lỗi trong danh sách chọn để admin xem / thử lại
+    const failedIds = new Set(failed.map(f => f.id));
+    setSelectedOrderIds(orders.filter(o => failedIds.has(o.hashId)).map(o => o.id));
+  };
+
   const handleBulkConfirm = async () => {
     const pendingOrders = filteredOrders.filter(o => selectedOrderIds.includes(o.id) && o.status === 'PENDING');
     if (pendingOrders.length === 0) {
       toast.warning('Không có đơn hàng nào ở trạng thái "Chờ xác nhận" trong danh sách đã chọn.', { title: 'Thông báo' });
       return;
     }
-    
+
     if (!window.confirm(`Xác nhận duyệt hàng loạt ${pendingOrders.length} đơn hàng đang chọn?`)) return;
 
-    try {
-      for (const order of pendingOrders) {
-        await updateStatusMutation.mutateAsync({ orderId: order.id, status: 'CONFIRMED' });
-      }
-      toast.success(`Đã duyệt thành công ${pendingOrders.length} đơn hàng!`, { title: 'Thành công' });
-      setSelectedOrderIds([]);
-    } catch (err) {
-      // Handled by onError of mutation
-    }
+    await runBulkStatus(pendingOrders, 'CONFIRMED', undefined, 'duyệt');
   };
 
   const handleBulkCancel = async () => {
@@ -1806,17 +1840,7 @@ function OrderManagerTab() {
     const reason = window.prompt(`Nhập lý do hủy hàng loạt cho ${cancellableOrders.length} đơn hàng đang chọn:`);
     if (reason === null) return;
 
-    const cancelReason = reason.trim() || 'Hủy hàng loạt bởi Quản trị viên';
-
-    try {
-      for (const order of cancellableOrders) {
-        await updateStatusMutation.mutateAsync({ orderId: order.id, status: 'CANCELLED', cancelReason });
-      }
-      toast.success(`Đã hủy thành công ${cancellableOrders.length} đơn hàng!`, { title: 'Thành công' });
-      setSelectedOrderIds([]);
-    } catch (err) {
-      // Handled by onError of mutation
-    }
+    await runBulkStatus(cancellableOrders, 'CANCELLED', reason.trim() || 'Hủy hàng loạt bởi Quản trị viên', 'hủy');
   };
 
   // Print invoice handler
@@ -2256,14 +2280,16 @@ function OrderManagerTab() {
           <div className="flex items-center gap-2.5 w-full sm:w-auto sm:ml-auto">
             <button
               onClick={handleBulkConfirm}
-              className="flex-1 sm:flex-none bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-bold py-2 px-4 rounded-none text-xs transition-colors uppercase tracking-widest flex items-center justify-center gap-1.5 border border-transparent shadow-sm cursor-pointer"
+              disabled={isBulkUpdating}
+              className="disabled:opacity-50 flex-1 sm:flex-none bg-[#2C4A3B] hover:bg-[#1e3529] text-white font-bold py-2 px-4 rounded-none text-xs transition-colors uppercase tracking-widest flex items-center justify-center gap-1.5 border border-transparent shadow-sm cursor-pointer"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"/></svg>
               Duyệt Hàng Loạt
             </button>
             <button
               onClick={handleBulkCancel}
-              className="flex-1 sm:flex-none border border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700 font-bold py-2 px-4 rounded-none text-xs transition-colors uppercase tracking-widest flex items-center justify-center gap-1.5 bg-white cursor-pointer"
+              disabled={isBulkUpdating}
+              className="disabled:opacity-50 flex-1 sm:flex-none border border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700 font-bold py-2 px-4 rounded-none text-xs transition-colors uppercase tracking-widest flex items-center justify-center gap-1.5 bg-white cursor-pointer"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
               Hủy Hàng Loạt
