@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../components/PasswordInput';
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -9,7 +10,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { user, login } = useAuth();
+  const { user, login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -33,6 +34,20 @@ export default function LoginPage() {
       setError(err.response?.data?.error || '❌ Đăng nhập thất bại.');
     } finally {
       setLoading(false); 
+    }
+  };
+
+  // Spec 005: Google trả ID token → máy chủ xác minh và cấp phiên như đăng nhập thường
+  const handleGoogleCredential = async (credential) => {
+    setLoading(true);
+    setError('');
+    try {
+      await loginWithGoogle(credential);
+      window.location.href = location.state?.from || '/';
+    } catch (err) {
+      setError(err.response?.data?.error || '❌ Đăng nhập bằng Google thất bại.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,6 +118,8 @@ export default function LoginPage() {
             {loading ? '⏳ Đang xác thực...' : 'Đăng Nhập'}
           </button>
         </form>
+
+        <GoogleLoginButton divider onCredential={handleGoogleCredential} />
 
         <div className="mt-6 text-center text-xs text-ink-60 tracking-wider">
           Chưa có tài khoản?{' '}

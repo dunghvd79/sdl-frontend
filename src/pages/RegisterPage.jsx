@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext';
 import PasswordInput from '../components/PasswordInput';
 import { PasswordRules, PasswordMismatch } from '../components/PasswordHints';
 import { passwordError } from '../utils/passwordRules';
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
@@ -14,7 +15,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { user, register } = useAuth();
+  const { user, register, loginWithGoogle } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -83,6 +84,21 @@ export default function RegisterPage() {
       window.location.href = '/';
     } catch (err) {
       setError(err.response?.data?.error || '❌ Đăng ký thất bại. Email có thể đã tồn tại.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Spec 005: đăng ký bằng Google = đăng nhập Google (máy chủ tự tạo tài khoản nếu chưa có)
+  const handleGoogleCredential = async (credential) => {
+    setLoading(true);
+    setError('');
+    try {
+      await loginWithGoogle(credential);
+      toast.success('Đăng nhập bằng Google thành công!', { title: 'Tuyệt vời 🎉' });
+      window.location.href = '/';
+    } catch (err) {
+      setError(err.response?.data?.error || '❌ Đăng ký bằng Google thất bại.');
     } finally {
       setLoading(false);
     }
@@ -176,6 +192,8 @@ export default function RegisterPage() {
             {loading ? '⏳ Đang khởi tạo tài khoản...' : 'Đăng Ký'}
           </button>
         </form>
+
+        <GoogleLoginButton divider text="signup_with" onCredential={handleGoogleCredential} />
 
         <div className="mt-6 text-center text-xs text-ink-60 tracking-wider">
           Đã có tài khoản?{' '}

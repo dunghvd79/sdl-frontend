@@ -149,6 +149,12 @@ export function AuthProvider({ children }) {
     startSession(response.data);
   };
 
+  // 3.2. ĐĂNG NHẬP BẰNG GOOGLE (spec 005): gửi ID token Google, máy chủ trả phiên giống /auth/login
+  const loginWithGoogle = async (credential) => {
+    const response = await api.post('/auth/google', { credential });
+    startSession(response.data);
+  };
+
   // 3.5. XỬ LÝ CẬP NHẬT THÔNG TIN (Update Profile)
   const updateUser = (newData) => {
     setUser(prev => {
@@ -189,7 +195,7 @@ export function AuthProvider({ children }) {
 
   return (
     // Bọc toàn bộ App bằng Provider, cung cấp thông tin đăng nhập và các hàm xử lý cho component con
-    <AuthContext.Provider value={{ user, login, register, logout, logoutAll, updateUser, setAccessToken }}>
+    <AuthContext.Provider value={{ user, login, register, loginWithGoogle, logout, logoutAll, updateUser, setAccessToken }}>
       {children}
     </AuthContext.Provider>
   );

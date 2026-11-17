@@ -137,6 +137,23 @@ describe('AuthContext', () => {
     expect(result.current.user).toEqual(SAMPLE_USER);
   });
 
+  it('spec 005: loginWithGoogle gửi credential tới /auth/google rồi lưu phiên như đăng nhập thường', async () => {
+    localStorage.setItem('last_shipping_info:5', JSON.stringify({ name: 'Người trước' }));
+    api.post.mockResolvedValueOnce({ data: { token: 'google-token', user: SAMPLE_USER } });
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      await result.current.loginWithGoogle('google-credential');
+    });
+
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(api.post).toHaveBeenCalledWith('/auth/google', { credential: 'google-credential' });
+    expect(localStorage.getItem('token')).toBe('google-token');
+    expect(JSON.parse(localStorage.getItem('user'))).toEqual(SAMPLE_USER);
+    expect(localStorage.getItem('last_shipping_info:5')).toBeNull();
+    expect(result.current.user).toEqual(SAMPLE_USER);
+  });
+
   it('updateUser gộp dữ liệu mới và lưu lại localStorage', async () => {
     localStorage.setItem('token', 'tok-123');
     localStorage.setItem('user', JSON.stringify(SAMPLE_USER));

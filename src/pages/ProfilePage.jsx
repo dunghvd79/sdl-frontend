@@ -267,6 +267,22 @@ export default function ProfilePage() {
             <div className="px-8 py-4 border-b border-divider bg-surface-warm">
               <h3 className="font-serif font-medium text-ink">Đổi mật khẩu</h3>
             </div>
+            {profile.has_password === false ? (
+              // Spec 005: tài khoản tạo qua Google chưa có mật khẩu → không có "mật khẩu hiện tại" để nhập
+              <div className="p-8 text-sm text-ink-light leading-relaxed">
+                <p>
+                  Tài khoản của bạn hiện chưa có mật khẩu (tài khoản đăng nhập bằng Google; mật khẩu cũ, nếu có, đã được
+                  huỷ khi liên kết Google để bảo vệ tài khoản). Bạn vẫn đăng nhập bằng Google như bình thường; muốn đăng
+                  nhập thêm bằng email và mật khẩu thì tạo mật khẩu qua email.
+                </p>
+                <Link
+                  to="/forgot-password"
+                  className="mt-5 inline-block bg-ink hover:bg-ink-light text-white font-medium py-2.5 px-6 rounded-none transition-colors text-sm uppercase tracking-wider"
+                >
+                  Tạo mật khẩu
+                </Link>
+              </div>
+            ) : (
             <form onSubmit={handleChangePassword} className="p-8">
               <div className="space-y-5">
                 <div>
@@ -324,6 +340,7 @@ export default function ProfilePage() {
                 </button>
               </div>
             </form>
+            )}
           </div>
 
           {/* Card 3: Thiết bị đăng nhập */}
