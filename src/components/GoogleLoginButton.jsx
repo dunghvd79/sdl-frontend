@@ -30,12 +30,11 @@ export default function GoogleLoginButton({
   onCredential,
   text = 'signin_with', // 'signup_with' cho trang đăng ký
   clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID,
-  // Nút đặt ở đầu form để khuyến khích dùng Google (email đã được Google xác minh — B56/B60):
-  hint = '', // dòng gợi ý lợi ích ngay dưới nút
+  // Nút đặt ở đầu form để khuyến khích dùng Google (email đã được Google xác minh — B56/B60).
   divider = '', // chữ trên dải phân cách giữa nút Google và form email phía sau, vd "hoặc dùng email"
 }) {
   const containerRef = useRef(null);
-  // Nút Google đã vẽ xong chưa — gợi ý + dải phân cách chỉ hiện khi đó (script bị chặn thì không để lại gì thừa)
+  // Nút Google đã vẽ xong chưa — dải phân cách chỉ hiện khi đó (script bị chặn thì không để lại dải thừa)
   const [ready, setReady] = useState(false);
   // Giữ callback mới nhất mà không khởi tạo lại Google mỗi lần trang render
   const onCredentialRef = useRef(onCredential);
@@ -74,14 +73,11 @@ export default function GoogleLoginButton({
 
   if (!clientId) return null;
   const button = <div ref={containerRef} data-testid="google-login-button" className="flex justify-center" />;
-  if (!hint && !divider) return button;
+  if (!divider) return button;
   return (
     <div className={ready ? 'mb-6' : undefined}>
       {button}
-      {ready && hint && (
-        <p className="mt-2 text-center text-[11px] text-ink/60">{hint}</p>
-      )}
-      {ready && divider && (
+      {ready && (
         <div className="flex items-center gap-3 mt-6" aria-hidden="true">
           <span className="h-px flex-1 bg-divider" />
           <span className="text-[10px] font-sans font-bold tracking-widest text-ink/50 uppercase">{divider}</span>

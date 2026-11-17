@@ -117,12 +117,7 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <GoogleLoginButton
-          text="signup_with"
-          hint="Nhanh nhất: không cần tạo mật khẩu, email đã được Google xác minh."
-          divider="hoặc đăng ký bằng email"
-          onCredential={handleGoogleCredential}
-        />
+        <GoogleLoginButton text="signup_with" divider="hoặc đăng ký bằng email" onCredential={handleGoogleCredential} />
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>

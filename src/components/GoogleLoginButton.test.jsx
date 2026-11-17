@@ -49,28 +49,23 @@ describe('GoogleLoginButton', () => {
     expect(onCredential).toHaveBeenCalledWith('id-token-tu-google');
   });
 
-  it('dải phân cách + lời gợi ý chỉ hiện khi nút Google đã vẽ xong; script bị chặn → không còn gì thừa', async () => {
-    render(<GoogleLoginButton clientId="abc" divider="hoặc dùng email" hint="Không cần mật khẩu" onCredential={vi.fn()} />);
+  it('dải phân cách chỉ hiện khi nút Google đã vẽ xong; script bị chặn → không còn dải thừa', async () => {
+    render(<GoogleLoginButton clientId="abc" divider="hoặc dùng email" onCredential={vi.fn()} />);
     expect(screen.queryByText('hoặc dùng email')).toBeNull();
-    expect(screen.queryByText('Không cần mật khẩu')).toBeNull();
 
     const script = document.querySelector(`script[src="${GSI_SRC}"]`);
     script.dispatchEvent(new Event('error'));
     await new Promise(r => setTimeout(r, 0));
     expect(screen.queryByText('hoặc dùng email')).toBeNull();
-    expect(screen.queryByText('Không cần mật khẩu')).toBeNull();
   });
 
-  it('nút vẽ xong → lời gợi ý dưới nút, dải phân cách nằm SAU nút (nút Google đứng đầu form)', async () => {
+  it('nút vẽ xong → dải phân cách nằm SAU nút (nút Google đứng đầu form)', async () => {
     stubGoogle();
-    render(<GoogleLoginButton clientId="abc" divider="hoặc dùng email" hint="Không cần mật khẩu" onCredential={vi.fn()} />);
+    render(<GoogleLoginButton clientId="abc" divider="hoặc dùng email" onCredential={vi.fn()} />);
 
     const divider = await screen.findByText('hoặc dùng email');
-    const hint = screen.getByText('Không cần mật khẩu');
     const button = screen.getByTestId('google-login-button');
-    // button → hint → divider theo thứ tự trong DOM
-    expect(button.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(hint.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(button.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('chưa có thư viện Google → tải script đúng một lần cho nhiều nút, tải xong mới vẽ nút', async () => {
