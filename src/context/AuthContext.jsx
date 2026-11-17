@@ -97,7 +97,8 @@ export function AuthProvider({ children }) {
           || serverUser.email !== user.email;
 
         if (hasChanges) {
-          const updatedUser = { ...user, ...serverUser };
+          // Đăng nhập trả `fullName`, hồ sơ trả `full_name` → ghi cả hai để Navbar (đọc fullName) không hiện tên cũ
+          const updatedUser = { ...user, ...serverUser, fullName: serverUser.full_name };
           localStorage.setItem('user', JSON.stringify(updatedUser));
           setUser(updatedUser);
         }

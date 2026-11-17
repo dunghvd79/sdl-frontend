@@ -154,6 +154,20 @@ describe('AuthContext', () => {
     expect(result.current.user).toEqual(SAMPLE_USER);
   });
 
+  it('đồng bộ hồ sơ từ máy chủ cập nhật cả fullName (Navbar đọc trường này) khi đổi tên ở thiết bị khác', async () => {
+    localStorage.setItem('token', 'tok-123');
+    localStorage.setItem('user', JSON.stringify({ id: 1, email: 'a@b.com', fullName: 'Tên Cũ', role: 'CUSTOMER' }));
+    api.get.mockResolvedValue({
+      data: { data: { id: 1, email: 'a@b.com', full_name: 'Tên Mới', role: 'CUSTOMER', is_active: true } },
+    });
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => expect(result.current.user.fullName).toBe('Tên Mới'));
+    expect(result.current.user.full_name).toBe('Tên Mới');
+    expect(JSON.parse(localStorage.getItem('user')).fullName).toBe('Tên Mới');
+  });
+
   it('updateUser gộp dữ liệu mới và lưu lại localStorage', async () => {
     localStorage.setItem('token', 'tok-123');
     localStorage.setItem('user', JSON.stringify(SAMPLE_USER));
