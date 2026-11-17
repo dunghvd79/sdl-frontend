@@ -117,6 +117,13 @@ export default function RegisterPage() {
           </div>
         )}
 
+        <GoogleLoginButton
+          text="signup_with"
+          hint="Nhanh nhất: không cần tạo mật khẩu, email đã được Google xác minh."
+          divider="hoặc đăng ký bằng email"
+          onCredential={handleGoogleCredential}
+        />
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label htmlFor="register-name" className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
@@ -192,8 +199,6 @@ export default function RegisterPage() {
             {loading ? '⏳ Đang khởi tạo tài khoản...' : 'Đăng Ký'}
           </button>
         </form>
-
-        <GoogleLoginButton divider text="signup_with" onCredential={handleGoogleCredential} />
 
         <div className="mt-6 text-center text-xs text-ink-60 tracking-wider">
           Đã có tài khoản?{' '}

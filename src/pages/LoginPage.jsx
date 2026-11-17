@@ -73,6 +73,8 @@ export default function LoginPage() {
           </div>
         )}
         
+        <GoogleLoginButton divider="hoặc dùng email" onCredential={handleGoogleCredential} />
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="login-email" className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
@@ -118,8 +120,6 @@ export default function LoginPage() {
             {loading ? '⏳ Đang xác thực...' : 'Đăng Nhập'}
           </button>
         </form>
-
-        <GoogleLoginButton divider onCredential={handleGoogleCredential} />
 
         <div className="mt-6 text-center text-xs text-ink-60 tracking-wider">
           Chưa có tài khoản?{' '}
