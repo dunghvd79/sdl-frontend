@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import api from '../services/api';
 import PasswordInput from '../components/PasswordInput';
+import { PasswordRules, PasswordMismatch } from '../components/PasswordHints';
+import { passwordError } from '../utils/passwordRules';
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
@@ -13,7 +14,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { user, login } = useAuth();
+  const { user, register } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -59,15 +60,10 @@ export default function RegisterPage() {
       return;
     }
 
-    // 4. Kiểm tra Mật khẩu
-    if (password.length < 8) {
-      setError('❌ Mật khẩu phải chứa ít nhất 8 ký tự.');
-      return;
-    }
-    const hasLetter = /[a-zA-Z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    if (!hasLetter || !hasNumber) {
-      setError('❌ Mật khẩu phải bao gồm cả chữ cái và chữ số.');
+    // 4. Kiểm tra Mật khẩu (cùng quy tắc với gợi ý dưới ô)
+    const pwError = passwordError(password);
+    if (pwError) {
+      setError(`❌ ${pwError}`);
       return;
     }
 
@@ -80,14 +76,9 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await api.post('/auth/register', {
-        email: trimmedEmail,
-        password,
-        fullName: trimmedName,
-      });
+      // Máy chủ tạo tài khoản và cấp phiên luôn (B57)
+      await register({ email: trimmedEmail, password, fullName: trimmedName });
 
-      await login(trimmedEmail, password);
-      
       toast.success('Đăng ký tài khoản thành công!', { title: 'Tuyệt vời 🎉' });
       window.location.href = '/';
     } catch (err) {
@@ -112,11 +103,13 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
+            <label htmlFor="register-name" className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Họ và tên
             </label>
             <input
+              id="register-name"
               type="text"
+              autoComplete="name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors"
@@ -126,11 +119,13 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
+            <label htmlFor="register-email" className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Email
             </label>
             <input
+              id="register-email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors"
@@ -140,31 +135,37 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
+            <label htmlFor="register-password" className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Mật khẩu
             </label>
             <PasswordInput
+              id="register-password"
               autoComplete="new-password"
+              aria-describedby="register-password-rules"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors"
               placeholder="••••••••"
               required
             />
+            <PasswordRules id="register-password-rules" password={password} />
           </div>
 
           <div>
-            <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
+            <label htmlFor="register-confirm" className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Xác nhận mật khẩu
             </label>
             <PasswordInput
+              id="register-confirm"
               autoComplete="new-password"
+              aria-describedby="register-confirm-error"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors"
               placeholder="••••••••"
               required
             />
+            <PasswordMismatch id="register-confirm-error" password={password} confirm={confirmPassword} />
           </div>
 
           <button

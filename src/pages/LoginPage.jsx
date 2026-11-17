@@ -60,11 +60,13 @@ export default function LoginPage() {
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
+            <label htmlFor="login-email" className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Email
             </label>
-            <input 
-              type="email" 
+            <input
+              id="login-email"
+              type="email"
+              autoComplete="email"
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors" 
@@ -72,11 +74,12 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
+            <label htmlFor="login-password" className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Mật khẩu
             </label>
-            <PasswordInput 
-              autoComplete="current-password" 
+            <PasswordInput
+              id="login-password"
+              autoComplete="current-password"
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors" 

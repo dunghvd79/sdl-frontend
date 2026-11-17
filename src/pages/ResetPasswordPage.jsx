@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import PasswordInput from '../components/PasswordInput';
+import { PasswordRules, PasswordMismatch } from '../components/PasswordHints';
+import { passwordError } from '../utils/passwordRules';
 
 export default function ResetPasswordPage() {
   const [newPassword, setNewPassword] = useState('');
@@ -33,16 +35,9 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (newPassword.length < 8) {
-      setError('❌ Mật khẩu phải chứa ít nhất 8 ký tự!');
-      setLoading(false);
-      return;
-    }
-
-    const hasLetter = /[a-zA-Z]/.test(newPassword);
-    const hasNumber = /[0-9]/.test(newPassword);
-    if (!hasLetter || !hasNumber) {
-      setError('❌ Mật khẩu phải bao gồm cả chữ cái và chữ số!');
+    const pwError = passwordError(newPassword);
+    if (pwError) {
+      setError(`❌ ${pwError}`);
       setLoading(false);
       return;
     }
@@ -95,11 +90,13 @@ export default function ResetPasswordPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
+            <label htmlFor="reset-password" className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Mật khẩu mới
             </label>
             <PasswordInput
+              id="reset-password"
               autoComplete="new-password"
+              aria-describedby="reset-password-rules"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors"
@@ -107,14 +104,17 @@ export default function ResetPasswordPage() {
               required
               disabled={!token}
             />
+            <PasswordRules id="reset-password-rules" password={newPassword} />
           </div>
 
           <div>
-            <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
+            <label htmlFor="reset-confirm" className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Xác nhận mật khẩu mới
             </label>
             <PasswordInput
+              id="reset-confirm"
               autoComplete="new-password"
+              aria-describedby="reset-confirm-error"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors"
@@ -122,6 +122,7 @@ export default function ResetPasswordPage() {
               required
               disabled={!token}
             />
+            <PasswordMismatch id="reset-confirm-error" password={newPassword} confirm={confirmPassword} />
           </div>
 
           <button

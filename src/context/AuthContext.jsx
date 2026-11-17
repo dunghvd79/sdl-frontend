@@ -127,11 +127,8 @@ export function AuthProvider({ children }) {
   }, [user?.id]); // Chỉ re-run khi user id thay đổi (login/logout)
 
   // 3. XỬ LÝ ĐĂNG NHẬP (Lưu dữ liệu)
-  const login = async (email, password) => {
-    // Sử dụng api instance thay vì axios thô
-    const response = await api.post('/auth/login', { email, password });
-    const { token, user: userData } = response.data;
-    
+  // Lưu phiên máy chủ vừa cấp (đăng nhập hoặc đăng ký) — response dạng { token, user }
+  const startSession = ({ token, user: userData }) => {
     // Người trước tắt trình duyệt mà không đăng xuất: xoá dữ liệu cá nhân của tài khoản khác còn sót (B54)
     clearOtherUsersData(userData?.id);
 
@@ -139,6 +136,17 @@ export function AuthProvider({ children }) {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData); // Cập nhật state để giao diện React đổi ngay lập tức
+  };
+
+  const login = async (email, password) => {
+    const response = await api.post('/auth/login', { email, password });
+    startSession(response.data);
+  };
+
+  // 3.1. ĐĂNG KÝ: máy chủ tạo tài khoản và cấp phiên luôn → dùng thẳng, không gọi thêm /auth/login (B57)
+  const register = async ({ email, password, fullName }) => {
+    const response = await api.post('/auth/register', { email, password, fullName });
+    startSession(response.data);
   };
 
   // 3.5. XỬ LÝ CẬP NHẬT THÔNG TIN (Update Profile)
@@ -181,7 +189,7 @@ export function AuthProvider({ children }) {
 
   return (
     // Bọc toàn bộ App bằng Provider, cung cấp thông tin đăng nhập và các hàm xử lý cho component con
-    <AuthContext.Provider value={{ user, login, logout, logoutAll, updateUser, setAccessToken }}>
+    <AuthContext.Provider value={{ user, login, register, logout, logoutAll, updateUser, setAccessToken }}>
       {children}
     </AuthContext.Provider>
   );

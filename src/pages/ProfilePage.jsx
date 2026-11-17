@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import api from '../services/api';
 import PasswordInput from '../components/PasswordInput';
+import { PasswordRules, PasswordMismatch } from '../components/PasswordHints';
+import { passwordError } from '../utils/passwordRules';
 
 export default function ProfilePage() {
   const { user, login, updateUser, logoutAll, setAccessToken } = useAuth();
@@ -83,8 +85,9 @@ export default function ProfilePage() {
       toast.warning('Mật khẩu xác nhận không khớp');
       return;
     }
-    if (passwords.new.length < 8 || !/[a-zA-Z]/.test(passwords.new) || !/[0-9]/.test(passwords.new)) {
-      toast.warning('Mật khẩu mới phải có ít nhất 8 ký tự, gồm cả chữ cái và chữ số');
+    const pwError = passwordError(passwords.new);
+    if (pwError) {
+      toast.warning(pwError);
       return;
     }
 
@@ -267,8 +270,9 @@ export default function ProfilePage() {
             <form onSubmit={handleChangePassword} className="p-8">
               <div className="space-y-5">
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-ink-light mb-1.5 font-medium">Mật khẩu hiện tại</label>
+                  <label htmlFor="profile-current-password" className="block text-xs uppercase tracking-wider text-ink-light mb-1.5 font-medium">Mật khẩu hiện tại</label>
                   <PasswordInput
+                    id="profile-current-password"
                     autoComplete="current-password"
                     value={passwords.current}
                     onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
@@ -278,20 +282,25 @@ export default function ProfilePage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-xs uppercase tracking-wider text-ink-light mb-1.5 font-medium">Mật khẩu mới</label>
+                    <label htmlFor="profile-new-password" className="block text-xs uppercase tracking-wider text-ink-light mb-1.5 font-medium">Mật khẩu mới</label>
                     <PasswordInput
+                      id="profile-new-password"
                       autoComplete="new-password"
+                      aria-describedby="profile-new-password-rules"
                       value={passwords.new}
                       onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                       className="w-full border border-divider rounded-none px-4 py-2.5 text-sm focus:outline-none focus:border-ink transition-colors bg-white text-ink"
                       required
                       minLength={8}
                     />
+                    <PasswordRules id="profile-new-password-rules" password={passwords.new} />
                   </div>
                   <div>
-                    <label className="block text-xs uppercase tracking-wider text-ink-light mb-1.5 font-medium">Xác nhận mật khẩu mới</label>
+                    <label htmlFor="profile-confirm-password" className="block text-xs uppercase tracking-wider text-ink-light mb-1.5 font-medium">Xác nhận mật khẩu mới</label>
                     <PasswordInput
+                      id="profile-confirm-password"
                       autoComplete="new-password"
+                      aria-describedby="profile-confirm-password-error"
                       value={passwords.confirm}
                       onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                       className={`w-full border rounded-none px-4 py-2.5 text-sm focus:outline-none focus:border-ink transition-colors bg-white text-ink ${
@@ -301,6 +310,7 @@ export default function ProfilePage() {
                       }`}
                       required
                     />
+                    <PasswordMismatch id="profile-confirm-password-error" password={passwords.new} confirm={passwords.confirm} />
                   </div>
                 </div>
               </div>

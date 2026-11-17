@@ -48,11 +48,13 @@ export default function ForgotPasswordPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
+            <label htmlFor="forgot-email" className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Email của bạn
             </label>
             <input
+              id="forgot-email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors"

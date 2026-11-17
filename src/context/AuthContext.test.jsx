@@ -116,6 +116,27 @@ describe('AuthContext', () => {
     expect(localStorage.getItem('active_coupon_code')).toBe('CHAOMUNG');
   });
 
+  it('B57: register dùng thẳng phiên do /auth/register cấp, không gọi thêm /auth/login', async () => {
+    localStorage.setItem('last_shipping_info:5', JSON.stringify({ name: 'Người trước' }));
+    api.post.mockResolvedValueOnce({ data: { token: 'reg-token', user: SAMPLE_USER } });
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      await result.current.register({ email: 'a@b.com', password: 'secret123', fullName: 'Test User' });
+    });
+
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(api.post).toHaveBeenCalledWith('/auth/register', {
+      email: 'a@b.com',
+      password: 'secret123',
+      fullName: 'Test User',
+    });
+    expect(localStorage.getItem('token')).toBe('reg-token');
+    expect(JSON.parse(localStorage.getItem('user'))).toEqual(SAMPLE_USER);
+    expect(localStorage.getItem('last_shipping_info:5')).toBeNull();
+    expect(result.current.user).toEqual(SAMPLE_USER);
+  });
+
   it('updateUser gộp dữ liệu mới và lưu lại localStorage', async () => {
     localStorage.setItem('token', 'tok-123');
     localStorage.setItem('user', JSON.stringify(SAMPLE_USER));
