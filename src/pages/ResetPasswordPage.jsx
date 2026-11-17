@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../components/PasswordInput';
 import { PasswordRules, PasswordMismatch } from '../components/PasswordHints';
 import { passwordError } from '../utils/passwordRules';
@@ -11,7 +12,9 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [canRequestNew, setCanRequestNew] = useState(false);
 
+  const { user, logout } = useAuth();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const navigate = useNavigate();
@@ -21,6 +24,7 @@ export default function ResetPasswordPage() {
     setLoading(true);
     setError('');
     setMessage('');
+    setCanRequestNew(false);
 
     // Client-side validations
     if (!token) {
@@ -48,13 +52,19 @@ export default function ResetPasswordPage() {
         newPassword
       });
       setMessage(response.data.message || '✅ Đặt lại mật khẩu thành công! Bạn đang được chuyển hướng về trang đăng nhập...');
-      
+
+      // B62: trình duyệt có thể đang giữ phiên (của tài khoản này hoặc tài khoản khác) → xoá để đăng nhập lại
+      // bằng mật khẩu mới; không thì /login thấy còn user và đưa thẳng về trang chủ với phiên cũ.
+      if (user) await logout();
+
       // Chuyển hướng sau 3 giây
       setTimeout(() => {
         navigate('/login');
       }, 3000);
     } catch (err) {
       setError(err.response?.data?.error || '❌ Đặt lại mật khẩu thất bại. Liên kết có thể đã hết hạn hoặc không hợp lệ.');
+      // Mã sai / hết hạn: mỗi lần yêu cầu lại, mã mới thay mã cũ nên email cũ không dùng được nữa
+      if (err.response?.status === 400) setCanRequestNew(true);
     } finally {
       setLoading(false);
     }
@@ -85,6 +95,14 @@ export default function ResetPasswordPage() {
         {error && (
           <div className="bg-red-50 border-l-2 border-red-500 text-red-700 p-3 mb-6 text-xs rounded-none leading-relaxed">
             {error}
+            {canRequestNew && (
+              <p className="mt-2 text-red-700/80">
+                Hãy mở email khôi phục mới nhất (mỗi lần yêu cầu lại, liên kết cũ hết hiệu lực) — liên kết chỉ dùng được trong 15 phút.{' '}
+                <Link to="/forgot-password" className="font-semibold text-red-800 underline underline-offset-2">
+                  Yêu cầu email mới
+                </Link>
+              </p>
+            )}
           </div>
         )}
 
