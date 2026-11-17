@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
+import PasswordInput from '../components/PasswordInput';
 
 export default function ResetPasswordPage() {
   const [newPassword, setNewPassword] = useState('');
@@ -97,8 +98,8 @@ export default function ResetPasswordPage() {
             <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Mật khẩu mới
             </label>
-            <input
-              type="password"
+            <PasswordInput
+              autoComplete="new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors"
@@ -112,8 +113,8 @@ export default function ResetPasswordPage() {
             <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Xác nhận mật khẩu mới
             </label>
-            <input
-              type="password"
+            <PasswordInput
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors"

@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import api from '../services/api';
+import PasswordInput from '../components/PasswordInput';
 
 export default function ProfilePage() {
   const { user, login, updateUser, logoutAll, setAccessToken } = useAuth();
@@ -267,8 +268,8 @@ export default function ProfilePage() {
               <div className="space-y-5">
                 <div>
                   <label className="block text-xs uppercase tracking-wider text-ink-light mb-1.5 font-medium">Mật khẩu hiện tại</label>
-                  <input
-                    type="password"
+                  <PasswordInput
+                    autoComplete="current-password"
                     value={passwords.current}
                     onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
                     className="w-full border border-divider rounded-none px-4 py-2.5 text-sm focus:outline-none focus:border-ink transition-colors bg-white text-ink"
@@ -278,8 +279,8 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-xs uppercase tracking-wider text-ink-light mb-1.5 font-medium">Mật khẩu mới</label>
-                    <input
-                      type="password"
+                    <PasswordInput
+                      autoComplete="new-password"
                       value={passwords.new}
                       onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                       className="w-full border border-divider rounded-none px-4 py-2.5 text-sm focus:outline-none focus:border-ink transition-colors bg-white text-ink"
@@ -289,8 +290,8 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <label className="block text-xs uppercase tracking-wider text-ink-light mb-1.5 font-medium">Xác nhận mật khẩu mới</label>
-                    <input
-                      type="password"
+                    <PasswordInput
+                      autoComplete="new-password"
                       value={passwords.confirm}
                       onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                       className={`w-full border rounded-none px-4 py-2.5 text-sm focus:outline-none focus:border-ink transition-colors bg-white text-ink ${

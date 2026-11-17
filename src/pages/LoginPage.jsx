@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PasswordInput from '../components/PasswordInput';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -74,8 +75,8 @@ export default function LoginPage() {
             <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Mật khẩu
             </label>
-            <input 
-              type="password" 
+            <PasswordInput 
+              autoComplete="current-password" 
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors" 

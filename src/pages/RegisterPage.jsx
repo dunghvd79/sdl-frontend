@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import api from '../services/api';
+import PasswordInput from '../components/PasswordInput';
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
@@ -142,8 +143,8 @@ export default function RegisterPage() {
             <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Mật khẩu
             </label>
-            <input
-              type="password"
+            <PasswordInput
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors"
@@ -156,8 +157,8 @@ export default function RegisterPage() {
             <label className="block text-[10px] font-sans font-bold tracking-widest text-ink/70 uppercase mb-2">
               Xác nhận mật khẩu
             </label>
-            <input
-              type="password"
+            <PasswordInput
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full border border-divider bg-transparent rounded-none px-4 py-2.5 text-sm text-ink focus:border-ink focus:outline-none transition-colors"
