@@ -78,6 +78,10 @@ export default function CartPage() {
   // Helper: lấy bookId chuẩn hóa thành string
   const getBookId = (item) => String(item.hashId || item.book?.hashId || item.bookId || item.book?.id);
 
+  // Sách nháp / đã ẩn (B86): vẫn nằm trong giỏ để khách thấy và tự xoá, nhưng không thanh toán được.
+  // Backend cũ chưa trả status → coi như còn bán.
+  const isForSale = (item) => (item.book?.status ?? 'PUBLISHED') === 'PUBLISHED';
+
   // Đồng bộ selectedItems khi cartItems được tải lần đầu
   useEffect(() => {
     if (cartItems.length > 0 && !hasInitializedSelection) {
@@ -99,8 +103,8 @@ export default function CartPage() {
         // Nếu parse lỗi, bỏ qua và chọn tất cả
       }
 
-      // Không có dữ liệu saved → chọn tất cả
-      setSelectedItems(new Set(currentIds));
+      // Không có dữ liệu saved → chọn tất cả sách còn bán
+      setSelectedItems(new Set(cartItems.filter(isForSale).map(getBookId)));
       setHasInitializedSelection(true);
     }
   }, [cartItems, hasInitializedSelection]);
@@ -350,6 +354,11 @@ export default function CartPage() {
       return;
     }
 
+    if (selectedCartItems.some(item => !isForSale(item))) {
+      toast.error('Bỏ chọn hoặc xoá sách đã ngừng bán để tiếp tục thanh toán.', { title: 'Có sách ngừng bán' });
+      return;
+    }
+
     // Kiểm tra xem có sản phẩm được chọn nào vượt quá tồn kho khả dụng hay không
     const selectedWithIssues = selectedCartItems.filter(item => item.quantity > (item.book?.stock || 0));
     if (selectedWithIssues.length > 0) {
@@ -508,6 +517,7 @@ export default function CartPage() {
                   : `https://picsum.photos/seed/${bookId}/150/200`;
                 const maxStock = item.book?.stock || 0;
                 const isSelected = selectedItems.has(bookId);
+                const forSale = isForSale(item);
 
                 return (
                   <div
@@ -558,8 +568,12 @@ export default function CartPage() {
                           </button>
                         </div>
 
-                        {/* Hiển thị cảnh báo tồn kho */}
-                        {item.quantity > maxStock ? (
+                        {/* Sách ngừng bán thay cho cảnh báo tồn kho */}
+                        {!forSale ? (
+                          <div className="bg-stone-100 text-stone-700 border border-stone-300/60 p-2 text-[10px] font-sans font-semibold mt-2.5 flex items-center gap-1.5 leading-none">
+                            <AlertTriangle size={12} /> Ngừng bán — xoá khỏi giỏ để tiếp tục thanh toán
+                          </div>
+                        ) : item.quantity > maxStock ? (
                           <div className="bg-red-50 text-red-800 border border-red-200/50 p-2 text-[10px] font-sans font-semibold mt-2.5 flex items-center gap-1.5 leading-none">
                             <AlertTriangle size={12} /> Chỉ còn {maxStock} sản phẩm khả dụng trong kho!
                           </div>
@@ -590,7 +604,7 @@ export default function CartPage() {
                         </span>
                         <button
                           onClick={() => handleQuantityChange(bookId, item.quantity, 1)}
-                          disabled={updateQuantityMutation.isPending || item.quantity >= maxStock}
+                          disabled={updateQuantityMutation.isPending || !forSale || item.quantity >= maxStock}
                           className="w-7 h-7 flex items-center justify-center text-ink hover:text-[#2C4A3B] hover:bg-stone-100 font-bold text-xs disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
                           title={item.quantity >= maxStock ? 'Số lượng đạt giới hạn tồn kho khả dụng' : ''}
                         >
