@@ -19,6 +19,7 @@ export default function HomePage() {
       } else {
         prev.delete('search');
       }
+      prev.delete('page'); // đổi bộ lọc → về trang 1
       return prev;
     }, { replace: true });
   };
@@ -39,10 +40,43 @@ export default function HomePage() {
     }, 350);
     return () => clearTimeout(timer);
   }, [localSearch, searchTerm]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [sortBy, setSortBy] = useState('newest');
-  const [maxPrice, setMaxPrice] = useState(500000);
-  const [page, setPage] = useState(1);
+  // Bộ lọc và trang hiện tại nằm trên URL (?category=3&sort=price_asc&maxPrice=200000&page=4), cùng chỗ với
+  // ?search= (B87): tải lại trang hoặc bấm Back từ trang chi tiết sách vẫn giữ đúng danh sách đang xem.
+  // Giá trị mặc định thì bỏ khỏi URL cho gọn. Đổi bộ lọc thì xoá ?page= (về trang 1).
+  const DEFAULT_SORT = 'newest';
+  const DEFAULT_MAX_PRICE = 500000;
+  const selectedCategory = searchParams.get('category') ? Number(searchParams.get('category')) : null;
+  const sortBy = searchParams.get('sort') || DEFAULT_SORT;
+  const maxPrice = Number(searchParams.get('maxPrice')) || DEFAULT_MAX_PRICE;
+  const page = Math.max(1, parseInt(searchParams.get('page'), 10) || 1);
+
+  const setFilterParam = (key, value, defaultValue, navigateOptions = {}) => {
+    setSearchParams(prev => {
+      if (value === null || value === defaultValue) {
+        prev.delete(key);
+      } else {
+        prev.set(key, String(value));
+      }
+      prev.delete('page');
+      return prev;
+    }, { replace: true, ...navigateOptions });
+  };
+  const setSelectedCategory = (id, navigateOptions) => setFilterParam('category', id, null, navigateOptions);
+  const setSortBy = (value) => setFilterParam('sort', value, DEFAULT_SORT);
+  const setMaxPrice = (value) => setFilterParam('maxPrice', value, DEFAULT_MAX_PRICE);
+
+  // Đổi trang thì thêm một mục lịch sử (Back quay lại trang trước); tự sửa trang rỗng thì thay thế (replace)
+  const setPage = (next, { replace = false } = {}) => {
+    const value = typeof next === 'function' ? next(page) : next;
+    setSearchParams(prev => {
+      if (value > 1) {
+        prev.set('page', String(value));
+      } else {
+        prev.delete('page');
+      }
+      return prev;
+    }, { replace });
+  };
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -64,8 +98,8 @@ export default function HomePage() {
               searchInput.focus();
             }
           }
-          // Clear state safely in React Router without breaking history state
-          navigate(location.pathname, { replace: true });
+          // Clear state safely in React Router without breaking history state — giữ nguyên ?search=, bộ lọc, trang
+          navigate({ pathname: location.pathname, search: location.search }, { replace: true });
         }, 150);
         return () => clearTimeout(timer);
       }
@@ -88,15 +122,11 @@ export default function HomePage() {
         c => c.name && c.name.toLowerCase().includes(location.state.filterCategory.toLowerCase())
       );
       if (matchedCat) {
-        setSelectedCategory(matchedCat.id);
+        // Giữ state cuộn (scrollTo) nhưng bỏ filterCategory để effect này không chạy lại
+        setSelectedCategory(matchedCat.id, { state: { ...location.state, filterCategory: undefined } });
       }
     }
   }, [location, categories]);
-
-  // Tự động quay về trang 1 khi thay đổi bất kỳ bộ lọc nào
-  React.useEffect(() => {
-    setPage(1);
-  }, [searchTerm, selectedCategory, sortBy, maxPrice]);
 
   // Cuộn mượt lên đầu danh sách sách (explore) khi đổi trang
   const isMounted = React.useRef(false);
@@ -112,7 +142,8 @@ export default function HomePage() {
   }, [page]);
 
   // Lấy danh sách sách dựa vào filters (phân trang 8 quyển/trang)
-  const { data: books, isLoading, isFetching, isError } = useQuery({
+  const PAGE_SIZE = 8;
+  const { data: booksPage, isLoading, isFetching, isError } = useQuery({
     queryKey: ['books', searchTerm, selectedCategory, sortBy, maxPrice, page],
     queryFn: async () => {
       const response = await api.get('/books', {
@@ -122,18 +153,21 @@ export default function HomePage() {
           sortBy: sortBy,
           maxPrice: maxPrice,
           page: page,
-          limit: 8
+          limit: PAGE_SIZE
         }
       });
-      return response.data.data;
+      return response.data; // { data: [...], pagination: { page, limit, total_in_page, has_more } }
     },
     placeholderData: (prev) => prev
   });
+  const books = booksPage?.data;
+  // Còn trang sau: lấy từ API (B87). Backend cũ chưa có has_more → đoán theo "đủ một trang" như trước.
+  const hasMore = booksPage?.pagination?.has_more ?? (books?.length || 0) >= PAGE_SIZE;
 
-  // Tự động quay về trang 1 nếu trang hiện tại bị trống (ví dụ: sau khi xóa sách ở trang 2)
+  // Tự động quay về trang 1 nếu trang hiện tại bị trống (ví dụ: sau khi xóa sách ở trang 2, hoặc ?page= quá lớn)
   React.useEffect(() => {
     if (!isLoading && books && books.length === 0 && page > 1) {
-      setPage(1);
+      setPage(1, { replace: true });
     }
   }, [books, page, isLoading]);
 
@@ -177,7 +211,7 @@ export default function HomePage() {
   const renderPageNumbers = () => {
     const pages = [];
     const startPage = Math.max(1, page - 1);
-    const endPage = books?.length < 8 ? page : page + 1;
+    const endPage = hasMore ? page + 1 : page;
 
     for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
@@ -658,7 +692,7 @@ export default function HomePage() {
 
             <button
               onClick={() => setPage(p => p + 1)}
-              disabled={(books?.length || 0) < 8 || isFetching}
+              disabled={!hasMore || isFetching}
               className="w-9 h-9 flex items-center justify-center rounded-full border border-stone-200 text-stone-600 hover:border-[#2C4A3B] hover:text-[#2C4A3B] hover:bg-[#2C4A3B]/5 disabled:opacity-30 disabled:pointer-events-none transition-all duration-300 cursor-pointer bg-white"
               aria-label="Trang sau"
             >
